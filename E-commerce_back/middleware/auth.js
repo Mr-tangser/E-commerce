@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const Admin = require('../models/Admin');
 
 const protect = async (req, res, next) => {
   let token;
@@ -13,8 +14,20 @@ const protect = async (req, res, next) => {
       // 验证token
       const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production');
 
-      // 获取用户信息（不包含密码）
-      const user = await User.findById(decoded.id).select('-password');
+      let user;
+      
+      // 根据userType选择对应的模型
+      if (decoded.userType === 'admin') {
+        user = await Admin.findById(decoded.id).select('-password');
+        if (user) {
+          user.userType = 'admin';
+        }
+      } else {
+        user = await User.findById(decoded.id).select('-password');
+        if (user) {
+          user.userType = 'user';
+        }
+      }
       
       if (!user) {
         return res.status(401).json({

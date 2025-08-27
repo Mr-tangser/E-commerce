@@ -13,6 +13,7 @@ const userRoutes = require('./routes/users');
 const productRoutes = require('./routes/products');
 const orderRoutes = require('./routes/orders');
 const categoryRoutes = require('./routes/categories');
+const adminRoutes = require('./routes/admin');
 
 // 导入中间件
 const errorHandler = require('./middleware/errorHandler');
@@ -30,7 +31,7 @@ app.use(helmet());
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
     ? ['https://yourdomain.com'] 
-    : ['http://localhost:3000', 'http://localhost:3001'],
+    : ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:8080', 'http://localhost:8081'],
   credentials: true
 }));
 
@@ -63,6 +64,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/categories', categoryRoutes);
+app.use('/api/admin', adminRoutes);
 
 // 健康检查端点
 app.get('/health', (req, res) => {

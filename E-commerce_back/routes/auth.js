@@ -202,4 +202,154 @@ router.get('/me', protect, async (req, res) => {
   }
 });
 
+// 忘记密码
+router.post('/forgot-password', [
+  body('email')
+    .isEmail()
+    .withMessage('请输入有效的邮箱地址')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: '输入验证失败',
+          details: errors.array()
+        }
+      });
+    }
+
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          message: '用户不存在'
+        }
+      });
+    }
+
+    // 生成重置密码令牌
+    const resetToken = require('crypto').randomBytes(32).toString('hex');
+    const resetTokenExpires = Date.now() + 10 * 60 * 1000; // 10分钟有效期
+
+    // 保存重置令牌到用户记录
+    user.passwordResetToken = require('crypto')
+      .createHash('sha256')
+      .update(resetToken)
+      .digest('hex');
+    user.passwordResetExpires = resetTokenExpires;
+
+    await user.save({ validateBeforeSave: false });
+
+    // 在实际应用中，这里应该发送邮件
+    // 目前返回令牌用于测试（生产环境中绝对不要这样做）
+    const resetURL = `${req.protocol}://${req.get('host')}/api/auth/reset-password/${resetToken}`;
+    
+    res.json({
+      success: true,
+      message: '密码重置邮件已发送',
+      // 仅用于开发测试，生产环境应删除以下字段
+      ...(process.env.NODE_ENV === 'development' && { 
+        resetToken: resetToken,
+        resetURL: resetURL 
+      })
+    });
+
+  } catch (error) {
+    console.error('忘记密码错误:', error);
+    res.status(500).json({
+      success: false,
+      error: {
+        message: '处理忘记密码请求失败'
+      }
+    });
+  }
+});
+
+// 重置密码
+router.post('/reset-password/:token', [
+  body('password')
+    .isLength({ min: 6 })
+    .withMessage('新密码至少6个字符'),
+  body('passwordConfirm')
+    .custom((value, { req }) => {
+      if (value !== req.body.password) {
+        throw new Error('密码确认不匹配');
+      }
+      return true;
+    })
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: '输入验证失败',
+          details: errors.array()
+        }
+      });
+    }
+
+    // 哈希化传入的令牌以匹配数据库中的令牌
+    const hashedToken = require('crypto')
+      .createHash('sha256')
+      .update(req.params.token)
+      .digest('hex');
+
+    // 查找具有该令牌且未过期的用户
+    const user = await User.findOne({
+      passwordResetToken: hashedToken,
+      passwordResetExpires: { $gt: Date.now() }
+    });
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: '令牌无效或已过期'
+        }
+      });
+    }
+
+    // 设置新密码
+    user.password = req.body.password;
+    user.passwordResetToken = undefined;
+    user.passwordResetExpires = undefined;
+
+    await user.save();
+
+    // 生成新的JWT令牌
+    const token = generateToken(user._id);
+
+    res.json({
+      success: true,
+      message: '密码重置成功',
+      data: {
+        user: {
+          id: user._id,
+          username: user.username,
+          email: user.email,
+          role: user.role,
+          avatar: user.avatar
+        },
+        token
+      }
+    });
+
+  } catch (error) {
+    console.error('重置密码错误:', error);
+    res.status(500).json({
+      success: false,
+      error: {
+        message: '重置密码失败'
+      }
+    });
+  }
+});
+
 module.exports = router; 

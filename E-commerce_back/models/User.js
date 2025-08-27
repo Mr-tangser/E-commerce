@@ -64,6 +64,14 @@ const userSchema = new mongoose.Schema({
       email: { type: Boolean, default: true },
       sms: { type: Boolean, default: false }
     }
+  },
+  passwordResetToken: {
+    type: String,
+    select: false
+  },
+  passwordResetExpires: {
+    type: Date,
+    select: false
   }
 }, {
   timestamps: true,
