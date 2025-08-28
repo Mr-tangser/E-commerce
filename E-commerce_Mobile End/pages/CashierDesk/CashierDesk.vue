@@ -45,9 +45,6 @@
 			return {
 				PayList: [
 					{
-						icon: '/static/wx_pay.png',
-						name: '微信支付',
-					},{
 						icon: '/static/zfb_pay.png',
 						name: '支付宝支付',
 					},{
@@ -56,7 +53,7 @@
 					},
 				],
 				PayWay: 0,
-				PayPirce: `微信支付￥299.00`,
+				PayPirce: `支付宝支付￥299.00`,
 				CountDown: 1000,
 				day: 0,
 				hour: 0,
