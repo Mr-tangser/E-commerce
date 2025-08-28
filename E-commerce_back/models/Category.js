@@ -66,7 +66,48 @@ const categorySchema = new mongoose.Schema({
     required: Boolean,
     options: [String],
     defaultValue: mongoose.Schema.Types.Mixed
-  }]
+  }],
+  
+  // 首页展示配置
+  homeDisplay: {
+    showOnHome: {
+      type: Boolean,
+      default: false
+    },
+    homeOrder: {
+      type: Number,
+      default: 0
+    },
+    homeTitle: String, // 首页显示的标题，如"手机专区"
+    homeSubtitle: String, // 副标题
+    homeIcon: String, // 首页显示的图标
+    homeColor: String // 主题颜色
+  },
+  
+  // 推荐商品（用于首页等特殊展示）
+  recommendedProducts: [{
+    product: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Product'
+    },
+    order: {
+      type: Number,
+      default: 0
+    },
+    reason: String // 推荐理由，如"热销"、"新品"
+  }],
+  
+  // 分类统计信息
+  stats: {
+    productCount: {
+      type: Number,
+      default: 0
+    },
+    lastUpdated: {
+      type: Date,
+      default: Date.now
+    }
+  }
 }, {
   timestamps: true,
   toJSON: { virtuals: true },
@@ -161,6 +202,69 @@ categorySchema.statics.getCategoryTree = async function() {
   return buildTree(categories);
 };
 
+// 获取首页分类（带推荐商品）
+categorySchema.statics.getHomepageCategories = async function() {
+  const categories = await this.find({ 
+    'homeDisplay.showOnHome': true,
+    isActive: true 
+  })
+  .populate({
+    path: 'recommendedProducts.product',
+    match: { isActive: true },
+    select: 'name price originalPrice memberPrice images rating sales'
+  })
+  .sort({ 'homeDisplay.homeOrder': 1 });
+  
+  return categories;
+};
+
+// 添加推荐商品
+categorySchema.methods.addRecommendedProduct = function(productId, reason = '', order = 0) {
+  // 检查商品是否已存在
+  const existingIndex = this.recommendedProducts.findIndex(
+    item => item.product.toString() === productId.toString()
+  );
+  
+  if (existingIndex > -1) {
+    // 更新现有推荐
+    this.recommendedProducts[existingIndex].reason = reason;
+    this.recommendedProducts[existingIndex].order = order;
+  } else {
+    // 添加新推荐
+    this.recommendedProducts.push({
+      product: productId,
+      reason,
+      order
+    });
+  }
+  
+  // 按order排序
+  this.recommendedProducts.sort((a, b) => a.order - b.order);
+  
+  return this.save();
+};
+
+// 移除推荐商品
+categorySchema.methods.removeRecommendedProduct = function(productId) {
+  this.recommendedProducts = this.recommendedProducts.filter(
+    item => item.product.toString() !== productId.toString()
+  );
+  return this.save();
+};
+
+// 更新商品统计
+categorySchema.methods.updateProductCount = async function() {
+  const Product = require('./Product');
+  const count = await Product.countDocuments({ 
+    category: this._id, 
+    isActive: true 
+  });
+  
+  this.stats.productCount = count;
+  this.stats.lastUpdated = new Date();
+  return this.save();
+};
+
 // 索引
 categorySchema.index({ slug: 1 });
 categorySchema.index({ parent: 1 });
@@ -169,5 +273,6 @@ categorySchema.index({ isActive: 1 });
 categorySchema.index({ isFeatured: 1 });
 categorySchema.index({ sortOrder: 1 });
 categorySchema.index({ path: 1 });
+categorySchema.index({ 'homeDisplay.showOnHome': 1, 'homeDisplay.homeOrder': 1 });
 
 module.exports = mongoose.model('Category', categorySchema); 
