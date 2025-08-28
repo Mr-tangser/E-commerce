@@ -1,138 +1,394 @@
-.page{
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  background-color: #FFFFFF;
-}
-.logo{
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 240rpx;
-  image{
-    width: 160rpx;
-    height: 160rpx;
+/* 登录页面样式 */
+.page {
+  min-height: 100vh;
+  background: url('/static/login_background/login_background.jpg') no-repeat center center;
+  background-size: cover;
+  position: relative;
+  padding: 0 30rpx;
+  box-sizing: border-box;
+  
+  /* 添加半透明遮罩层，确保文字清晰可读 */
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.3);
+    z-index: 1;
+  }
+  
+  /* 确保所有内容在遮罩层之上 */
+  > * {
+    position: relative;
+    z-index: 2;
   }
 }
 
-/* 填写 */
-.input-info{
-  padding: 0 6%;
-  height: 240rpx;
-  .info{
-    display: flex;
-    align-items:center;
-    justify-content: space-between;
-    width: 100%;
-    height: 100rpx;
-    border-bottom: 2rpx solid #f6f6f6;
-    input{
-      width: 70%;
-      height: 100%;
-      font-size: 26rpx;
-      color: #222222;
-    }
-    .more{
-      display: flex;
-      align-items: center;
-      justify-content: flex-end;
-      width: 30%;
-      height: 100%;
-      .iconfont{
-        font-size: 34rpx;
-      }
-      .mo{
-        font-size: 26rpx;
-        padding-left: 20rpx;
-        margin-left: 10rpx;
-        border-left: 2rpx solid #EEEEEE;
-      }
+/* Logo区域 */
+.logo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 100rpx 0 80rpx;
+  
+  image {
+    width: 120rpx;
+    height: 120rpx;
+    border-radius: 20rpx;
+    box-shadow: 0 10rpx 30rpx rgba(0, 0, 0, 0.2);
+  }
+  
+  .app-name {
+    margin-top: 20rpx;
+    font-size: 36rpx;
+    font-weight: bold;
+    color: #ffffff;
+    text-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.3);
+  }
+}
+
+/* 登录方式切换标签 */
+.login-type-tabs {
+  display: flex;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 50rpx;
+  padding: 6rpx;
+  margin-bottom: 60rpx;
+  backdrop-filter: blur(15rpx);
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.2);
+  
+  .tab-item {
+    flex: 1;
+    text-align: center;
+    padding: 20rpx 0;
+    border-radius: 44rpx;
+    font-size: 28rpx;
+    color: rgba(255, 255, 255, 0.7);
+    transition: all 0.3s ease;
+    
+    &.active {
+      background: #ffffff;
+      color: #667eea;
+      font-weight: bold;
+      box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.1);
     }
   }
 }
-/* 按钮 */
-.btn-info{
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 100rpx;
-  .btn{
+
+/* 表单容器 */
+.form-container {
+  margin-bottom: 40rpx;
+}
+
+.form-section {
+      .input-group {
+    position: relative;
+    margin-bottom: 30rpx;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 50rpx;
+    padding: 0 30rpx;
     display: flex;
     align-items: center;
-    justify-content: center;
-    width: 90%;
-    height: 80rpx;
-    background: linear-gradient(to right,$base,$change-clor);
-    border-radius: 100rpx;
-    color: #FFFFFF;
-    font-size: 28rpx;
-    opacity: 0.4;
+    box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.15);
+    backdrop-filter: blur(15rpx);
+    border: 1rpx solid rgba(255, 255, 255, 0.2);
+    
+    .input-icon {
+      font-size: 36rpx;
+      color: #667eea;
+      margin-right: 20rpx;
+      width: 36rpx;
+      text-align: center;
+    }
+    
+    .form-input {
+      flex: 1;
+      height: 88rpx;
+      font-size: 28rpx;
+      color: #333;
+      border: none;
+      background: transparent;
+      
+      &::placeholder {
+        color: #999;
+      }
+    }
+    
+    .password-toggle {
+      font-size: 32rpx;
+      color: #999;
+      padding: 10rpx;
+      margin-right: -10rpx;
+    }
+    
+    .code-btn {
+      font-size: 24rpx;
+      color: #667eea;
+      padding: 15rpx 25rpx;
+      border-radius: 30rpx;
+      background: rgba(102, 126, 234, 0.1);
+      white-space: nowrap;
+      
+      &.disabled {
+        color: #999;
+        background: rgba(153, 153, 153, 0.1);
+      }
+    }
   }
-}
-/* 操作 */
-.operation{
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 6%;
-  height: 80rpx;
-  text{
-    font-size: 28rpx;
-    color: #555555;
+  
+  .login-switch {
+    text-align: center;
+    margin-top: 20rpx;
+    
+    text {
+      font-size: 26rpx;
+      color: rgba(255, 255, 255, 0.8);
+      text-decoration: underline;
+    }
   }
 }
 
-/* 其他 */
-.other-ways{
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  height: 80rpx;
-  margin-top: 100rpx;
-  text{
-    font-size: 28rpx;
-    color: #999999;
+/* 登录按钮 */
+.btn-container {
+  margin-bottom: 40rpx;
+  
+  .login-btn {
+    width: 100%;
+    height: 88rpx;
+    background: rgba(255, 255, 255, 0.2);
+    border: 1rpx solid rgba(255, 255, 255, 0.3);
+    border-radius: 50rpx;
+    font-size: 32rpx;
+    color: rgba(255, 255, 255, 0.8);
+    transition: all 0.3s ease;
+    backdrop-filter: blur(15rpx);
+    
+    &.active {
+      background: #ffffff;
+      color: #667eea;
+      font-weight: bold;
+      box-shadow: 0 6rpx 30rpx rgba(0, 0, 0, 0.2);
+      transform: translateY(-2rpx);
+    }
+    
+    &[disabled] {
+      opacity: 0.5;
+    }
   }
 }
-.other-ways::after{
-  content: "";
-  width: 36%;
-  height: 2rpx;
-  background-color: #EEEEEE;
+
+/* 快捷操作 */
+.quick-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 60rpx;
+  
+  text {
+    font-size: 26rpx;
+    color: rgba(255, 255, 255, 0.8);
+    text-decoration: underline;
+  }
 }
-.other-ways::before{
-  content: "";
-  width: 36%;
-  height: 2rpx;
-  background-color: #EEEEEE;
+
+/* 快速登录方式 */
+.quick-login-section {
+  margin-bottom: 60rpx;
+  
+  .quick-login-title {
+    text-align: center;
+    font-size: 28rpx;
+    color: rgba(255, 255, 255, 0.8);
+    margin-bottom: 30rpx;
+    position: relative;
+    
+    &::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 0;
+      right: 0;
+      height: 1rpx;
+      background: rgba(255, 255, 255, 0.3);
+      z-index: 1;
+    }
+    
+    &::after {
+      content: '快速登录';
+      background: rgba(0, 0, 0, 0.3);
+      padding: 0 30rpx;
+      position: relative;
+      z-index: 2;
+      border-radius: 20rpx;
+      backdrop-filter: blur(10rpx);
+    }
+  }
+  
+  .quick-login-buttons {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 40rpx;
+    flex-wrap: wrap;
+    
+    .quick-login-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 25rpx 20rpx;
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 20rpx;
+      backdrop-filter: blur(15rpx);
+      border: 1rpx solid rgba(255, 255, 255, 0.2);
+      transition: all 0.3s ease;
+      min-width: 120rpx;
+      
+      &:active {
+        transform: scale(0.95);
+        background: rgba(255, 255, 255, 0.25);
+      }
+      
+      .iconfont {
+        font-size: 50rpx;
+        color: #ffffff;
+        margin-bottom: 12rpx;
+        text-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.3);
+      }
+      
+      .login-icon {
+        font-size: 50rpx;
+        margin-bottom: 12rpx;
+        text-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.3);
+        
+        &.fingerprint-icon {
+          // 指纹图标特殊样式
+          filter: drop-shadow(0 0 8rpx rgba(255, 255, 255, 0.5));
+        }
+        
+        &.face-icon {
+          // 人脸图标特殊样式
+          filter: drop-shadow(0 0 8rpx rgba(255, 255, 255, 0.5));
+        }
+      }
+      
+      .quick-login-icon {
+        width: 50rpx;
+        height: 50rpx;
+        margin-bottom: 12rpx;
+        border-radius: 8rpx;
+      }
+      
+      .btn-text {
+        font-size: 22rpx;
+        color: rgba(255, 255, 255, 0.9);
+        text-align: center;
+        line-height: 1.2;
+      }
+    }
+  }
 }
-/* 登录方式 */
-.login-way{
+
+/* 加载遮罩 */
+.loading-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 100%;
-  height: 200rpx;
-  .way{
+  z-index: 9999;
+  
+  .loading-content {
+    background: #ffffff;
+    border-radius: 20rpx;
+    padding: 60rpx 80rpx;
     display: flex;
     flex-direction: column;
-    justify-content: center;
     align-items: center;
-    width: 50%;
-    height: 100%;
-    image{
+    
+    .loading-spinner {
+      width: 60rpx;
+      height: 60rpx;
+      border: 4rpx solid #f3f3f3;
+      border-top: 4rpx solid #667eea;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 20rpx;
+    }
+    
+    .loading-text {
+      font-size: 28rpx;
+      color: #333;
+    }
+  }
+}
+
+/* 动画 */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* 图标字体类 */
+.iconfont {
+  font-family: 'iconfont';
+  
+  &.icon-phone::before { content: '\e600'; }
+  &.icon-code::before { content: '\e601'; }
+  &.icon-lock::before { content: '\e602'; }
+  &.icon-email::before { content: '\e603'; }
+  &.icon-eye-on::before { content: '\e604'; }
+  &.icon-eye-off::before { content: '\e605'; }
+  &.icon-fingerprint::before { content: '\e606'; }
+  &.icon-face::before { content: '\e607'; }
+}
+
+/* 响应式适配 */
+@media screen and (max-width: 750rpx) {
+  .page {
+    padding: 0 20rpx;
+  }
+  
+  .logo {
+    padding: 80rpx 0 60rpx;
+    
+    image {
       width: 100rpx;
       height: 100rpx;
     }
-    text{
-      font-size: 28rpx;
-      color: #959595;
-      margin-top: 20rpx;
+    
+    .app-name {
+      font-size: 32rpx;
+    }
+  }
+  
+  .quick-login-buttons {
+    gap: 30rpx !important;
+    
+    .quick-login-btn {
+      padding: 20rpx 15rpx !important;
+      min-width: 100rpx !important;
+      
+      .iconfont {
+        font-size: 45rpx !important;
+      }
+      
+      .login-icon {
+        font-size: 45rpx !important;
+      }
+      
+      .quick-login-icon {
+        width: 45rpx !important;
+        height: 45rpx !important;
+      }
+      
+      .btn-text {
+        font-size: 20rpx !important;
+      }
     }
   }
 }
