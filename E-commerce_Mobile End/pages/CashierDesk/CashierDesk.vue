@@ -194,10 +194,10 @@
 				
 				try {
 					// 调用后端创建支付宝支付订单
-					const response = await uni.request({
-						url: 'http://localhost:3000/api/payment/alipay/create',
-						method: 'POST',
-						header: {
+								const response = await uni.request({
+				url: 'http://192.168.92.58:3000/api/payment/alipay/create',
+				method: 'POST',
+				header: {
 							'Authorization': `Bearer ${uni.getStorageSync('token')}`,
 							'Content-Type': 'application/json'
 						},
@@ -304,10 +304,10 @@
 						const queryOrderNumber = this.actualOrderNumber || this.orderInfo.orderId;
 						console.log('查询订单号:', queryOrderNumber);
 						
-						const response = await uni.request({
-							url: `http://localhost:3000/api/payment/alipay/query/${queryOrderNumber}`,
-							method: 'GET',
-							header: {
+									const response = await uni.request({
+				url: `http://192.168.92.58:3000/api/payment/alipay/query/${queryOrderNumber}`,
+				method: 'GET',
+				header: {
 								'Authorization': `Bearer ${uni.getStorageSync('token')}`
 							}
 						});

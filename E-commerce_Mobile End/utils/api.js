@@ -1,5 +1,5 @@
 // API工具函数
-const BASE_URL = 'http://localhost:3000/api'
+const BASE_URL = 'http://192.168.92.58:3000/api'
 
 // 通用请求方法
 function request(url, options = {}) {
@@ -16,7 +16,7 @@ function request(url, options = {}) {
         'Authorization': options.token ? `Bearer ${options.token}` : '',
         ...options.header
       },
-      timeout: 10000, // 10秒超时
+      timeout: 30000, // 30秒超时
       success: (res) => {
         console.log(`API请求成功 ${url}:`, res);
         

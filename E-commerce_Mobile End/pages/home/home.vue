@@ -55,7 +55,7 @@
 						<view class="list" v-for="(item,index) in navList"
 						@click="onSkip('menu')"
 						:key="item.id">
-							<image :src="'/static/nav/nav_ico'+(index+1)+'.png'" mode=""></image>
+							<image :src="item.icon || '/static/nav/nav_ico'+(index+1)+'.png'" mode="aspectFill"></image>
 							<text>{{item.name}}</text>
 						</view>
 					</view>
@@ -595,11 +595,11 @@ export default {
 		async testApiConnection() {
 			try {
 				console.log('🔗 测试API连通性...');
-				const testResponse = await uni.request({
-					url: 'http://localhost:3000/api/categories/homepage',
-					method: 'GET',
-					timeout: 5000
-				});
+						const testResponse = await uni.request({
+			url: 'http://192.168.92.58:3000/api/categories/homepage',
+			method: 'GET',
+			timeout: 30000
+		});
 				
 				console.log('🌐 API连通性测试结果:', testResponse);
 				
@@ -626,7 +626,7 @@ export default {
 		async loadHomepageCategories() {
 			try {
 				console.log('🔄 开始加载首页分类数据...');
-				console.log('🌐 API基础URL:', 'http://localhost:3000/api');
+				console.log('🌐 API基础URL:', 'http://192.168.92.58:3000/api');
 				
 				const response = await api.category.getHomepageCategories();
 				console.log('📡 完整API响应:', JSON.stringify(response, null, 2));
