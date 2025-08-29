@@ -422,6 +422,13 @@
             	"navigationBarBackgroundColor": "#FFFFFF"
             }
         }
+        ,{
+            "path" : "pages/waterfallDemo/waterfallDemo",
+            "style" : {
+            	"navigationBarTitleText": "瀑布流演示",
+            	"navigationBarBackgroundColor": "#FFFFFF"
+            }
+        }
     ],
 	"globalStyle": {
 		"navigationBarTextStyle": "black",

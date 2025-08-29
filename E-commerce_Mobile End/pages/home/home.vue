@@ -220,36 +220,22 @@
 						<image src="/static/wntj_title.png" mode=""></image>
 					</view>
 				</view>
-				<view class="goods-list" v-if="goodsList.length > 0">
-					<view class="list" v-for="(item,index) in goodsList" @click="onSkip('goods', item)" :key="item.id || index">
-						<view class="pictrue">
-							<image :src="item.img" mode="heightFix"></image>
-						</view>
-						<view class="title-tag">
-							<view class="tag">
-								<text v-if="item.is_goods === 1">特价</text>
-								{{item.name}}
-							</view>
-						</view>
-						<view class="price-info">
-							<view class="user-price">
-								<text class="min">￥</text>
-								<text class="max">{{item.price}}</text>
-							</view>
-							<view class="vip-price">
-								<image src="/static/vip_ico.png"></image>
-								<text>￥{{item.vip_price}}</text>
-							</view>
-						</view>
-					</view>
-				</view>
+				<!-- 瀑布流商品列表 -->
+				<WaterfallFlow 
+					:dataList="goodsList"
+					:showLoadMore="false"
+					@item-click="onGoodsClick"
+					v-if="!loading"
+				/>
 				<!-- 加载状态 -->
-				<view class="loading-state" v-else-if="loading">
+				<view class="loading-state" v-if="loading">
+					<view class="loading-spinner"></view>
 					<text>正在加载商品...</text>
 				</view>
 				<!-- 空状态 -->
-				<view class="empty-state" v-else>
-					<text>暂无商品数据</text>
+				<view class="empty-state" v-else-if="!loading && goodsList.length === 0">
+					<text class="empty-icon">🛒</text>
+					<text class="empty-text">暂无商品数据</text>
 				</view>
 			</view>
 		</view>
@@ -263,6 +249,7 @@
 <script>
 import TabBar from '../../components/TabBar/TabBar.vue';
 import ClassifyData from '../../components/ClassifyData/ClassifyData.vue';
+import WaterfallFlow from '../../components/WaterfallFlow/WaterfallFlow.vue';
 // 引入mescroll-mixins.js
 import MescrollMixin from "@/components/mescroll-uni/mescroll-mixins.js";
 import api from '@/utils/api.js';
@@ -271,6 +258,7 @@ export default {
 	components:{
 		TabBar,
 		ClassifyData,
+		WaterfallFlow,
 		},
 	data(){
 		return{
@@ -734,6 +722,20 @@ export default {
 				console.error('❌ 加载推荐商品失败:', error);
 				api.handleError(error, '商品数据加载失败');
 			}
+		},
+
+		// 商品点击处理
+		onGoodsClick(item) {
+			console.log('🛒 点击商品:', item.name, item);
+			let goodsUrl = '/pages/GoodsDetails/GoodsDetails';
+			if (item && item.id) {
+				goodsUrl += `?id=${item.id}`;
+			}
+			uni.navigateTo({
+				url: goodsUrl,
+				animationType: 'zoom-fade-out',
+				animationDuration: 200
+			});
 		},
 
 		// 设置默认导航数据
