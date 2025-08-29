@@ -220,8 +220,8 @@
 						<image src="/static/wntj_title.png" mode=""></image>
 					</view>
 				</view>
-				<view class="goods-list">
-					<view class="list" v-for="(item,index) in goodsList" @click="onSkip('goods')" :key="index">
+				<view class="goods-list" v-if="goodsList.length > 0">
+					<view class="list" v-for="(item,index) in goodsList" @click="onSkip('goods', item)" :key="item.id || index">
 						<view class="pictrue">
 							<image :src="item.img" mode="heightFix"></image>
 						</view>
@@ -242,6 +242,14 @@
 							</view>
 						</view>
 					</view>
+				</view>
+				<!-- 加载状态 -->
+				<view class="loading-state" v-else-if="loading">
+					<text>正在加载商品...</text>
+				</view>
+				<!-- 空状态 -->
+				<view class="empty-state" v-else>
+					<text>暂无商品数据</text>
 				</view>
 			</view>
 		</view>
@@ -530,7 +538,7 @@ export default {
 		 * 跳转点击
 		 * @param {String} type 跳转类型
 		 */
-		onSkip(type){
+		onSkip(type, data = null){
 			switch (type){
 				case 'mess':
 					uni.navigateTo({
@@ -560,8 +568,14 @@ export default {
 					})
 					break;
 				case 'goods':
+					// 跳转到商品详情，如果有商品数据则传递ID
+					let goodsUrl = '/pages/GoodsDetails/GoodsDetails';
+					if (data && data.id) {
+						goodsUrl += `?id=${data.id}`;
+						console.log('🔍 跳转商品详情页:', goodsUrl, data);
+					}
 					uni.navigateTo({
-						url: '/pages/GoodsDetails/GoodsDetails',
+						url: goodsUrl,
 						animationType: 'zoom-fade-out',
 						animationDuration: 200
 					})
@@ -692,42 +706,33 @@ export default {
 		// 加载推荐商品数据
 		async loadRecommendedProducts() {
 			try {
-				console.log('开始加载推荐商品数据...');
-				const response = await api.product.getProducts({
-					limit: 20,
-					featured: true // 获取精选商品
-				});
-				console.log('商品API响应:', response);
+				console.log('🛒 开始加载推荐商品数据...');
 				
-				if (response && response.success && response.data && response.data.products) {
+				// 直接获取所有商品，不进行精选过滤
+				const response = await api.product.getProducts({
+					limit: 20
+				});
+				console.log('📦 商品API响应:', response);
+				
+				if (response && response.success && response.data && response.data.products && response.data.products.length > 0) {
 					// 转换商品数据格式
 					const products = response.data.products.map(product => 
 						api.transformers.productToFrontend(product)
 					);
-					this.$set(this, 'goodsList', products);
-					console.log('推荐商品数据加载成功:', products.length, '个商品');
+					
+					// 强制更新数据
+					this.goodsList = products;
+					this.$forceUpdate();
+					
+					console.log('✅ 商品数据加载成功:', products.length, '个商品');
+					console.log('🔍 商品数据预览:', products.slice(0, 2));
+				} else {
+					console.warn('⚠️ 无法获取商品数据');
+					console.log('📊 API响应详情:', JSON.stringify(response, null, 2));
 				}
 			} catch (error) {
-				console.error('获取推荐商品失败:', error);
-				// 如果推荐商品加载失败，尝试加载普通商品列表
-				try {
-					console.log('尝试加载普通商品列表...');
-					const fallbackResponse = await api.product.getProducts({
-						limit: 20
-					});
-					if (fallbackResponse && fallbackResponse.success && fallbackResponse.data && fallbackResponse.data.products) {
-						const products = fallbackResponse.data.products.map(product => 
-							api.transformers.productToFrontend(product)
-						);
-						this.$set(this, 'goodsList', products);
-						console.log('商品数据加载成功（备用方案）:', products.length, '个商品');
-					} else {
-						console.warn('普通商品列表也无法加载，保持现有商品数据');
-					}
-				} catch (fallbackError) {
-					console.error('备用商品加载也失败:', fallbackError);
-					console.warn('保持现有商品数据');
-				}
+				console.error('❌ 加载推荐商品失败:', error);
+				api.handleError(error, '商品数据加载失败');
 			}
 		},
 
