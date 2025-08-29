@@ -1,5 +1,5 @@
 // API工具函数
-const BASE_URL = 'http://192.168.92.58:3000/api'
+const BASE_URL = 'http://192.168.134.128:3000/api'
 
 // 通用请求方法
 function request(url, options = {}) {

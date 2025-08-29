@@ -596,7 +596,7 @@ export default {
 			try {
 				console.log('🔗 测试API连通性...');
 						const testResponse = await uni.request({
-			url: 'http://192.168.92.58:3000/api/categories/homepage',
+			url: 'http://192.168.134.128:3000/api/categories/homepage',
 			method: 'GET',
 			timeout: 30000
 		});
@@ -626,7 +626,7 @@ export default {
 		async loadHomepageCategories() {
 			try {
 				console.log('🔄 开始加载首页分类数据...');
-				console.log('🌐 API基础URL:', 'http://192.168.92.58:3000/api');
+				console.log('🌐 API基础URL:', 'http://192.168.134.128:3000/api');
 				
 				const response = await api.category.getHomepageCategories();
 				console.log('📡 完整API响应:', JSON.stringify(response, null, 2));
