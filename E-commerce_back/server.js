@@ -96,9 +96,10 @@ mongoose.connect(MONGODB_URI, {
   console.log('✅ MongoDB连接成功');
   
   // 启动服务器
-  app.listen(PORT, () => {
+  app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 服务器运行在端口 ${PORT}`);
-    console.log(`📱 开发环境: http://localhost:${PORT}`);
+    console.log(`📱 本地访问: http://localhost:${PORT}`);
+    console.log(`📱 局域网访问: http://192.168.92.58:${PORT}`);
     console.log(`🔍 健康检查: http://localhost:${PORT}/health`);
   });
 })

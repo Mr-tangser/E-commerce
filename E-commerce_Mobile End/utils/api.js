@@ -16,7 +16,7 @@ function request(url, options = {}) {
         'Authorization': options.token ? `Bearer ${options.token}` : '',
         ...options.header
       },
-      timeout: 10000, // 10秒超时
+      timeout: 30000, // 30秒超时
       success: (res) => {
         console.log(`API请求成功 ${url}:`, res);
         
