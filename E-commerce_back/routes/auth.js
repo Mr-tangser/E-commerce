@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
 const User = require('../models/User');
 const { protect } = require('../middleware/auth');
+const smsService = require('../utils/smsService');
 
 const router = express.Router();
 
@@ -92,7 +93,144 @@ router.post('/register', [
   }
 });
 
-// 用户登录
+// 发送手机验证码
+router.post('/send-code', [
+  body('phone')
+    .matches(/^1[3-9]\d{9}$/)
+    .withMessage('请输入有效的手机号码'),
+  body('type')
+    .optional()
+    .isIn(['login', 'register', 'reset-password', 'bind-phone'])
+    .withMessage('验证码类型无效')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: '输入验证失败',
+          details: errors.array()
+        }
+      });
+    }
+
+    const { phone, type = 'login' } = req.body;
+    const clientIP = req.ip || req.connection.remoteAddress || '';
+
+    // 调用SMS服务发送验证码
+    const result = await smsService.sendCode(phone, type, clientIP);
+
+    res.json({
+      success: true,
+      message: result.message,
+      data: result.data
+    });
+
+  } catch (error) {
+    console.error('发送验证码错误:', error);
+    res.status(400).json({
+      success: false,
+      error: {
+        message: error.message || '发送验证码失败，请稍后重试'
+      }
+    });
+  }
+});
+
+// 手机验证码登录
+router.post('/login-by-phone', [
+  body('phone')
+    .matches(/^1[3-9]\d{9}$/)
+    .withMessage('请输入有效的手机号码'),
+  body('code')
+    .isLength({ min: 4, max: 6 })
+    .withMessage('请输入正确的验证码')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: '输入验证失败',
+          details: errors.array()
+        }
+      });
+    }
+
+    const { phone, code } = req.body;
+
+    // 验证验证码
+    const verifyResult = await smsService.verifyCode(phone, code, 'login');
+    
+    if (!verifyResult.success) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: verifyResult.message
+        }
+      });
+    }
+
+    // 查找或创建用户
+    let user = await User.findOne({ phone });
+    
+    if (!user) {
+      // 如果用户不存在，创建新用户
+      user = await User.create({
+        username: `用户${phone.substr(-4)}`,
+        email: `${phone}@temp.com`, // 临时邮箱，用户后续可以修改
+        password: 'temp123456', // 临时密码，用户后续可以修改
+        phone
+      });
+    }
+
+    if (!user.isActive) {
+      return res.status(401).json({
+        success: false,
+        error: {
+          message: '账户已被禁用，请联系管理员'
+        }
+      });
+    }
+
+    // 更新最后登录时间
+    user.lastLogin = new Date();
+    await user.save();
+
+    // 生成令牌
+    const token = generateToken(user._id);
+
+    res.json({
+      success: true,
+      message: '登录成功',
+      data: {
+        user: {
+          id: user._id,
+          username: user.username,
+          email: user.email,
+          phone: user.phone,
+          role: user.role,
+          avatar: user.avatar,
+          lastLogin: user.lastLogin
+        },
+        token
+      }
+    });
+
+  } catch (error) {
+    console.error('手机验证码登录错误:', error);
+    res.status(500).json({
+      success: false,
+      error: {
+        message: '登录失败，请稍后重试'
+      }
+    });
+  }
+});
+
+// 用户登录（邮箱密码）
 router.post('/login', [
   body('email')
     .isEmail()

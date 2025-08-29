@@ -114,11 +114,27 @@ const api = {
 
   // 用户相关
   user: {
-    // 用户登录
-    login(username, password) {
+    // 用户登录（邮箱密码）
+    login(email, password) {
       return request('/auth/login', {
         method: 'POST',
-        data: { username, password }
+        data: { email, password }
+      });
+    },
+    
+    // 手机验证码登录
+    loginByPhone(phone, code) {
+      return request('/auth/login-by-phone', {
+        method: 'POST',
+        data: { phone, code }
+      });
+    },
+    
+    // 发送手机验证码
+    sendCode(phone, type = 'login') {
+      return request('/auth/send-code', {
+        method: 'POST',
+        data: { phone, type }
       });
     },
     

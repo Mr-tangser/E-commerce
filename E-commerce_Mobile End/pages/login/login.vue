@@ -173,6 +173,7 @@
 // 导入工具类
 import BiometricAuth from '@/utils/biometricAuth.js'
 import WechatAuth from '@/utils/wechatAuth.js'
+import api from '@/utils/api.js'
 
 export default {
   data() {
@@ -278,28 +279,27 @@ export default {
         this.loadingText = '发送验证码中...';
         
         // 调用发送验证码API
-        const res = await uni.request({
-          url: 'http://your-api-domain.com/api/auth/send-code',
-          method: 'POST',
-          data: {
-            phone: this.form.phone
-          }
-        });
+        const response = await api.user.sendCode(this.form.phone, 'login');
         
-        if (res.data.code === 200) {
+        if (response.success) {
           uni.showToast({
             title: '验证码已发送',
             icon: 'success'
           });
           this.startCountdown();
+          
+          // 开发环境下显示验证码（仅用于测试）
+          if (response.data && response.data.code) {
+            console.log('验证码:', response.data.code);
+            // 可以在开发环境下自动填入验证码进行测试
+            // this.form.code = response.data.code;
+          }
         } else {
-          throw new Error(res.data.message || '发送失败');
+          throw new Error(response.error?.message || '发送失败');
         }
       } catch (error) {
-        uni.showToast({
-          title: error.message || '发送验证码失败',
-          icon: 'none'
-        });
+        console.error('发送验证码失败:', error);
+        api.handleError(error, '发送验证码失败');
       } finally {
         this.loading = false;
       }
@@ -328,43 +328,27 @@ export default {
         this.loading = true;
         this.loadingText = '登录中...';
         
-        let loginData = {};
+        let response;
         
         if (this.loginType === 'phone') {
           if (this.phoneLoginWay === 'code') {
             // 手机验证码登录
-            loginData = {
-              type: 'phone_code',
-              phone: this.form.phone,
-              code: this.form.code
-            };
+            response = await api.user.loginByPhone(this.form.phone, this.form.code);
           } else {
-            // 手机密码登录
-            loginData = {
-              type: 'phone_password',
-              phone: this.form.phone,
-              password: this.form.password
-            };
+            // 手机密码登录（暂时使用邮箱登录接口，需要用户有邮箱绑定）
+            const userPhone = this.form.phone;
+            // 这里可以先查询用户是否存在，如果不存在提示用户注册
+            response = await api.user.login(`${userPhone}@temp.com`, this.form.password);
           }
         } else {
           // 邮箱登录
-          loginData = {
-            type: 'email',
-            email: this.form.email,
-            password: this.form.emailPassword
-          };
+          response = await api.user.login(this.form.email, this.form.emailPassword);
         }
         
-        const res = await uni.request({
-          url: 'http://your-api-domain.com/api/auth/login',
-          method: 'POST',
-          data: loginData
-        });
-        
-        if (res.data.code === 200) {
+        if (response.success) {
           // 保存登录信息
-          uni.setStorageSync('token', res.data.data.token);
-          uni.setStorageSync('userInfo', res.data.data.userInfo);
+          uni.setStorageSync('token', response.data.token);
+          uni.setStorageSync('userInfo', response.data.user);
           
           uni.showToast({
             title: '登录成功',
@@ -374,17 +358,15 @@ export default {
           // 跳转到首页或返回上一页
           setTimeout(() => {
             uni.switchTab({
-              url: '/pages/index/index'
+              url: '/pages/home/home'
             });
           }, 1500);
         } else {
-          throw new Error(res.data.message || '登录失败');
+          throw new Error(response.error?.message || '登录失败');
         }
       } catch (error) {
-        uni.showToast({
-          title: error.message || '登录失败',
-          icon: 'none'
-        });
+        console.error('登录失败:', error);
+        api.handleError(error, '登录失败');
       } finally {
         this.loading = false;
       }
