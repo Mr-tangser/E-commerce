@@ -51,11 +51,11 @@
 			<!-- 菜单导航 -->
 			<view class="menu-nav">
 				<scroll-view scroll-x @scroll="ScrollMenu" class="nav-list">
-					<view class="nav" ref="nav" :style="navList.length<=10?'flex-direction:row':''">
+					<view class="nav" ref="nav">
 						<view class="list" v-for="(item,index) in navList"
 						@click="onSkip('menu')"
 						:key="item.id">
-							<image :src="'/static/nav/nav_ico'+(index+1)+'.png'" mode=""></image>
+							<image :src="item.icon || '/static/nav/nav_ico'+(index+1)+'.png'" mode="aspectFill"></image>
 							<text>{{item.name}}</text>
 						</view>
 					</view>
@@ -257,6 +257,7 @@ import TabBar from '../../components/TabBar/TabBar.vue';
 import ClassifyData from '../../components/ClassifyData/ClassifyData.vue';
 // 引入mescroll-mixins.js
 import MescrollMixin from "@/components/mescroll-uni/mescroll-mixins.js";
+import api from '@/utils/api.js';
 export default {
   mixins: [MescrollMixin], // 使用mixin
 	components:{
@@ -305,63 +306,13 @@ export default {
 				}
 			],
 			slideNum: 0,
-			navList: [
-				{
-					id: 1,
-					name: '手机专区',
-				},{
-					id: 2,
-					name: '潮牌男装',
-				},{
-					id: 3,
-					name: '运动男装',
-				},{
-					id: 4,
-					name: '时尚背包',
-				},{
-					id: 5,
-					name: '台式电脑',
-				},{
-					id: 6,
-					name: '珠宝首饰',
-				},{
-					id: 7,
-					name: '美颜美妆',
-				},{
-					id: 8,
-					name: '家用电器',
-				},{
-					id: 9,
-					name: '洗护用品',
-				},{
-					id: 10,
-					name: '台式电脑',
-				}
-			],
+			navList: [], // 将从API获取
 			classList: [
 				{
 					id: 0,
 					name: '首页',
-				},{
-					id: 1,
-					name: '手机',
-				},{
-					id: 2,
-					name: '男装',
-				},{
-					id: 3,
-					name: '背包',
-				},{
-					id: 4,
-					name: '电脑',
-				},{
-					id: 5,
-					name: '珠宝',
-				},{
-					id: 6,
-					name: '美妆',
 				}
-			],
+			], // 将从API获取并追加到首页后面
 			goodsList:[
 				{
 					id: 1,
@@ -489,25 +440,13 @@ export default {
 					vip_price: '8200.00',
 					img: '/static/img/goods_thumb_18.png',
 					is_goods: 0,
-				},{
-					id: 1,
-					name: '同仁堂美白祛斑霜套装 淡斑美白祛黄提亮补水保湿套装 男女士护肤美白化妆品套装',
-					price: '288.00',
-					vip_price: '282.00',
-					img: '/static/img/goods_thumb_19.png',
-					is_goods: 0,
-				},{
-					id: 1,
-					name: '【限定款·雕花口红8支礼盒装】中国风口红套装七夕礼物送女朋友老婆生日礼物唇膏唇釉花仙西子同心锁口红 【限定款8支雕花口红】',
-					price: '188.00',
-					vip_price: '99.00',
-					img: '/static/img/goods_thumb_20.png',
-					is_goods: 0,
-				},
-			],
+				}
+			], // goodsList数据临时保留，将通过API替换
 			classifyShow: 0,
 			// 页面高度
 			pageHeight: 500,
+			// 加载状态
+			loading: false,
 		}
 	},
 	onReady() {
@@ -523,7 +462,9 @@ export default {
 		// #endif
 	},
 	onLoad() {
-
+		console.log('首页onLoad执行');
+		// 异步加载真实数据
+		this.loadPageData();
 	},
 	onPageScroll(e){
 		let scrollTop = e.scrollTop;
@@ -626,6 +567,204 @@ export default {
 					})
 					break;
 			}
+		},
+		
+		// 加载页面数据
+		async loadPageData() {
+			console.log('🚀 开始加载页面数据...');
+			this.loading = true;
+			try {
+				// 首先测试API连通性
+				await this.testApiConnection();
+				
+				// 并行加载数据
+				await Promise.all([
+					this.loadHomepageCategories(),
+					this.loadRecommendedProducts()
+				]);
+			} catch (error) {
+				console.error('❌ 加载页面数据失败:', error);
+				api.handleError(error, '加载数据失败');
+			} finally {
+				this.loading = false;
+				console.log('⏹️ 数据加载完成');
+			}
+		},
+
+		// 测试API连通性
+		async testApiConnection() {
+			try {
+				console.log('🔗 测试API连通性...');
+						const testResponse = await uni.request({
+			url: 'http://192.168.92.58:3000/api/categories/homepage',
+			method: 'GET',
+			timeout: 30000
+		});
+				
+				console.log('🌐 API连通性测试结果:', testResponse);
+				
+				// 处理可能的数组响应
+				let actualResponse = testResponse;
+				if (Array.isArray(testResponse) && testResponse.length > 1) {
+					actualResponse = testResponse[1];
+				}
+				
+				if (actualResponse.statusCode === 200) {
+					console.log('✅ API连接正常');
+					console.log('📊 原始API响应数据:', JSON.stringify(actualResponse.data, null, 2));
+					return actualResponse.data;
+				} else {
+					throw new Error(`API连接失败: ${actualResponse.statusCode}`);
+				}
+			} catch (error) {
+				console.error('❌ API连通性测试失败:', error);
+				throw error;
+			}
+		},
+
+		// 加载首页分类和导航数据
+		async loadHomepageCategories() {
+			try {
+				console.log('🔄 开始加载首页分类数据...');
+				console.log('🌐 API基础URL:', 'http://192.168.92.58:3000/api');
+				
+				const response = await api.category.getHomepageCategories();
+				console.log('📡 完整API响应:', JSON.stringify(response, null, 2));
+				
+				if (response && response.success && response.data && response.data.categories) {
+					const categories = response.data.categories;
+					console.log('✅ 获取到分类数据:', categories.length, '个分类');
+					console.log('📦 分类详细数据:', JSON.stringify(categories, null, 2));
+					
+					// 检查每个分类的homeDisplay配置
+					categories.forEach((category, index) => {
+						console.log(`🏷️  分类${index + 1}: ${category.name}`, {
+							showOnHome: category.homeDisplay?.showOnHome,
+							homeTitle: category.homeDisplay?.homeTitle,
+							homeOrder: category.homeDisplay?.homeOrder
+						});
+					});
+					
+					// 过滤出配置了首页显示的分类
+					const homeCategories = categories.filter(cat => 
+						cat.homeDisplay && cat.homeDisplay.showOnHome
+					).sort((a, b) => 
+						(a.homeDisplay.homeOrder || 0) - (b.homeDisplay.homeOrder || 0)
+					);
+					
+					console.log('🏠 首页显示分类:', homeCategories.length, '个');
+					
+					if (homeCategories.length > 0) {
+						// 更新导航数据 (9宫格导航)
+						const navData = api.transformers.categoryToNavigation(homeCategories);
+						console.log('🧭 转换后的导航数据:', navData);
+						this.$set(this, 'navList', navData);
+						
+						// 更新分类标签 (顶部横向滚动标签)
+						const newClassList = api.transformers.categoryToClassList(homeCategories);
+						console.log('🏷️  转换后的分类标签:', newClassList);
+						this.$set(this, 'classList', newClassList);
+						
+						console.log('✅ 首页分类数据加载成功!');
+					} else {
+						console.warn('⚠️ 没有配置首页显示的分类，使用默认数据');
+						this.setDefaultNavigationData();
+					}
+				} else {
+					console.warn('⚠️ API响应格式异常，使用默认数据');
+					console.log('响应结构:', {
+						hasResponse: !!response,
+						hasSuccess: !!(response && response.success),
+						hasData: !!(response && response.data),
+						hasCategories: !!(response && response.data && response.data.categories)
+					});
+					this.setDefaultNavigationData();
+				}
+			} catch (error) {
+				console.error('❌ 获取首页分类失败:', error);
+				console.error('错误详情:', error.message);
+				console.warn('🔄 使用默认导航数据作为降级方案');
+				this.setDefaultNavigationData();
+				// 不再抛出错误，避免阻断其他数据加载
+			}
+		},
+
+		// 加载推荐商品数据
+		async loadRecommendedProducts() {
+			try {
+				console.log('开始加载推荐商品数据...');
+				const response = await api.product.getProducts({
+					limit: 20,
+					featured: true // 获取精选商品
+				});
+				console.log('商品API响应:', response);
+				
+				if (response && response.success && response.data && response.data.products) {
+					// 转换商品数据格式
+					const products = response.data.products.map(product => 
+						api.transformers.productToFrontend(product)
+					);
+					this.$set(this, 'goodsList', products);
+					console.log('推荐商品数据加载成功:', products.length, '个商品');
+				}
+			} catch (error) {
+				console.error('获取推荐商品失败:', error);
+				// 如果推荐商品加载失败，尝试加载普通商品列表
+				try {
+					console.log('尝试加载普通商品列表...');
+					const fallbackResponse = await api.product.getProducts({
+						limit: 20
+					});
+					if (fallbackResponse && fallbackResponse.success && fallbackResponse.data && fallbackResponse.data.products) {
+						const products = fallbackResponse.data.products.map(product => 
+							api.transformers.productToFrontend(product)
+						);
+						this.$set(this, 'goodsList', products);
+						console.log('商品数据加载成功（备用方案）:', products.length, '个商品');
+					} else {
+						console.warn('普通商品列表也无法加载，保持现有商品数据');
+					}
+				} catch (fallbackError) {
+					console.error('备用商品加载也失败:', fallbackError);
+					console.warn('保持现有商品数据');
+				}
+			}
+		},
+
+		// 设置默认导航数据
+		setDefaultNavigationData() {
+			console.log('设置默认导航数据');
+			
+			// 默认10宫格导航数据（2行×5列）
+			const defaultNavList = [
+				{ id: 1, name: '手机专区' },
+				{ id: 2, name: '潮牌男装' },
+				{ id: 3, name: '运动男装' },
+				{ id: 4, name: '时尚背包' },
+				{ id: 5, name: '台式电脑' },
+				{ id: 6, name: '珠宝首饰' },
+				{ id: 7, name: '美颜美妆' },
+				{ id: 8, name: '家用电器' },
+				{ id: 9, name: '洗护用品' },
+				{ id: 10, name: '女装' }
+			];
+			
+			// 默认分类标签数据
+			const defaultClassList = [
+				{ id: 0, name: '首页' },
+				{ id: 1, name: '手机' },
+				{ id: 2, name: '男装' },
+				{ id: 3, name: '背包' },
+				{ id: 4, name: '电脑' },
+				{ id: 5, name: '珠宝' },
+				{ id: 6, name: '美妆' },
+				{ id: 7, name: '女装' }
+			];
+			
+			this.$set(this, 'navList', defaultNavList);
+			this.$set(this, 'classList', defaultClassList);
+			
+			console.log('默认导航数据设置完成');
 		}
 	}
 };

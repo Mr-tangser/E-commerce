@@ -2,16 +2,23 @@
 	<view class="page">
 		<view class="pay-price">
 			<view class="icon">
-				<image src="/static/pay_success.png" mode=""></image>
+				<image :src="paymentResult.status === 'success' ? '/static/pay_success.png' : '/static/pay_fail.png'" mode=""></image>
 			</view>
-			<view class="price-data">
+			<view class="result-text">
+				<text class="result-title">{{paymentResult.status === 'success' ? '支付成功' : '支付失败'}}</text>
+			</view>
+			<view class="price-data" v-if="paymentResult.status === 'success'">
 				<view class="list">
 					<view class="title">支付方式</view>
-					<view class="content">：微信支付</view>
+					<view class="content">：{{paymentResult.paymentMethod}}</view>
 				</view>
 				<view class="list">
 					<view class="title">支付金额</view>
-					<view class="content">：￥299.00</view>
+					<view class="content">：￥{{paymentResult.amount}}</view>
+				</view>
+				<view class="list" v-if="paymentResult.orderNumber">
+					<view class="title">订单号</view>
+					<view class="content">：{{paymentResult.orderNumber}}</view>
 				</view>
 			</view>
 		</view>
@@ -58,6 +65,12 @@
 	export default {
 		data() {
 			return {
+				paymentResult: {
+					status: 'success', // success or fail
+					paymentMethod: '支付宝支付',
+					amount: '299.00',
+					orderNumber: ''
+				},
         goodsList:[
           {
             id: 1,
@@ -201,6 +214,21 @@
             is_goods: 0,
           },
         ],
+			}
+		},
+		onLoad(options) {
+			// 获取支付结果参数
+			if (options.status) {
+				this.paymentResult.status = options.status;
+			}
+			if (options.amount) {
+				this.paymentResult.amount = options.amount;
+			}
+			if (options.orderNumber) {
+				this.paymentResult.orderNumber = options.orderNumber;
+			}
+			if (options.paymentMethod) {
+				this.paymentResult.paymentMethod = decodeURIComponent(options.paymentMethod);
 			}
 		},
 		methods: {

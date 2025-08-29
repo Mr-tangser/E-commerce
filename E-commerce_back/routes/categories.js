@@ -5,6 +5,28 @@ const { protect, authorize } = require('../middleware/auth');
 
 const router = express.Router();
 
+// 获取首页分类（带推荐商品）
+router.get('/homepage', async (req, res) => {
+  try {
+    const categories = await Category.getHomepageCategories();
+    console.log(categories);
+    res.json({
+      success: true,
+      data: {
+        categories
+      }
+    });
+  } catch (error) {
+    console.error('获取首页分类错误:', error);
+    res.status(500).json({
+      success: false,
+      error: {
+        message: '获取首页分类失败'
+      }
+    });
+  }
+});
+
 // 获取所有分类（树形结构）
 router.get('/', async (req, res) => {
   try {
