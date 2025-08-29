@@ -11,7 +11,7 @@ import ListUserPage from "@/pages/Dashboard/Examples/UserManagement/ListUserPage
 
 // Pages
 import RtlSupport from "@/pages/Dashboard/Pages/RtlSupport.vue";
-import Login from "@/pages/Dashboard/Pages/Login.vue";
+import Login from "@/pages/Dashboard/Pages/Login/Login_zhao.vue";
 import Register from "@/pages/Dashboard/Pages/Register.vue";
 
 // Components pages
@@ -108,18 +108,20 @@ let authPages = {
   name: "Authentication",
   children: [
     {
-      path: "/login",
-      name: "Login",
-      component: Login,
-      meta: { middleware: guest }
-    },
-    {
       path: "/register",
       name: "Register",
       component: Register,
       meta: { middleware: guest }
     }
   ]
+};
+
+// 独立的登录页面，不使用AuthLayout
+let loginPage = {
+  path: "/login",
+  name: "Login",
+  component: Login,
+  meta: { middleware: guest }
 };
 
 const routes = [
@@ -143,6 +145,7 @@ const routes = [
   },
   componentsMenu,
   examplesMenu,
+  loginPage,
   authPages
 ];
 
