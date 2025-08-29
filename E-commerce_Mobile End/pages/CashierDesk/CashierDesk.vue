@@ -195,7 +195,7 @@
 				try {
 					// 调用后端创建支付宝支付订单
 								const response = await uni.request({
-				url: 'http://192.168.92.58:3000/api/payment/alipay/create',
+				url: 'http://192.168.157.4:3000/api/payment/alipay/create',
 				method: 'POST',
 				header: {
 							'Authorization': `Bearer ${uni.getStorageSync('token')}`,

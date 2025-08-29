@@ -596,7 +596,7 @@ export default {
 			try {
 				console.log('🔗 测试API连通性...');
 						const testResponse = await uni.request({
-			url: 'http://192.168.92.58:3000/api/categories/homepage',
+			url: 'http://192.168.157.4:3000/api/categories/homepage',
 			method: 'GET',
 			timeout: 30000
 		});
