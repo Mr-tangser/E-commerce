@@ -1,3 +1,6 @@
+// 加载环境变量配置
+require('dotenv').config();
+
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -14,6 +17,7 @@ const productRoutes = require('./routes/products');
 const orderRoutes = require('./routes/orders');
 const categoryRoutes = require('./routes/categories');
 const adminRoutes = require('./routes/admin');
+const paymentRoutes = require('./routes/payment');
 
 // 导入中间件
 const errorHandler = require('./middleware/errorHandler');
@@ -65,6 +69,7 @@ app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/payment', paymentRoutes);
 
 // 健康检查端点
 app.get('/health', (req, res) => {
