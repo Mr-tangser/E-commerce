@@ -9,7 +9,6 @@ const router = express.Router();
 router.get('/homepage', async (req, res) => {
   try {
     const categories = await Category.getHomepageCategories();
-    console.log(categories);
     res.json({
       success: true,
       data: {

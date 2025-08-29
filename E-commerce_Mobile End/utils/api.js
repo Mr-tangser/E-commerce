@@ -1,6 +1,15 @@
 // API工具函数
 const BASE_URL = 'http://192.168.157.4:3000/api'
 
+// 构建查询字符串的兼容性函数
+function buildQuery(params = {}) {
+  const query = Object.keys(params)
+    .filter(key => params[key] !== undefined && params[key] !== null && params[key] !== '')
+    .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`)
+    .join('&');
+  return query;
+}
+
 // 通用请求方法
 function request(url, options = {}) {
   const fullUrl = `${BASE_URL}${url}`;
@@ -64,10 +73,10 @@ const api = {
     
     // 获取分类商品
     getCategoryProducts(categoryId, params = {}) {
-      const query = new URLSearchParams({
+      const query = buildQuery({
         category: categoryId,
         ...params
-      }).toString();
+      });
       return request(`/products?${query}`);
     }
   },
@@ -77,7 +86,7 @@ const api = {
     // 获取商品列表
     getProducts(params = {}) {
       try {
-        const query = new URLSearchParams(params).toString();
+        const query = buildQuery(params);
         console.log('构建商品API查询:', query);
         const url = `/products${query ? '?' + query : ''}`;
         console.log('商品API请求URL:', url);
@@ -95,10 +104,10 @@ const api = {
     
     // 搜索商品
     searchProducts(keyword, params = {}) {
-      const query = new URLSearchParams({
+      const query = buildQuery({
         search: keyword,
         ...params
-      }).toString();
+      });
       return request(`/products/search?${query}`);
     }
   },
@@ -142,7 +151,7 @@ const api = {
     
     // 获取用户订单列表
     getUserOrders(token, params = {}) {
-      const query = new URLSearchParams(params).toString();
+      const query = buildQuery(params);
       return request(`/orders?${query}`, {
         token
       });
