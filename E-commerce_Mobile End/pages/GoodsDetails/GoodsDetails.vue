@@ -1,5 +1,12 @@
 <template>
   <view @click="isMore = false">
+    <!-- 加载状态 -->
+    <view class="loading-overlay" v-if="loading">
+      <view class="loading-content">
+        <view class="loading-spinner"></view>
+        <text>加载商品详情中...</text>
+      </view>
+    </view>
     <view class="goods-head" :style="'background:rgba(255,255,255,' + PageScrollTop / 100 + ')'">
       <!-- 返回 -->
       <view class="back" @click="onBack">
@@ -83,7 +90,12 @@
       </view>
       <!-- 价格 -->
       <view class="price-info" v-show="type==0">
-        <view class="price">
+        <view class="price" v-if="goodsDetail">
+          <text class="min">￥</text>
+          <text class="max">{{ goodsDetail.price ? Math.floor(goodsDetail.price) : '99' }}</text>
+          <text class="min">.{{ goodsDetail.price ? String((goodsDetail.price % 1).toFixed(2)).split('.')[1] : '00' }}</text>
+        </view>
+        <view class="price" v-else>
           <text class="min">￥</text>
           <text class="max">99</text>
           <text class="min">.00</text>
@@ -106,12 +118,20 @@
 						<text class="iconfont icon-flash-sale"></text>
 					</view>
 					<view class="price">
-						<view class="current-price">
+						<view class="current-price" v-if="goodsDetail">
+							<text class="min">￥</text>
+							<text class="max">{{ goodsDetail.memberPrice ? Math.floor(goodsDetail.memberPrice) : (goodsDetail.price ? Math.floor(goodsDetail.price) : '99') }}</text>
+							<text class="min">.{{ goodsDetail.memberPrice ? String((goodsDetail.memberPrice % 1).toFixed(2)).split('.')[1] : (goodsDetail.price ? String((goodsDetail.price % 1).toFixed(2)).split('.')[1] : '00') }}</text>
+						</view>
+						<view class="current-price" v-else>
 							<text class="min">￥</text>
 							<text class="max">99</text>
 							<text class="min">.00</text>
 						</view>
-						<view class="original-price">
+						<view class="original-price" v-if="goodsDetail && goodsDetail.originalPrice">
+							<text>￥{{ goodsDetail.originalPrice.toFixed(2) }}</text>
+						</view>
+						<view class="original-price" v-else>
 							<text>￥149.00</text>
 						</view>
 					</view>
@@ -134,7 +154,8 @@
 			</view>
       <!-- 标题 -->
       <view class="goods-title">
-        <text>美连诚雪纺连衣裙 2020新款女夏裙子波点气质沙滩裙仙气时尚女装休闲衣服大码女装 白底红点 M</text>
+        <text v-if="goodsDetail">{{ goodsDetail.name }}</text>
+        <text v-else>商品加载中...</text>
       </view>
       <!-- 开通会员 -->
       <view class="dredge-vip">
@@ -157,7 +178,8 @@
       <view class="list">
         <view class="title">积分</view>
         <view class="content">
-          <text>购买本商品可获得100积分</text>
+          <text v-if="goodsDetail && goodsDetail.points">购买本商品可获得{{ goodsDetail.points }}积分</text>
+          <text v-else>购买本商品可获得100积分</text>
         </view>
         <view class="more">
           <text class="iconfont icon-more"></text>
@@ -298,7 +320,22 @@
       <view class="title">
         <text>商品介绍</text>
       </view>
-      <view class="content" v-html="web_content"></view>
+      <!-- 商品描述 -->
+      <view class="content" v-if="goodsDetail && goodsDetail.description">
+        <view class="description-text">
+          <text>{{ goodsDetail.description }}</text>
+        </view>
+      </view>
+      <!-- 商品详情HTML内容 -->
+      <view class="content" v-if="goodsDetail && goodsDetail.detailContent">
+        <rich-text :nodes="goodsDetail.detailContent"></rich-text>
+      </view>
+      <!-- 默认内容 -->
+      <view class="content" v-if="!goodsDetail || (!goodsDetail.description && !goodsDetail.detailContent)">
+        <view class="description-text">
+          <text>商品详情加载中...</text>
+        </view>
+      </view>
     </view>
     <!-- 底部 -->
     <view class="page-footer">
@@ -334,6 +371,7 @@
 import GoodsServe from '../../components/GoodsServe/GoodsServe.vue';
 import GoodsCoupon from '../../components/GoodsCoupon/GoodsCoupon.vue';
 import GoodsAttr from '../../components/GoodsAttr/GoodsAttr.vue';
+import api from '@/utils/api.js';
 
 export default {
   components: {
@@ -346,6 +384,11 @@ export default {
       TabShow: 0,
       isMore: false,
       AttentionShow: 0,
+      // 商品详情数据
+      goodsDetail: null,
+      productId: null,
+      loading: true,
+      // 轮播图数据（将从商品详情中获取）
       swiperList: [
         {
           id: 0,
@@ -380,7 +423,20 @@ export default {
     };
   },
 	onLoad(params) {
-		this.type = params.type||0;
+		console.log('🛒 商品详情页参数:', params);
+		this.type = params.type || 0;
+		this.productId = params.id;
+		
+		if (this.productId) {
+			console.log('📦 接收到商品ID:', this.productId);
+			this.loadProductDetail();
+		} else {
+			console.warn('⚠️ 未接收到商品ID参数');
+			uni.showToast({
+				title: '商品ID缺失',
+				icon: 'error'
+			});
+		}
 	},
 	onPageScroll(e) {
 		this.PageScrollTop = e.scrollTop;
@@ -465,6 +521,73 @@ export default {
 			uni.navigateTo({
 				url: '/pages/GoodsEvaluateList/GoodsEvaluateList'
 			})
+		},
+
+		/**
+		 * 加载商品详情数据
+		 */
+		async loadProductDetail() {
+			try {
+				this.loading = true;
+				console.log('🔄 开始加载商品详情，ID:', this.productId);
+				
+				// 调用API获取商品详情
+				const response = await api.product.getProductById(this.productId);
+				console.log('📦 商品详情API响应:', response);
+				
+				if (response && response.success && response.data && response.data.product) {
+					const product = response.data.product;
+					this.goodsDetail = product;
+					
+					console.log('✅ 商品详情加载成功:', product.name);
+					
+					// 更新商品图片轮播数据
+					this.updateProductImages(product);
+					
+					// 更新页面标题
+					uni.setNavigationBarTitle({
+						title: product.name.length > 10 ? product.name.substring(0, 10) + '...' : product.name
+					});
+					
+					console.log('🖼️ 商品图片数量:', product.images?.length || 0);
+					console.log('💰 商品价格:', product.price);
+					
+				} else {
+					console.error('❌ 商品详情数据格式异常');
+					uni.showToast({
+						title: '商品数据加载失败',
+						icon: 'error'
+					});
+				}
+			} catch (error) {
+				console.error('❌ 加载商品详情失败:', error);
+				api.handleError(error, '获取商品详情失败');
+				
+				// 返回上一页
+				setTimeout(() => {
+					uni.navigateBack();
+				}, 2000);
+			} finally {
+				this.loading = false;
+			}
+		},
+
+		/**
+		 * 更新商品图片轮播数据
+		 */
+		updateProductImages(product) {
+			if (product.images && product.images.length > 0) {
+				// 使用真实的商品图片
+				this.swiperList = product.images.map((imageUrl, index) => ({
+					id: index,
+					type: 'image',
+					url: imageUrl
+				}));
+				console.log('🖼️ 更新商品轮播图:', this.swiperList.length, '张图片');
+			} else {
+				console.warn('⚠️ 商品无图片，使用默认图片');
+				// 保持默认图片
+			}
 		}
   }
 };
@@ -472,4 +595,55 @@ export default {
 
 <style scoped lang="scss">
 @import 'GoodsDetails.scss';
+
+/* 加载状态样式 */
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.loading-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  
+  text {
+    margin-top: 20rpx;
+    color: #999;
+    font-size: 28rpx;
+  }
+}
+
+.loading-spinner {
+  width: 60rpx;
+  height: 60rpx;
+  border: 4rpx solid #f3f3f3;
+  border-top: 4rpx solid #fe3b0f;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* 商品描述样式 */
+.description-text {
+  padding: 20rpx 0;
+  line-height: 1.6;
+  
+  text {
+    color: #666;
+    font-size: 28rpx;
+  }
+}
 </style>
