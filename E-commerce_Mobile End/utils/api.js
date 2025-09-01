@@ -1,5 +1,51 @@
 // API工具函数
-const BASE_URL = 'http://192.168.157.4:3000/api'
+import { getAPIBaseURL, CONNECTION_CONFIG, ERROR_MESSAGES } from '@/config/api-config.js';
+
+const BASE_URL = getAPIBaseURL();
+console.log('🔧 API配置初始化:', BASE_URL);
+
+// 网络状态检测
+const checkNetworkStatus = () => {
+  return new Promise((resolve, reject) => {
+    uni.getNetworkType({
+      success: (res) => {
+        console.log('📶 网络类型:', res.networkType);
+        if (res.networkType === 'none') {
+          reject(new Error('网络未连接，请检查网络设置'));
+        } else {
+          resolve(res.networkType);
+        }
+      },
+      fail: (err) => {
+        console.error('获取网络状态失败:', err);
+        resolve('unknown'); // 假设网络可用
+      }
+    });
+  });
+};
+
+// API连接测试
+const testAPIConnection = async (testUrl = BASE_URL) => {
+  try {
+    console.log('🔗 测试API连接:', testUrl);
+    
+    const response = await new Promise((resolve, reject) => {
+      uni.request({
+        url: `${testUrl}/products?limit=1`,
+        method: 'GET',
+        timeout: CONNECTION_CONFIG.timeout,
+        success: resolve,
+        fail: reject
+      });
+    });
+    
+    console.log('✅ API连接测试成功');
+    return true;
+  } catch (error) {
+    console.error('❌ API连接测试失败:', error);
+    return false;
+  }
+};
 
 // 构建查询字符串的兼容性函数
 function buildQuery(params = {}) {
@@ -11,50 +57,67 @@ function buildQuery(params = {}) {
 }
 
 // 通用请求方法
-function request(url, options = {}) {
-  const fullUrl = `${BASE_URL}${url}`;
-  console.log(`发起API请求: ${options.method || 'GET'} ${fullUrl}`);
-  
-  return new Promise((resolve, reject) => {
-    uni.request({
-      url: fullUrl,
-      method: options.method || 'GET',
-      data: options.data || {},
-      header: {
-        'Content-Type': 'application/json',
-        'Authorization': options.token ? `Bearer ${options.token}` : '',
-        ...options.header
-      },
-      timeout: 30000, // 30秒超时
-      success: (res) => {
-        console.log(`API请求成功 ${url}:`, res);
-        
-        // 处理uni.request可能返回数组的情况
-        let actualResponse = res;
-        if (Array.isArray(res) && res.length > 1) {
-          actualResponse = res[1];
+async function request(url, options = {}) {
+  try {
+    // 先检查网络状态
+    await checkNetworkStatus();
+    
+    const fullUrl = `${BASE_URL}${url}`;
+    console.log(`发起API请求: ${options.method || 'GET'} ${fullUrl}`);
+    
+    return new Promise((resolve, reject) => {
+      uni.request({
+        url: fullUrl,
+        method: options.method || 'GET',
+        data: options.data || {},
+        header: {
+          'Content-Type': 'application/json',
+          'Authorization': options.token ? `Bearer ${options.token}` : '',
+          ...options.header
+        },
+        timeout: CONNECTION_CONFIG.timeout,
+        success: (res) => {
+          console.log(`API请求成功 ${url}:`, res);
+          
+          // 处理uni.request可能返回数组的情况
+          let actualResponse = res;
+          if (Array.isArray(res) && res.length > 1) {
+            actualResponse = res[1];
+          }
+          
+          if (actualResponse.statusCode === 200) {
+            console.log(`API响应数据:`, actualResponse.data);
+            resolve(actualResponse.data);
+          } else {
+            console.error(`API请求失败 ${url}:`, actualResponse);
+            const errorMsg = actualResponse.data?.error?.message || `服务器错误(${actualResponse.statusCode})`;
+            reject(new Error(errorMsg));
+          }
+        },
+        fail: (err) => {
+          console.error(`API请求异常 ${url}:`, err);
+          let errorMessage = '网络连接失败';
+          
+          if (err.errMsg) {
+            if (err.errMsg.includes('timeout')) {
+              errorMessage = '请求超时，请检查网络连接';
+            } else if (err.errMsg.includes('fail')) {
+              errorMessage = '无法连接到服务器，请检查网络或服务器状态';
+            } else if (err.errMsg.includes('abort')) {
+              errorMessage = '请求被取消';
+            } else {
+              errorMessage = `网络错误: ${err.errMsg}`;
+            }
+          }
+          
+          reject(new Error(errorMessage));
         }
-        
-        if (actualResponse.statusCode === 200) {
-          console.log(`API响应数据:`, actualResponse.data);
-          resolve(actualResponse.data);
-        } else {
-          console.error(`API请求失败 ${url}:`, actualResponse);
-          reject(new Error(`请求失败: ${actualResponse.statusCode} - ${actualResponse.data?.error?.message || '未知错误'}`));
-        }
-      },
-      fail: (err) => {
-        console.error(`API请求异常 ${url}:`, err);
-        if (err.errMsg && err.errMsg.includes('timeout')) {
-          reject(new Error('请求超时，请检查网络连接'));
-        } else if (err.errMsg && err.errMsg.includes('fail')) {
-          reject(new Error('网络连接失败，请检查服务器是否运行'));
-        } else {
-          reject(new Error(`网络错误: ${err.errMsg || '未知错误'}`));
-        }
-      }
+      });
     });
-  });
+  } catch (networkError) {
+    console.error('网络检测失败:', networkError);
+    throw networkError;
+  }
 }
 
 // API方法
@@ -109,6 +172,34 @@ const api = {
         ...params
       });
       return request(`/products/search?${query}`);
+    },
+
+    // 获取推荐商品
+    getRecommendedProducts(params = {}) {
+      const query = buildQuery(params);
+      return request(`/products/recommended?${query}`);
+    },
+
+    // 基于浏览历史获取推荐商品
+    getRecommendationsByHistory(browsingParams = {}) {
+      return request('/products/recommendations/history', {
+        method: 'POST',
+        data: browsingParams
+      });
+    },
+
+    // 获取相似商品
+    getSimilarProducts(productId, params = {}) {
+      const query = buildQuery(params);
+      return request(`/products/${productId}/similar?${query}`);
+    },
+
+    // 获取新品推荐
+    getNewProductRecommendations(params = {}) {
+      return request('/products/recommendations/new', {
+        method: 'POST',
+        data: params
+      });
     }
   },
 
@@ -186,6 +277,33 @@ const api = {
     // 测试支付接口连通性
     testPayment() {
       return request('/payment/test');
+    }
+  },
+
+  // 系统相关
+  system: {
+    // 检查网络状态
+    checkNetworkStatus,
+    
+    // 测试API连接
+    testAPIConnection,
+    
+    // 获取当前API地址
+    getAPIUrl() {
+      return BASE_URL;
+    },
+    
+    // 获取系统信息
+    getSystemInfo() {
+      return new Promise((resolve, reject) => {
+        uni.getSystemInfo({
+          success: (res) => {
+            console.log('📱 系统信息:', res);
+            resolve(res);
+          },
+          fail: reject
+        });
+      });
     }
   }
 };

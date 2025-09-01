@@ -2,6 +2,7 @@ const express = require('express');
 const { body, validationResult } = require('express-validator');
 const Product = require('../models/Product');
 const { protect, authorize, optionalAuth } = require('../middleware/auth');
+const RecommendationEngine = require('../utils/recommendation');
 
 const router = express.Router();
 
@@ -79,6 +80,106 @@ router.get('/', optionalAuth, async (req, res) => {
       success: false,
       error: {
         message: '获取产品列表失败'
+      }
+    });
+  }
+});
+
+// 获取推荐商品 - 必须在 /:id 路由之前
+router.get('/recommended', optionalAuth, async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 10;
+    
+    // 获取通用推荐商品（精选、热销、高评分等）
+    const recommendations = await RecommendationEngine.getFallbackRecommendations(limit);
+    
+    res.json({
+      success: true,
+      data: {
+        products: recommendations,
+        total: recommendations.length,
+        type: 'general_recommendation'
+      }
+    });
+  } catch (error) {
+    console.error('获取推荐商品错误:', error);
+    res.status(500).json({
+      success: false,
+      error: {
+        message: '获取推荐商品失败'
+      }
+    });
+  }
+});
+
+// 基于浏览历史的个性化推荐 - 必须在 /:id 路由之前
+router.post('/recommendations/history', async (req, res) => {
+  try {
+    const { recentProductIds = [], preferredCategories = [], historySize = 0 } = req.body;
+    const limit = parseInt(req.query.limit) || 10;
+    
+    console.log('📊 收到推荐请求:', { recentProductIds, preferredCategories, historySize, limit });
+    
+    let recommendations;
+    
+    if (recentProductIds.length > 0 || preferredCategories.length > 0) {
+      // 基于浏览历史的个性化推荐
+      recommendations = await RecommendationEngine.getRecommendationsByHistory({
+        recentProductIds,
+        preferredCategories,
+        historySize
+      }, limit);
+    } else {
+      // 没有浏览历史，返回通用推荐
+      recommendations = await RecommendationEngine.getFallbackRecommendations(limit);
+    }
+    
+    res.json({
+      success: true,
+      data: {
+        products: recommendations,
+        total: recommendations.length,
+        type: recentProductIds.length > 0 ? 'personalized' : 'general',
+        basedOn: {
+          recentProducts: recentProductIds.length,
+          preferredCategories: preferredCategories.length,
+          historySize
+        }
+      }
+    });
+  } catch (error) {
+    console.error('个性化推荐错误:', error);
+    res.status(500).json({
+      success: false,
+      error: {
+        message: '获取个性化推荐失败'
+      }
+    });
+  }
+});
+
+// 获取新品推荐 - 必须在 /:id 路由之前
+router.post('/recommendations/new', async (req, res) => {
+  try {
+    const { preferredCategories = [] } = req.body;
+    const limit = parseInt(req.query.limit) || 8;
+    
+    const newProducts = await RecommendationEngine.getNewProductRecommendations(preferredCategories, limit);
+    
+    res.json({
+      success: true,
+      data: {
+        products: newProducts,
+        total: newProducts.length,
+        type: 'new_products'
+      }
+    });
+  } catch (error) {
+    console.error('获取新品推荐错误:', error);
+    res.status(500).json({
+      success: false,
+      error: {
+        message: '获取新品推荐失败'
       }
     });
   }
@@ -388,6 +489,35 @@ router.get('/:id/reviews', async (req, res) => {
       success: false,
       error: {
         message: '获取产品评论失败'
+      }
+    });
+  }
+});
+
+// 获取相似商品 - 这个路由应该在 /:id 路由之后，因为它使用了 /:id/similar 模式
+router.get('/:id/similar', optionalAuth, async (req, res) => {
+  try {
+    const productId = req.params.id;
+    const limit = parseInt(req.query.limit) || 6;
+    
+    // 获取相似商品
+    const similarProducts = await RecommendationEngine.getSimilarProductsByIds([productId], limit);
+    
+    res.json({
+      success: true,
+      data: {
+        products: similarProducts,
+        total: similarProducts.length,
+        type: 'similar_products',
+        baseProductId: productId
+      }
+    });
+  } catch (error) {
+    console.error('获取相似商品错误:', error);
+    res.status(500).json({
+      success: false,
+      error: {
+        message: '获取相似商品失败'
       }
     });
   }

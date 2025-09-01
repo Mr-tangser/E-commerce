@@ -4,7 +4,7 @@
     <view class="waterfall-column left-column">
       <view 
         v-for="(item, index) in leftColumnData" 
-        :key="item.id || index"
+        :key="`left-${item.id || index}`"
         class="waterfall-item"
         @click="onItemClick(item)"
       >
@@ -47,7 +47,7 @@
     <view class="waterfall-column right-column">
       <view 
         v-for="(item, index) in rightColumnData" 
-        :key="item.id || index"
+        :key="`right-${item.id || index}`"
         class="waterfall-item"
         @click="onItemClick(item)"
       >
@@ -334,6 +334,7 @@ export default {
     line-height: 1.4;
     display: -webkit-box;
     -webkit-line-clamp: 2;
+    line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
     text-overflow: ellipsis;

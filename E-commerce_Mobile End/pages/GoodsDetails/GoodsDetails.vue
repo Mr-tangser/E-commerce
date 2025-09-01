@@ -296,25 +296,7 @@
         </view>
       </view>
     </view>
-    <!-- 排行榜 -->
-    <view class="ranking-list">
-      <view class="ranking-title">
-        <view class="title">排行榜</view>
-      </view>
-      <view class="goods-list">
-        <view class="list" v-for="(item, index) in 6" :key="index">
-          <view class="thumb">
-            <image :src="'/static/img/goods_thumb_0'+(index+1)+'.png'"></image>
-          </view>
-          <view class="title">
-            <text class="two-omit">美连诚雪纺连衣裙 2020新款女夏裙子波点气质沙滩裙仙气时尚女装休闲衣服大码女装 白底红点 M</text>
-          </view>
-          <view class="price">
-            <text>￥121.00</text>
-          </view>
-        </view>
-      </view>
-    </view>
+
     <!-- 商品介绍 -->
     <view class="products-introduction" ref="products">
       <view class="title">
@@ -372,6 +354,7 @@ import GoodsServe from '../../components/GoodsServe/GoodsServe.vue';
 import GoodsCoupon from '../../components/GoodsCoupon/GoodsCoupon.vue';
 import GoodsAttr from '../../components/GoodsAttr/GoodsAttr.vue';
 import api from '@/utils/api.js';
+import BrowsingHistory from '@/utils/browsing-history.js';
 
 export default {
   components: {
@@ -388,6 +371,7 @@ export default {
       goodsDetail: null,
       productId: null,
       loading: true,
+
       // 轮播图数据（将从商品详情中获取）
       swiperList: [
         {
@@ -549,6 +533,9 @@ export default {
 						title: product.name.length > 10 ? product.name.substring(0, 10) + '...' : product.name
 					});
 					
+					// 记录商品浏览历史
+					this.recordBrowsingHistory(product);
+					
 					console.log('🖼️ 商品图片数量:', product.images?.length || 0);
 					console.log('💰 商品价格:', product.price);
 					
@@ -587,6 +574,33 @@ export default {
 			} else {
 				console.warn('⚠️ 商品无图片，使用默认图片');
 				// 保持默认图片
+			}
+		},
+
+		/**
+		 * 记录商品浏览历史
+		 */
+		recordBrowsingHistory(product) {
+			try {
+				const historyItem = {
+					id: product._id,
+					name: product.name,
+					price: product.price,
+					img: product.images && product.images.length > 0 ? product.images[0] : '/static/img/default_product.png',
+					category: product.category?.name || product.category,
+					subcategory: product.subcategory?.name || product.subcategory,
+					tags: product.tags || []
+				};
+				
+				BrowsingHistory.addProduct(historyItem);
+				console.log('📖 商品浏览记录已保存:', product.name);
+				
+				// 可选：获取并打印浏览统计
+				const stats = BrowsingHistory.getStatistics();
+				console.log('📊 浏览记录统计:', stats);
+				
+			} catch (error) {
+				console.error('❌ 记录浏览历史失败:', error);
 			}
 		}
   }
@@ -646,4 +660,6 @@ export default {
     font-size: 28rpx;
   }
 }
+
+
 </style>
