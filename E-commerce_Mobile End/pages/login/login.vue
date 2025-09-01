@@ -180,8 +180,8 @@ export default {
     return {
       // 登录类型：phone(手机) / email(邮箱)
       loginType: 'phone',
-      // 手机登录方式：code(验证码) / password(密码)
-      phoneLoginWay: 'code',
+      // 手机登录方式：code(验证码) / password(密码) - 默认密码登录更常用
+      phoneLoginWay: 'password',
       // 是否显示密码
       showPassword: false,
       // 验证码倒计时
@@ -335,10 +335,8 @@ export default {
             // 手机验证码登录
             response = await api.user.loginByPhone(this.form.phone, this.form.code);
           } else {
-            // 手机密码登录（暂时使用邮箱登录接口，需要用户有邮箱绑定）
-            const userPhone = this.form.phone;
-            // 这里可以先查询用户是否存在，如果不存在提示用户注册
-            response = await api.user.login(`${userPhone}@temp.com`, this.form.password);
+            // 手机密码登录
+            response = await api.user.loginByPhonePassword(this.form.phone, this.form.password);
           }
         } else {
           // 邮箱登录
@@ -355,11 +353,21 @@ export default {
             icon: 'success'
           });
           
-          // 跳转到首页或返回上一页
+          // 检查是否需要完善个人信息
+          const user = response.data.user;
+          const needProfile = !user.address || !user.address.receiverName || !user.address.province;
+          
+          // 跳转逻辑：如果用户信息不完整，跳转到完善信息页面，否则跳转到首页
           setTimeout(() => {
-            uni.switchTab({
-              url: '/pages/home/home'
-            });
+            if (needProfile) {
+              uni.navigateTo({
+                url: '/pages/UserProfile/UserProfile'
+              });
+            } else {
+              uni.switchTab({
+                url: '/pages/home/home'
+              });
+            }
           }, 1500);
         } else {
           throw new Error(response.error?.message || '登录失败');
@@ -383,20 +391,40 @@ export default {
         const result = await WechatAuth.login();
         
         if (result.success) {
-          // 保存登录信息
-          uni.setStorageSync('token', result.data.token);
-          uni.setStorageSync('userInfo', result.data.userInfo);
+          // 调用后端微信登录接口
+          const wechatResponse = await api.user.wechatLogin(
+            result.code,
+            result.phoneNumber, // 从微信获取的手机号
+            result.encryptedData,
+            result.iv
+          );
           
-          uni.showToast({
-            title: '登录成功',
-            icon: 'success'
-          });
+          if (wechatResponse.success) {
+            // 保存登录信息
+            uni.setStorageSync('token', wechatResponse.data.token);
+            uni.setStorageSync('userInfo', wechatResponse.data.user);
           
-          setTimeout(() => {
-            uni.switchTab({
-              url: '/pages/index/index'
+            uni.showToast({
+              title: '登录成功',
+              icon: 'success'
             });
-          }, 1500);
+          
+            // 检查是否需要完善个人信息
+            const user = wechatResponse.data.user || {};
+            const needProfile = !user.address || !user.address.receiverName || !user.address.province;
+          
+            setTimeout(() => {
+              if (needProfile) {
+                uni.navigateTo({
+                  url: '/pages/UserProfile/UserProfile'
+                });
+              } else {
+                uni.switchTab({
+                  url: '/pages/home/home'
+                });
+              }
+            }, 1500);
+          }
         }
       } catch (error) {
         uni.showToast({
@@ -518,10 +546,20 @@ export default {
             icon: 'success'
           });
           
+          // 检查是否需要完善个人信息
+          const user = res.data.data.userInfo || {};
+          const needProfile = !user.address || !user.address.receiverName || !user.address.province;
+          
           setTimeout(() => {
-            uni.switchTab({
-              url: '/pages/index/index'
-            });
+            if (needProfile) {
+              uni.navigateTo({
+                url: '/pages/UserProfile/UserProfile'
+              });
+            } else {
+              uni.switchTab({
+                url: '/pages/home/home'
+              });
+            }
           }, 1500);
         }
       }

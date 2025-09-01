@@ -51,16 +51,38 @@ const userSchema = new mongoose.Schema({
   // 手机号码
   phone: {
     type: String,
-    trim: true                       // 自动去除首尾空格
+    unique: true,                    // 确保手机号唯一
+    sparse: true,                    // 允许null值但唯一
+    trim: true,                      // 自动去除首尾空格
+    match: [/^1[3-9]\d{9}$/, '请输入有效的手机号码']
+  },
+
+  // 性别
+  gender: {
+    type: String,
+    enum: ['male', 'female'],
+    default: null
+  },
+
+  // 生日
+  birthday: {
+    type: Date,
+    default: null
   },
 
   // 用户地址信息
   address: {
-    street: String,                  // 街道地址
+    receiverName: String,            // 收货人姓名
+    receiverPhone: String,           // 收货人电话
+    province: String,                // 省份
     city: String,                    // 城市
-    state: String,                   // 省份/州
+    district: String,                // 区/县
+    street: String,                  // 街道地址
     zipCode: String,                 // 邮政编码
-    country: String                  // 国家
+    country: {
+      type: String,
+      default: 'China'               // 默认中国
+    }
   },
 
   // 账户状态

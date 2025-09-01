@@ -1,5 +1,5 @@
 // API工具函数
-const BASE_URL = 'http://192.168.134.128:3000/api'
+const BASE_URL = 'http://192.168.160.128:3000/api'
 
 // 构建查询字符串的兼容性函数
 function buildQuery(params = {}) {
@@ -35,7 +35,8 @@ function request(url, options = {}) {
           actualResponse = res[1];
         }
         
-        if (actualResponse.statusCode === 200) {
+        // 检查成功状态码范围（200-299）
+        if (actualResponse.statusCode >= 200 && actualResponse.statusCode < 300) {
           console.log(`API响应数据:`, actualResponse.data);
           resolve(actualResponse.data);
         } else {
@@ -130,6 +131,22 @@ const api = {
       });
     },
     
+    // 手机密码登录
+    loginByPhonePassword(phone, password) {
+      return request('/auth/login-by-phone-password', {
+        method: 'POST',
+        data: { phone, password }
+      });
+    },
+    
+    // 微信登录
+    wechatLogin(code, phoneNumber, encryptedData, iv) {
+      return request('/auth/wechat-login', {
+        method: 'POST',
+        data: { code, phoneNumber, encryptedData, iv }
+      });
+    },
+    
     // 发送手机验证码
     sendCode(phone, type = 'login') {
       return request('/auth/send-code', {
@@ -143,6 +160,15 @@ const api = {
       return request('/auth/register', {
         method: 'POST',
         data: userData
+      });
+    },
+    
+    // 更新用户信息
+    updateUserInfo(userInfo, token) {
+      return request('/users/profile', {
+        method: 'PUT',
+        data: userInfo,
+        token
       });
     },
     

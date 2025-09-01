@@ -101,3 +101,4 @@ smsCodeSchema.index({ createdAt: 1 });
 
 // 导出短信验证码模型
 module.exports = mongoose.model('SmsCode', smsCodeSchema);
+

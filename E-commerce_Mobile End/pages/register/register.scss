@@ -1,137 +1,301 @@
-.page{
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  background-color: #FFFFFF;
-}
-.logo{
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 240rpx;
-  image{
-    width: 160rpx;
-    height: 160rpx;
+/* 注册页面样式 */
+.page {
+  min-height: 100vh;
+  background: url('/static/register_background/register_background.png') no-repeat center center;
+  background-size: cover;
+  position: relative;
+  padding: 0 30rpx;
+  box-sizing: border-box;
+  
+  /* 添加半透明遮罩层，确保文字清晰可读 */
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.3);
+    z-index: 1;
   }
-}
-/* 填写 */
-.input-info{
-  padding: 0 6%;
-  .info{
-    display: flex;
-    align-items:center;
-    justify-content: space-between;
-    width: 100%;
-    height: 100rpx;
-    border-bottom: 2rpx solid #f6f6f6;
-    input{
-      width: 70%;
-      height: 100%;
-      font-size: 26rpx;
-      color: #222222;
-    }
-    .more{
-      display: flex;
-      align-items: center;
-      justify-content: flex-end;
-      width: 30%;
-      height: 100%;
-      .iconfont{
-        font-size: 34rpx;
-      }
-      .mo{
-        font-size: 26rpx;
-        padding-left: 20rpx;
-        margin-left: 10rpx;
-        border-left: 2rpx solid #EEEEEE;
-      }
-    }
-  }
-}
-/* 按钮 */
-.btn-info{
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 100rpx;
-  margin-top: 40rpx;
-  .btn{
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 90%;
-    height: 80rpx;
-    background: linear-gradient(to right,$base,$change-clor);
-    border-radius: 100rpx;
-    color: #FFFFFF;
-    font-size: 28rpx;
-    opacity: 0.4;
-  }
-}
-/* 操作 */
-.operation{
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 6%;
-  height: 80rpx;
-  text{
-    font-size: 28rpx;
-    color: #555555;
+  
+  /* 确保所有内容在遮罩层之上 */
+  > * {
+    position: relative;
+    z-index: 2;
   }
 }
 
-/* 其他 */
-.other-ways{
+/* Logo区域 */
+.logo {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  height: 80rpx;
-  margin-top: 100rpx;
-  text{
-    font-size: 28rpx;
-    color: #999999;
+  padding: 80rpx 0 60rpx;
+  
+  image {
+    width: 120rpx;
+    height: 120rpx;
+    border-radius: 20rpx;
+    box-shadow: 0 10rpx 30rpx rgba(0, 0, 0, 0.2);
+  }
+  
+  .app-name {
+    margin-top: 20rpx;
+    font-size: 36rpx;
+    font-weight: bold;
+    color: #ffffff;
+    text-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.3);
   }
 }
-.other-ways::after{
-  content: "";
-  width: 36%;
-  height: 2rpx;
-  background-color: #EEEEEE;
+
+/* 表单容器 */
+.form-container {
+  margin-bottom: 30rpx;
+  
+  .input-group {
+    position: relative;
+    margin-bottom: 25rpx;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 50rpx;
+    padding: 0 30rpx;
+    display: flex;
+    align-items: center;
+    box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.15);
+    backdrop-filter: blur(15rpx);
+    border: 1rpx solid rgba(255, 255, 255, 0.2);
+    
+    .input-icon {
+      font-size: 36rpx;
+      color: #667eea;
+      margin-right: 20rpx;
+      width: 36rpx;
+      text-align: center;
+    }
+    
+    .form-input {
+      flex: 1;
+      height: 88rpx;
+      font-size: 28rpx;
+      color: #333;
+      border: none;
+      background: transparent;
+      
+      &::placeholder {
+        color: #999;
+        font-size: 26rpx;
+      }
+    }
+    
+    .password-toggle {
+      font-size: 32rpx;
+      color: #999;
+      padding: 10rpx;
+      margin-right: -10rpx;
+    }
+    
+    .code-btn {
+      font-size: 24rpx;
+      color: #667eea;
+      padding: 15rpx 25rpx;
+      border-radius: 30rpx;
+      background: rgba(102, 126, 234, 0.1);
+      white-space: nowrap;
+      
+      &.disabled {
+        color: #999;
+        background: rgba(153, 153, 153, 0.1);
+      }
+    }
+  }
 }
-.other-ways::before{
-  content: "";
-  width: 36%;
-  height: 2rpx;
-  background-color: #EEEEEE;
+
+/* 协议条款 */
+.agreement {
+  margin-bottom: 30rpx;
+  
+  .agreement-check {
+    display: flex;
+    align-items: flex-start;
+    padding: 0 10rpx;
+    
+    .checkbox {
+      width: 36rpx;
+      height: 36rpx;
+      border: 2rpx solid rgba(255, 255, 255, 0.6);
+      border-radius: 6rpx;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 15rpx;
+      background: transparent;
+      color: transparent;
+      font-size: 24rpx;
+      transition: all 0.3s ease;
+      flex-shrink: 0;
+      margin-top: 2rpx;
+      
+      &.checked {
+        background: #ffffff;
+        color: #667eea;
+        border-color: #ffffff;
+        font-weight: bold;
+      }
+    }
+    
+    .agreement-text {
+      font-size: 26rpx;
+      color: rgba(255, 255, 255, 0.9);
+      line-height: 1.5;
+      flex: 1;
+      
+      .link-text {
+        color: #ffffff;
+        text-decoration: underline;
+        font-weight: bold;
+      }
+    }
+  }
 }
-/* 登录方式 */
-.login-way{
+
+/* 注册按钮 */
+.btn-container {
+  margin-bottom: 40rpx;
+  
+  .register-btn {
+    width: 100%;
+    height: 88rpx;
+    background: rgba(255, 255, 255, 0.2);
+    border: 1rpx solid rgba(255, 255, 255, 0.3);
+    border-radius: 50rpx;
+    font-size: 32rpx;
+    color: rgba(255, 255, 255, 0.8);
+    transition: all 0.3s ease;
+    backdrop-filter: blur(15rpx);
+    
+    &.active {
+      background: #ffffff;
+      color: #667eea;
+      font-weight: bold;
+      box-shadow: 0 6rpx 30rpx rgba(0, 0, 0, 0.2);
+      transform: translateY(-2rpx);
+    }
+    
+    &[disabled] {
+      opacity: 0.5;
+    }
+  }
+}
+
+/* 快捷操作 */
+.quick-actions {
+  text-align: center;
+  margin-bottom: 40rpx;
+  
+  text {
+    font-size: 26rpx;
+    color: rgba(255, 255, 255, 0.8);
+    text-decoration: underline;
+  }
+}
+
+/* 加载遮罩 */
+.loading-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 100%;
-  height: 200rpx;
-  .way{
+  z-index: 9999;
+  
+  .loading-content {
+    background: #ffffff;
+    border-radius: 20rpx;
+    padding: 60rpx 80rpx;
     display: flex;
     flex-direction: column;
-    justify-content: center;
     align-items: center;
-    width: 50%;
-    height: 100%;
-    image{
+    
+    .loading-spinner {
+      width: 60rpx;
+      height: 60rpx;
+      border: 4rpx solid #f3f3f3;
+      border-top: 4rpx solid #667eea;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 20rpx;
+    }
+    
+    .loading-text {
+      font-size: 28rpx;
+      color: #333;
+    }
+  }
+}
+
+/* 动画 */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* 图标字体类 */
+.iconfont {
+  font-family: 'iconfont';
+  
+  &.icon-user::before { content: '👤'; }
+  &.icon-phone::before { content: '📱'; }
+  &.icon-code::before { content: '🔢'; }
+  &.icon-lock::before { content: '🔒'; }
+  &.icon-email::before { content: '📧'; }
+  &.icon-eye-on::before { content: '👁'; }
+  &.icon-eye-off::before { content: '🙈'; }
+}
+
+/* 响应式适配 */
+@media screen and (max-width: 750rpx) {
+  .page {
+    padding: 0 20rpx;
+  }
+  
+  .logo {
+    padding: 60rpx 0 40rpx;
+    
+    image {
       width: 100rpx;
       height: 100rpx;
     }
-    text{
-      font-size: 28rpx;
-      color: #959595;
-      margin-top: 20rpx;
+    
+    .app-name {
+      font-size: 32rpx;
+    }
+  }
+  
+  .form-container {
+    .input-group {
+      margin-bottom: 20rpx;
+      padding: 0 25rpx;
+      
+      .form-input {
+        height: 80rpx;
+        font-size: 26rpx;
+      }
+      
+      .input-icon {
+        font-size: 32rpx;
+      }
+    }
+  }
+  
+  .agreement {
+    .agreement-check {
+      .agreement-text {
+        font-size: 24rpx;
+      }
     }
   }
 }
