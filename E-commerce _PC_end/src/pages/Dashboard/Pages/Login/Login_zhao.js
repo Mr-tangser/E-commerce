@@ -7,8 +7,8 @@ export default {
     return {
       images: [],
       videoFrames: { frame: 0 },
-      frameCount: 360,
-      imagesToLoad: 360,
+      frameCount: 600,
+      imagesToLoad: 600,
       context: null,
       lenis: null,
       // 表单控制
@@ -80,8 +80,26 @@ export default {
       this.context.scale(pixelRatio, pixelRatio);
     },
 
+    // 获取当前时间对应的文件夹
+    getCurrentTimeFolder() {
+      const now = new Date();
+      const hour = now.getHours();
+      
+      if (hour >= 0 && hour < 6) {
+        return 'Loading_early_morning'; // 凌晨 00:00-05:59
+      } else if (hour >= 6 && hour < 12) {
+        return 'Loading_Morning';       // 上午 06:00-11:59
+      } else if (hour >= 12 && hour < 18) {
+        return 'Loading_afternoon';     // 下午 12:00-17:59
+      } else {
+        return 'Load_Night';           // 夜间 18:00-23:59
+      }
+    },
+
     currentFrame(index) {
-      return `/img/Starry/Starry_${(index + 1).toString().padStart(4,"0")}.jpg`;
+      const folder = this.getCurrentTimeFolder();
+      const frameNumber = (index + 1).toString().padStart(4, "0");
+      return `/img/${folder}/${folder}_${frameNumber}.png`;
     },
 
     loadImages() {
@@ -227,12 +245,12 @@ export default {
         await new Promise(resolve => setTimeout(resolve, 1000));
         
         // 登录成功后的逻辑
-        alert('登录成功！');
+        alert('欢迎进入E-Mall智能商城管理系统！');
         // 可以在这里进行路由跳转
         // this.$router.push('/dashboard');
         
       } catch (error) {
-        this.errorMessage = '登录失败，请检查用户名和密码';
+        this.errorMessage = '登录失败，请检查管理员邮箱和密码是否正确';
         console.error('登录错误:', error);
       } finally {
         this.loginLoading = false;
@@ -254,14 +272,14 @@ export default {
         // 模拟API调用
         await new Promise(resolve => setTimeout(resolve, 1000));
         
-        // 注册成功后的逻辑
-        alert('注册成功！请登录');
+        // 权限申请成功后的逻辑
+        alert('权限申请提交成功！管理员将在24小时内审核您的申请，请耐心等待。');
         this.activeTab = 'login';
         this.resetRegisterForm();
         
       } catch (error) {
-        this.errorMessage = '注册失败，请稍后重试';
-        console.error('注册错误:', error);
+        this.errorMessage = '权限申请提交失败，请检查网络连接后重试';
+        console.error('权限申请错误:', error);
       } finally {
         this.registerLoading = false;
       }
@@ -270,46 +288,59 @@ export default {
     // 验证登录表单
     validateLoginForm() {
       if (!this.loginForm.email || !this.loginForm.password) {
-        this.errorMessage = '请填写所有字段';
+        this.errorMessage = '请填写管理员邮箱和密码';
         return false;
       }
       
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(this.loginForm.email)) {
-        this.errorMessage = '请输入有效的邮箱地址';
+        this.errorMessage = '请输入有效的管理员邮箱地址';
+        return false;
+      }
+      
+      if (this.loginForm.password.length < 6) {
+        this.errorMessage = '管理密码长度不能少于6位';
         return false;
       }
       
       return true;
     },
 
-    // 验证注册表单
+    // 验证权限申请表单
     validateRegisterForm() {
       const { username, email, password, confirmPassword } = this.registerForm;
       
       if (!username || !email || !password || !confirmPassword) {
-        this.errorMessage = '请填写所有字段';
+        this.errorMessage = '请填写所有申请信息';
         return false;
       }
       
-      if (username.length < 3) {
-        this.errorMessage = '用户名至少需要3个字符';
+      if (username.length < 2) {
+        this.errorMessage = '申请人姓名至少需要2个字符';
         return false;
       }
       
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) {
-        this.errorMessage = '请输入有效的邮箱地址';
+        this.errorMessage = '请输入有效的企业邮箱地址';
         return false;
       }
       
-      if (password.length < 6) {
-        this.errorMessage = '密码至少需要6个字符';
+      if (password.length < 8) {
+        this.errorMessage = '管理密码至少需要8个字符，建议包含数字和字母';
         return false;
       }
       
       if (password !== confirmPassword) {
-        this.errorMessage = '两次输入的密码不一致';
+        this.errorMessage = '两次输入的密码不一致，请重新确认';
+        return false;
+      }
+      
+      // 简单的密码强度检查
+      const hasNumber = /\d/.test(password);
+      const hasLetter = /[a-zA-Z]/.test(password);
+      if (!hasNumber || !hasLetter) {
+        this.errorMessage = '密码强度不够，请包含数字和字母';
         return false;
       }
       
@@ -330,6 +361,21 @@ export default {
     switchTab(tab) {
       this.activeTab = tab;
       this.errorMessage = '';
+    },
+
+    // 滚动到登录表单
+    scrollToLogin() {
+      // 先显示登录表单
+      this.showLoginForm = true;
+      
+      // 延迟一点时间确保DOM已更新，然后滚动到登录区域
+      this.$nextTick(() => {
+        const targetPosition = window.innerHeight * 7; // 对应ScrollTrigger的end位置
+        window.scrollTo({
+          top: targetPosition,
+          behavior: 'smooth'
+        });
+      });
     }
   }
 }

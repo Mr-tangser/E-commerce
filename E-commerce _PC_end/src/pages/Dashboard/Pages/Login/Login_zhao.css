@@ -47,19 +47,26 @@ a {
     border-radius: 0.25rem;
 }
 
-.btn .primary {
+.btn.primary {
     background-color: var(--bg);
 }
 
-.btn .primary a {
+.btn.primary a {
     color: var(--fg);
 }
 
-.ben .secondary {
+.btn.secondary {
     background-color: var(--fg);
+    transition: all 0.3s ease;
 }
 
-.btn .secondary a {
+.btn.secondary:hover {
+    background-color: #0080cc;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 170, 255, 0.3);
+}
+
+.btn.secondary a {
     color: var(--bg);
 }
 
@@ -78,9 +85,8 @@ nav > div {
     flex: 1;
 }
 
-nav .nav-links {
-    display: flex;
-    gap: 3rem;
+.nav-left {
+    flex: 1;
 }
 
 nav .logo {
@@ -101,8 +107,8 @@ nav .logo a {
 
 nav .nav-buttons {
     display: flex;
-    gap: 1.5rem;
     justify-content: flex-end;
+    cursor: pointer;
 }
 
 section {
@@ -372,20 +378,307 @@ canvas {
     20%, 40%, 60%, 80% { transform: translateX(5px); }
 }
 
+/* 新增样式：标题动画效果 */
+.main-title {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.title-part {
+    display: inline-block;
+    animation: fadeInUp 1s ease-out forwards;
+    opacity: 0;
+    transform: translateY(30px);
+}
+
+.title-part:nth-child(1) {
+    animation-delay: 0.2s;
+    color: var(--fg);
+    font-weight: 300;
+}
+
+.title-part.highlight {
+    animation-delay: 0.4s;
+    background: linear-gradient(135deg, var(--fg), #0080cc);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-weight: 600;
+    position: relative;
+}
+
+.title-part.highlight::after {
+    content: '';
+    position: absolute;
+    bottom: -5px;
+    left: 0;
+    width: 0;
+    height: 3px;
+    background: linear-gradient(135deg, var(--fg), #0080cc);
+    animation: underlineExpand 1s ease-out 0.8s forwards;
+}
+
+.subtitle {
+    font-size: 1.1rem;
+    color: rgba(0, 170, 255, 0.8);
+    text-transform: none;
+    font-weight: 400;
+    margin-bottom: 2rem;
+    opacity: 0;
+    animation: fadeInUp 1s ease-out 0.6s forwards;
+}
+
+.trusted-text {
+    font-size: 0.9rem;
+    color: rgba(0, 170, 255, 0.6);
+    text-transform: none;
+    font-weight: 400;
+    opacity: 0;
+    animation: fadeInUp 1s ease-out 1.4s forwards;
+}
+
+/* 功能列表样式已移除 - 简化页面 */
+
+/* 登录头部样式 */
+.login-header {
+    text-align: center;
+    margin-bottom: 2rem;
+    opacity: 0;
+    animation: fadeInDown 0.8s ease-out 0.5s forwards;
+}
+
+.login-header h2 {
+    font-family: "Host Grotesk", sans-serif;
+    font-size: 1.8rem;
+    color: var(--fg);
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+}
+
+.login-header p {
+    color: rgba(0, 170, 255, 0.7);
+    font-size: 0.9rem;
+    text-transform: none;
+    font-weight: 400;
+}
+
+/* 输入框图标样式 */
+.form-group {
+    position: relative;
+}
+
+.input-icon {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1.1rem;
+    z-index: 1;
+    opacity: 0.7;
+}
+
+.form-group input {
+    padding-left: 3rem;
+}
+
+/* 表单底部链接样式 */
+.form-footer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.divider {
+    color: rgba(0, 170, 255, 0.4);
+    font-size: 0.8rem;
+}
+
+.help-link {
+    color: var(--fg);
+    font-size: 0.8rem;
+    text-decoration: none;
+    opacity: 0.8;
+    transition: opacity 0.3s ease;
+}
+
+.help-link:hover {
+    opacity: 1;
+    text-decoration: underline;
+}
+
+.form-footer small {
+    color: rgba(0, 170, 255, 0.6);
+    font-size: 0.75rem;
+    text-align: center;
+    text-transform: none;
+}
+
+/* 错误信息样式增强 */
+.error-message {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.error-icon {
+    font-size: 1rem;
+}
+
+/* 导航链接hover效果 */
+.nav-link {
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.nav-link::after {
+    content: '';
+    position: absolute;
+    bottom: -5px;
+    left: 0;
+    width: 0;
+    height: 2px;
+    background: var(--fg);
+    transition: width 0.3s ease;
+}
+
+.nav-link:hover::after {
+    width: 100%;
+}
+
+.nav-link:hover {
+    color: var(--fg);
+    transform: translateY(-2px);
+}
+
+/* 结尾部分样式 */
+.outro-title {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.outro-main {
+    font-size: 3.5rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--fg), #0080cc);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 0.5rem;
+}
+
+.outro-sub {
+    font-size: 2rem;
+    font-weight: 300;
+    color: rgba(0, 170, 255, 0.8);
+}
+
+.outro-description {
+    font-size: 1.1rem;
+    color: rgba(0, 170, 255, 0.7);
+    text-transform: none;
+    font-weight: 400;
+    max-width: 600px;
+    line-height: 1.6;
+}
+
+/* 动画关键帧 */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(40px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes underlineExpand {
+    from {
+        width: 0;
+    }
+    to {
+        width: 100%;
+    }
+}
+
+/* vue-bits.dev风格的浮动动画 */
+@keyframes float {
+    0%, 100% {
+        transform: translateY(0px);
+    }
+    50% {
+        transform: translateY(-10px);
+    }
+}
+
+.login-container {
+    animation: float 6s ease-in-out infinite;
+}
+
+/* 功能卡片hover动画已移除 */
+
+/* 按钮脉冲效果 */
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(0, 170, 255, 0.4);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(0, 170, 255, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(0, 170, 255, 0);
+    }
+}
+
+.submit-btn:not(:disabled):hover {
+    animation: pulse 1.5s infinite;
+}
+
 /* 响应式设计 */
 @media (max-width: 1000px) {
     h1 {
         font-size: 2rem;
     }
 
-    nav .nav-links,
     nav .nav-buttons {
-        display: none;
+        display: flex;
     }
 
     .header h1, .client-logos, .hero-img-container {
         width: calc(100% - 4rem);
     }
+    
+    /* 功能列表样式已移除 */
     
     .login-container {
         padding: 2rem;
@@ -393,13 +686,30 @@ canvas {
         margin: 0 1rem;
     }
     
+    .login-header h2 {
+        font-size: 1.5rem;
+    }
+    
     .form-group input {
-        padding: 14px 16px;
+        padding: 14px 16px 14px 3rem;
         font-size: 16px; /* 防止iOS缩放 */
     }
     
     .submit-btn {
         padding: 14px 2rem;
         font-size: 0.9rem;
+    }
+    
+    .outro-main {
+        font-size: 2.5rem;
+    }
+    
+    .outro-sub {
+        font-size: 1.5rem;
+    }
+    
+    .outro-description {
+        font-size: 1rem;
+        padding: 0 1rem;
     }
 }

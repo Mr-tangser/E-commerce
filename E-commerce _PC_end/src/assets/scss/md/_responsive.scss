@@ -1,3 +1,9 @@
+// 全局防止水平滚动条
+html,
+body {
+    overflow-x: hidden;
+}
+
 @media (min-width: 992px){
     .navbar-form {
         margin-top: 21px;
