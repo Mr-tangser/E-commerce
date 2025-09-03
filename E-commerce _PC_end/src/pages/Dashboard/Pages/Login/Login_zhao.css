@@ -1,8 +1,78 @@
 @import url("https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&family=Host+Grotesk:ital,wght@0,300..800;1,300..800&display=swap");
 
+/* 默认主题（上午）- 暖橙对比蓝天背景 */
 :root {
-    --fg: #00aaff;
-    --bg: #fefbf4;
+    --fg: #d35400;
+    --bg: #fef9f3;
+    --accent: #e74c3c;
+    --glass-bg: rgba(254, 249, 243, 0.95);
+    --shadow-color: rgba(211, 84, 0, 0.25);
+    --fg-light: rgba(211, 84, 0, 0.08);
+    --fg-medium: rgba(211, 84, 0, 0.15);
+    --fg-text-80: rgba(211, 84, 0, 0.8);
+    --fg-text-70: rgba(211, 84, 0, 0.7);
+    --fg-text-60: rgba(211, 84, 0, 0.6);
+    --fg-text-40: rgba(211, 84, 0, 0.4);
+}
+
+/* 凌晨主题 - 暖橙对比蓝紫晨曦 */
+.theme-early-morning {
+    --fg: #e67e22;
+    --bg: #fefbf7;
+    --accent: #d35400;
+    --glass-bg: rgba(254, 251, 247, 0.95);
+    --shadow-color: rgba(230, 126, 34, 0.3);
+    --fg-light: rgba(230, 126, 34, 0.1);
+    --fg-medium: rgba(230, 126, 34, 0.15);
+    --fg-text-80: rgba(230, 126, 34, 0.8);
+    --fg-text-70: rgba(230, 126, 34, 0.7);
+    --fg-text-60: rgba(230, 126, 34, 0.6);
+    --fg-text-40: rgba(230, 126, 34, 0.4);
+}
+
+/* 上午主题 - 暖橙对比蓝天背景 */
+.theme-morning {
+    --fg: #d35400;
+    --bg: #fef9f3;
+    --accent: #e74c3c;
+    --glass-bg: rgba(254, 249, 243, 0.95);
+    --shadow-color: rgba(211, 84, 0, 0.25);
+    --fg-light: rgba(211, 84, 0, 0.08);
+    --fg-medium: rgba(211, 84, 0, 0.15);
+    --fg-text-80: rgba(211, 84, 0, 0.8);
+    --fg-text-70: rgba(211, 84, 0, 0.7);
+    --fg-text-60: rgba(211, 84, 0, 0.6);
+    --fg-text-40: rgba(211, 84, 0, 0.4);
+}
+
+/* 下午主题 - 深紫蓝对比金黄夕阳 */
+.theme-afternoon {
+    --fg: #2c3e50;
+    --bg: #f8fafc;
+    --accent: #34495e;
+    --glass-bg: rgba(248, 250, 252, 0.95);
+    --shadow-color: rgba(44, 62, 80, 0.3);
+    --fg-light: rgba(44, 62, 80, 0.1);
+    --fg-medium: rgba(44, 62, 80, 0.15);
+    --fg-text-80: rgba(44, 62, 80, 0.8);
+    --fg-text-70: rgba(44, 62, 80, 0.7);
+    --fg-text-60: rgba(44, 62, 80, 0.6);
+    --fg-text-40: rgba(44, 62, 80, 0.4);
+}
+
+/* 夜间主题 - 明亮金黄对比深邃夜色 */
+.theme-night {
+    --fg: #f39c12;
+    --bg: #fffbf5;
+    --accent: #e67e22;
+    --glass-bg: rgba(255, 251, 245, 0.95);
+    --shadow-color: rgba(243, 156, 18, 0.3);
+    --fg-light: rgba(243, 156, 18, 0.1);
+    --fg-medium: rgba(243, 156, 18, 0.15);
+    --fg-text-80: rgba(243, 156, 18, 0.8);
+    --fg-text-70: rgba(243, 156, 18, 0.7);
+    --fg-text-60: rgba(243, 156, 18, 0.6);
+    --fg-text-40: rgba(243, 156, 18, 0.4);
 }
 
 * {
@@ -61,9 +131,9 @@ a {
 }
 
 .btn.secondary:hover {
-    background-color: #0080cc;
+    background-color: var(--accent);
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 170, 255, 0.3);
+    box-shadow: 0 4px 12px var(--shadow-color);
 }
 
 .btn.secondary a {
@@ -77,8 +147,11 @@ nav {
     display: flex;
     align-items: center;
     gap: 2rem;
-    will-change: opacity;
+    will-change: transform, opacity;
     z-index: 2;
+    opacity: 1; /* 初始完全显示 */
+    transform-style: preserve-3d;
+    perspective: 1000px;
 }
 
 nav > div {
@@ -132,6 +205,10 @@ canvas {
     width: 100%;
     height: 100%;
     object-fit: cover;
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 0;
 }
 
 .hero-content {
@@ -146,7 +223,7 @@ canvas {
 
 .header {
     position: absolute;
-    top: 50%;
+    top: 45%;
     left: 50%;
     transform: translate(-50%,-50%);
     width: 100vw;
@@ -158,6 +235,7 @@ canvas {
     color: var(--fg);
     transform-origin: center;
     will-change: transform, opacity;
+    z-index: 1;
 }
 
 .header h1 {
@@ -188,67 +266,92 @@ canvas {
     top: 50%;
     left: 50%;
     transform: translate(-50%,-50%);
-    width: 50%;
+    width: 100%;
+    max-width: 900px;
     transform-style: preserve-3d;
     perspective: 1000px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 .hero-img {
     position: relative;
     width: 100%;
     height: 100%;
-    transform: translateZ(1000px);
-    opacity: 0;
+    transform: translateZ(0);
+    opacity: 1;
     will-change: transform, opacity;
 }
 
 /* 登录容器样式 */
 .login-container {
-    background: rgba(254, 251, 244, 0.95);
-    border-radius: 16px;
-    padding: 2.5rem;
+    display: flex;
+    background: rgba(20, 30, 60, 0.95);
+    border-radius: 20px;
     backdrop-filter: blur(20px);
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    max-width: 400px;
-    margin: 0 auto;
-    min-height: 400px;
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    width: 900px;
+    max-width: 90vw;
+    min-height: 550px;
+    height: auto;
+    position: relative;
+    z-index: 10;
+    opacity: 1;
+    transition: opacity 0.3s ease;
+    overflow: hidden;
+}
+
+/* 左侧背景图 */
+.login-left {
+    flex: 1;
+    background: url('~@/../public/img/伊蕾娜星空.jpg') center/cover;
+    position: relative;
+    border-radius: 20px 0 0 20px;
+}
+
+.space-bg {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(45deg, rgba(0, 20, 40, 0.3), rgba(20, 40, 80, 0.2));
+    border-radius: 20px 0 0 20px;
+}
+
+/* 右侧表单 */
+.login-right {
+    flex: 1;
+    padding: 40px 50px;
     display: flex;
     flex-direction: column;
+    justify-content: center;
+    background: rgba(15, 25, 45, 0.9);
+    border-radius: 0 20px 20px 0;
+    min-height: 550px;
 }
 
-/* 标签页切换 */
-.login-tabs {
-    display: flex;
+/* 登录头部样式 - 重新定义 */
+.login-header {
+    text-align: center;
     margin-bottom: 2rem;
-    background: rgba(0, 170, 255, 0.1);
-    border-radius: 10px;
-    padding: 4px;
+    opacity: 0;
+    transform: translateY(20px);
+    animation: fadeInUp 0.8s ease-out 0.5s forwards;
 }
 
-.login-tabs button {
-    flex: 1;
-    padding: 12px 20px;
-    border: none;
-    background: transparent;
-    color: var(--fg);
-    cursor: pointer;
-    border-radius: 6px;
-    font-family: "DM Mono", sans-serif;
-    font-size: 0.85rem;
-    font-weight: 500;
-    text-transform: uppercase;
-    transition: all 0.3s ease;
+.login-header h2 {
+    font-family: "Host Grotesk", sans-serif;
+    font-size: 2.2rem;
+    color: #ffffff;
+    margin-bottom: 0.8rem;
+    font-weight: 600;
 }
 
-.login-tabs button.active {
-    background: var(--fg);
-    color: var(--bg);
-    box-shadow: 0 2px 8px rgba(0, 170, 255, 0.3);
-}
-
-.login-tabs button:hover:not(.active) {
-    background: rgba(0, 170, 255, 0.15);
+.login-header p {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 1rem;
+    text-transform: none;
+    font-weight: 400;
 }
 
 /* 表单样式 */
@@ -256,7 +359,6 @@ canvas {
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
-    flex: 1;
 }
 
 .form-group {
@@ -265,45 +367,47 @@ canvas {
 
 .form-group input {
     width: 100%;
-    padding: 1rem 1.2rem;
-    border: 2px solid rgba(0, 170, 255, 0.2);
-    border-radius: 10px;
+    padding: 1.2rem 1.5rem;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 50px;
     font-family: "DM Mono", sans-serif;
-    font-size: 0.9rem;
-    background: rgba(255, 255, 255, 0.8);
-    color: var(--fg);
+    font-size: 1rem;
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
     transition: all 0.3s ease;
     outline: none;
+    backdrop-filter: blur(10px);
 }
 
 .form-group input:focus {
-    border-color: var(--fg);
-    background: var(--bg);
-    box-shadow: 0 0 0 3px rgba(0, 170, 255, 0.1);
+    border-color: #4a9eff;
+    background: rgba(255, 255, 255, 0.15);
+    box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.2);
     transform: translateY(-2px);
 }
 
 .form-group input::placeholder {
-    color: rgba(0, 170, 255, 0.6);
+    color: rgba(255, 255, 255, 0.6);
     font-weight: 400;
 }
 
 /* 提交按钮 */
 .submit-btn {
-    background: linear-gradient(135deg, var(--fg), #0080cc);
-    color: var(--bg);
+    background: linear-gradient(135deg, #ff6b6b, #4a9eff);
+    color: #ffffff;
     padding: 1.2rem 2rem;
     border: none;
-    border-radius: 10px;
+    border-radius: 50px;
     cursor: pointer;
     font-family: "DM Mono", sans-serif;
     font-weight: 600;
-    font-size: 0.9rem;
-    text-transform: uppercase;
+    font-size: 1rem;
+    text-transform: none;
     letter-spacing: 0.5px;
     transition: all 0.3s ease;
     position: relative;
     overflow: hidden;
+    margin: 0.5rem 0;
 }
 
 .submit-btn::before {
@@ -319,7 +423,7 @@ canvas {
 
 .submit-btn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(0, 170, 255, 0.3);
+    box-shadow: 0 8px 25px var(--shadow-color);
 }
 
 .submit-btn:hover::before {
@@ -344,7 +448,51 @@ canvas {
 /* 表单底部 */
 .form-footer {
     text-align: center;
-    margin-top: 1rem;
+    margin-top: 1.5rem;
+}
+
+.switch-link {
+    color: #4a9eff;
+    font-size: 0.9rem;
+    text-transform: none;
+    font-weight: 400;
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+.switch-link:hover {
+    color: #66b3ff;
+    text-decoration: underline;
+}
+
+/* 表单容器 */
+.form-container {
+    width: 100%;
+}
+
+/* 表单切换动画 */
+.form-slide-enter-active, .form-slide-leave-active {
+    transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.form-slide-enter-from {
+    opacity: 0;
+    transform: translateX(30px);
+}
+
+.form-slide-leave-to {
+    opacity: 0;
+    transform: translateX(-30px);
+}
+
+/* 错误提示动画 */
+.error-fade-enter-active, .error-fade-leave-active {
+    transition: all 0.3s ease;
+}
+
+.error-fade-enter-from, .error-fade-leave-to {
+    opacity: 0;
+    transform: translateY(-10px);
 }
 
 .forgot-password {
@@ -365,11 +513,26 @@ canvas {
     background: linear-gradient(135deg, #ff4757, #ff3838);
     color: white;
     padding: 12px 16px;
-    border-radius: 8px;
+    border-radius: 12px;
     font-size: 0.85rem;
     text-align: center;
     margin-top: 1rem;
     animation: shake 0.5s ease-in-out;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+}
+
+/* 成功提示 */
+.success-message {
+    background: linear-gradient(135deg, #2ed573, #1dd1a1);
+    color: white;
+    padding: 12px 16px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    text-align: center;
+    margin-top: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
 }
 
 @keyframes shake {
@@ -388,9 +551,9 @@ canvas {
 
 .title-part {
     display: inline-block;
-    animation: fadeInUp 1s ease-out forwards;
+    animation: fadeInDown 1s ease-out forwards;
     opacity: 0;
-    transform: translateY(30px);
+    transform: translateY(-30px);
 }
 
 .title-part:nth-child(1) {
@@ -401,7 +564,7 @@ canvas {
 
 .title-part.highlight {
     animation-delay: 0.4s;
-    background: linear-gradient(135deg, var(--fg), #0080cc);
+    background: linear-gradient(135deg, var(--fg), var(--accent));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -416,13 +579,13 @@ canvas {
     left: 0;
     width: 0;
     height: 3px;
-    background: linear-gradient(135deg, var(--fg), #0080cc);
+    background: linear-gradient(135deg, var(--fg), var(--accent));
     animation: underlineExpand 1s ease-out 0.8s forwards;
 }
 
 .subtitle {
     font-size: 1.1rem;
-    color: rgba(0, 170, 255, 0.8);
+    color: var(--fg-text-80);
     text-transform: none;
     font-weight: 400;
     margin-bottom: 2rem;
@@ -432,56 +595,16 @@ canvas {
 
 .trusted-text {
     font-size: 0.9rem;
-    color: rgba(0, 170, 255, 0.6);
+    color: var(--fg-text-60);
     text-transform: none;
     font-weight: 400;
     opacity: 0;
     animation: fadeInUp 1s ease-out 1.4s forwards;
 }
 
-/* 功能列表样式已移除 - 简化页面 */
+/* 旧的登录头部样式已移除 */
 
-/* 登录头部样式 */
-.login-header {
-    text-align: center;
-    margin-bottom: 2rem;
-    opacity: 0;
-    animation: fadeInDown 0.8s ease-out 0.5s forwards;
-}
-
-.login-header h2 {
-    font-family: "Host Grotesk", sans-serif;
-    font-size: 1.8rem;
-    color: var(--fg);
-    margin-bottom: 0.5rem;
-    font-weight: 600;
-}
-
-.login-header p {
-    color: rgba(0, 170, 255, 0.7);
-    font-size: 0.9rem;
-    text-transform: none;
-    font-weight: 400;
-}
-
-/* 输入框图标样式 */
-.form-group {
-    position: relative;
-}
-
-.input-icon {
-    position: absolute;
-    left: 15px;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 1.1rem;
-    z-index: 1;
-    opacity: 0.7;
-}
-
-.form-group input {
-    padding-left: 3rem;
-}
+/* 旧的输入框图标样式已移除 */
 
 /* 表单底部链接样式 */
 .form-footer {
@@ -493,7 +616,7 @@ canvas {
 }
 
 .divider {
-    color: rgba(0, 170, 255, 0.4);
+    color: var(--fg-text-40);
     font-size: 0.8rem;
 }
 
@@ -511,7 +634,7 @@ canvas {
 }
 
 .form-footer small {
-    color: rgba(0, 170, 255, 0.6);
+    color: var(--fg-text-60);
     font-size: 0.75rem;
     text-align: center;
     text-transform: none;
@@ -566,7 +689,7 @@ canvas {
 .outro-main {
     font-size: 3.5rem;
     font-weight: 700;
-    background: linear-gradient(135deg, var(--fg), #0080cc);
+    background: linear-gradient(135deg, var(--fg), var(--accent));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -576,12 +699,12 @@ canvas {
 .outro-sub {
     font-size: 2rem;
     font-weight: 300;
-    color: rgba(0, 170, 255, 0.8);
+    color: var(--fg-text-80);
 }
 
 .outro-description {
     font-size: 1.1rem;
-    color: rgba(0, 170, 255, 0.7);
+    color: var(--fg-text-70);
     text-transform: none;
     font-weight: 400;
     max-width: 600px;
@@ -641,22 +764,20 @@ canvas {
     }
 }
 
-.login-container {
-    animation: float 6s ease-in-out infinite;
-}
+/* 移除旧的浮动动画 */
 
 /* 功能卡片hover动画已移除 */
 
 /* 按钮脉冲效果 */
 @keyframes pulse {
     0% {
-        box-shadow: 0 0 0 0 rgba(0, 170, 255, 0.4);
+        box-shadow: 0 0 0 0 var(--fg-text-40);
     }
     70% {
-        box-shadow: 0 0 0 10px rgba(0, 170, 255, 0);
+        box-shadow: 0 0 0 10px var(--fg-text-40);
     }
     100% {
-        box-shadow: 0 0 0 0 rgba(0, 170, 255, 0);
+        box-shadow: 0 0 0 0 var(--fg-text-40);
     }
 }
 
@@ -678,26 +799,73 @@ canvas {
         width: calc(100% - 4rem);
     }
     
-    /* 功能列表样式已移除 */
+    /* 功能卡片响应式 */
+    .features-grid {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+        margin-top: 2rem;
+        max-width: calc(100% - 2rem);
+    }
+    
+    .feature-card {
+        padding: 1.5rem 1rem;
+    }
+    
+    .feature-icon {
+        font-size: 2rem;
+    }
+    
+    .feature-card h3 {
+        font-size: 1.1rem;
+    }
+    
+    .feature-card p {
+        font-size: 0.85rem;
+    }
     
     .login-container {
-        padding: 2rem;
+        flex-direction: column;
         max-width: calc(100% - 2rem);
+        width: 95vw;
+        height: auto;
         margin: 0 1rem;
     }
     
+    .login-left {
+        height: 200px;
+        border-radius: 20px 20px 0 0;
+    }
+    
+    .space-bg {
+        border-radius: 20px 20px 0 0;
+    }
+    
+    .login-right {
+        padding: 30px 30px;
+        border-radius: 0 0 20px 20px;
+        min-height: auto;
+    }
+    
     .login-header h2 {
-        font-size: 1.5rem;
+        font-size: 1.8rem;
+    }
+    
+    .login-header {
+        margin-bottom: 1.5rem;
     }
     
     .form-group input {
-        padding: 14px 16px 14px 3rem;
+        padding: 1rem 1.5rem;
         font-size: 16px; /* 防止iOS缩放 */
     }
     
     .submit-btn {
-        padding: 14px 2rem;
-        font-size: 0.9rem;
+        padding: 1rem 2rem;
+        font-size: 1rem;
+    }
+    
+    .switch-link {
+        font-size: 0.85rem;
     }
     
     .outro-main {

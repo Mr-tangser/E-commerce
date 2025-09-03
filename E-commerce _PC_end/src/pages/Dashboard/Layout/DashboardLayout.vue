@@ -15,149 +15,71 @@
       <user-menu></user-menu>
       <mobile-menu></mobile-menu>
       <template slot="links">
+        <!-- 全品汇管理系统主页 -->
         <sidebar-item
-          v-if="$route.meta.rtlActive"
-          :link="{
-            name: 'لوحة القيادةة',
-            icon: 'dashboard',
-            path: '/dashboard',
-          }"
+          :link="{ name: '仪表板', icon: 'dashboard', path: '/dashboard' }"
         />
+        
+        <!-- 商品管理 -->
         <sidebar-item
-          v-else
-          :link="{ name: 'Dashboard', icon: 'dashboard', path: '/dashboard' }"
-        />
-
-        <sidebar-item opened :link="{ name: 'Examples (API)', image: image }">
+          :link="{ name: '商品管理', icon: 'inventory_2' }"
+          opened
+        >
           <sidebar-item
-            :link="{ name: 'User Profile', path: '/examples/user-profile' }"
+            :link="{ name: '商品列表', path: '/products' }"
           />
           <sidebar-item
-            :link="{
-              name: 'User Management',
-              path: '/examples/user-management/list-users',
-            }"
+            :link="{ name: '添加商品', path: '/products/add' }"
+          />
+          <sidebar-item
+            :link="{ name: '商品分类', path: '/categories' }"
           />
         </sidebar-item>
 
+        <!-- 订单管理 -->
         <sidebar-item
-          v-if="$route.meta.rtlActive"
-          :link="{
-            name: 'الجداول',
-            icon: 'content_paste',
-            path: '/components/table',
-          }"
-        />
+          :link="{ name: '订单管理', icon: 'receipt_long' }"
+          opened
+        >
+          <sidebar-item
+            :link="{ name: '订单列表', path: '/orders' }"
+          />
+          <sidebar-item
+            :link="{ name: '订单统计', path: '/orders/statistics' }"
+          />
+        </sidebar-item>
+
+        <!-- 用户管理 -->
         <sidebar-item
-          :link="{
-            name: 'Table Lists',
-            icon: 'content_paste',
-            path: '/components/table',
-          }"
+          :link="{ name: '用户管理', icon: 'people' }"
+          opened
+        >
+          <sidebar-item
+            :link="{ name: '用户列表', path: '/users' }"
+          />
+          <sidebar-item
+            :link="{ name: '管理员管理', path: '/admins' }"
+          />
+        </sidebar-item>
+
+        <!-- 数据统计 -->
+        <sidebar-item
+          :link="{ name: '数据统计', icon: 'analytics', path: '/analytics' }"
         />
 
+        <!-- 系统设置 -->
         <sidebar-item
-          v-if="$route.meta.rtlActive"
-          :link="{
-            name: 'طباعة',
-            icon: 'library_books',
-            path: '/components/typography',
-          }"
-        />
-        <sidebar-item
-          v-else
-          :link="{
-            name: 'Typography',
-            icon: 'library_books',
-            path: '/components/typography',
-          }"
-        />
-
-        <sidebar-item
-          v-if="$route.meta.rtlActive"
-          :link="{
-            name: 'الرموز',
-            icon: 'bubble_chart',
-            path: '/components/icons',
-          }"
-        />
-        <sidebar-item
-          v-else
-          :link="{
-            name: 'Icons',
-            icon: 'bubble_chart',
-            path: '/components/icons',
-          }"
-        />
-
-        <sidebar-item
-          v-if="$route.meta.rtlActive"
-          :link="{
-            name: 'خرائط جوجل',
-            icon: 'place',
-            path: '/components/maps',
-          }"
-        />
-        <sidebar-item
-          v-else
-          :link="{ name: 'Maps', icon: 'place', path: '/components/maps' }"
-        />
-
-        <sidebar-item
-          v-if="$route.meta.rtlActive"
-          :link="{
-            name: 'إخطارات',
-            icon: 'notifications',
-            path: '/components/notifications',
-          }"
-        />
-        <sidebar-item
-          v-else
-          :link="{
-            name: 'Notifications',
-            icon: 'notifications',
-            path: '/components/notifications',
-          }"
-        />
-
-        <sidebar-item
-          v-if="$route.meta.rtlActive"
-          :link="{ name: 'دعم رتل', icon: 'language', path: '/components/rtl' }"
-        />
-        <sidebar-item
-          v-else
-          :link="{
-            name: 'RTL Support',
-            icon: 'language',
-            path: '/components/rtl',
-          }"
+          :link="{ name: '系统设置', icon: 'settings', path: '/settings' }"
         />
       </template>
 
-      <div style="width: 100%; position: absolute; bottom: 0; padding: 16px">
-        <md-button
-          v-if="sidebarMini"
-          class="md-button md-danger md-block"
-          href="https://www.creative-tim.com/product/vue-material-dashboard-laravel-pro-bs4"
-          target="_blanck"
-        >
-          <i class="fas fa-download" style="margin-right: 4px"></i>Upgrade to
-          PRO
-        </md-button>
-      </div>
+      <!-- 全品汇管理系统 - 无需升级按钮 -->
     </side-bar>
 
     <div class="main-panel">
       <top-navbar></top-navbar>
 
-      <fixed-plugin
-        :color.sync="sidebarBackground"
-        :colorBg.sync="sidebarBackgroundColor"
-        :sidebarMini.sync="sidebarMini"
-        :sidebarImg.sync="sidebarImg"
-        :image.sync="sidebarBackgroundImage"
-      >
-      </fixed-plugin>
+      <!-- 全品汇管理系统 - 移除主题配置插件 -->
 
       <div :class="{ content: !$route.meta.hideContent }">
         <zoom-center-transition :duration="200" mode="out-in">
@@ -208,14 +130,12 @@ function reinitScrollbar() {
 import TopNavbar from "./TopNavbar.vue";
 import ContentFooter from "./ContentFooter.vue";
 import MobileMenu from "./Extra/MobileMenu.vue";
-import FixedPlugin from "../../FixedPlugin.vue";
 import UserMenu from "./Extra/UserMenu.vue";
 
 export default {
   components: {
     TopNavbar,
     ContentFooter,
-    FixedPlugin,
     MobileMenu,
     UserMenu,
   },
