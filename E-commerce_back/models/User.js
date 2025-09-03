@@ -119,6 +119,25 @@ const userSchema = new mongoose.Schema({
   passwordResetExpires: {
     type: Date,
     select: false                    // 查询时不返回重置过期时间
+  },
+
+  // 人脸识别相关字段
+  faceData: {
+    faceToken: {
+      type: String,
+      select: false                  // 查询时不返回人脸token
+    },
+    faceImage: {
+      type: String,                  // 存储人脸图片路径
+      select: false
+    },
+    faceRegistered: {
+      type: Boolean,
+      default: false                 // 是否已注册人脸
+    },
+    registeredAt: {
+      type: Date                     // 人脸注册时间
+    }
   }
 }, {
   timestamps: true,                  // 自动添加 createdAt 和 updatedAt 时间戳

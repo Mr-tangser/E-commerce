@@ -166,6 +166,15 @@
         <text class="loading-text">{{ loadingText }}</text>
       </view>
     </view>
+    
+    <!-- 人脸识别组件 -->
+    <FaceRecognition 
+      :visible="showFaceRecognition"
+      :type="faceRecognitionType"
+      :userId="selectedUserId"
+      @success="handleFaceRecognitionSuccess"
+      @close="closeFaceRecognition"
+    />
   </view>
 </template>
 
@@ -174,8 +183,13 @@
 import BiometricAuth from '@/utils/biometricAuth.js'
 import WechatAuth from '@/utils/wechatAuth.js'
 import api from '@/utils/api.js'
+import FaceRecognition from '@/components/FaceRecognition/FaceRecognition.vue'
 
 export default {
+  components: {
+    FaceRecognition
+  },
+  
   data() {
     return {
       // 登录类型：phone(手机) / email(邮箱)
@@ -202,7 +216,13 @@ export default {
         password: '',
         email: '',
         emailPassword: ''
-      }
+      },
+      
+      // 人脸识别相关
+      showFaceRecognition: false,
+      faceRecognitionType: 'login',
+      selectedUserId: '',
+      lastLoginUsers: [] // 保存最近登录过的用户，用于人脸识别选择
     };
   },
   
@@ -227,6 +247,8 @@ export default {
   async mounted() {
     // 检查生物识别支持
     await this.checkBiometricSupport();
+    // 加载最近登录的用户
+    this.loadLastLoginUsers();
   },
   
   methods: {
@@ -348,26 +370,19 @@ export default {
           uni.setStorageSync('token', response.data.token);
           uni.setStorageSync('userInfo', response.data.user);
           
+          // 更新最近登录用户记录
+          this.updateLastLoginUser(response.data.user);
+          
           uni.showToast({
             title: '登录成功',
             icon: 'success'
           });
           
-          // 检查是否需要完善个人信息
-          const user = response.data.user;
-          const needProfile = !user.address || !user.address.receiverName || !user.address.province;
-          
-          // 跳转逻辑：如果用户信息不完整，跳转到完善信息页面，否则跳转到首页
+          // 登录成功直接跳转到首页
           setTimeout(() => {
-            if (needProfile) {
-              uni.navigateTo({
-                url: '/pages/UserProfile/UserProfile'
-              });
-            } else {
-              uni.switchTab({
-                url: '/pages/home/home'
-              });
-            }
+            uni.switchTab({
+              url: '/pages/home/home'
+            });
           }, 1500);
         } else {
           throw new Error(response.error?.message || '登录失败');
@@ -403,26 +418,20 @@ export default {
             // 保存登录信息
             uni.setStorageSync('token', wechatResponse.data.token);
             uni.setStorageSync('userInfo', wechatResponse.data.user);
+            
+            // 更新最近登录用户记录
+            this.updateLastLoginUser(wechatResponse.data.user);
           
             uni.showToast({
               title: '登录成功',
               icon: 'success'
             });
           
-            // 检查是否需要完善个人信息
-            const user = wechatResponse.data.user || {};
-            const needProfile = !user.address || !user.address.receiverName || !user.address.province;
-          
+            // 登录成功直接跳转到首页
             setTimeout(() => {
-              if (needProfile) {
-                uni.navigateTo({
-                  url: '/pages/UserProfile/UserProfile'
-                });
-              } else {
-                uni.switchTab({
-                  url: '/pages/home/home'
-                });
-              }
+              uni.switchTab({
+                url: '/pages/home/home'
+              });
             }, 1500);
           }
         }
@@ -483,40 +492,130 @@ export default {
      */
     async faceLogin() {
       try {
-        this.loading = true;
-        this.loadingText = '人脸识别中...';
-        
-        // 检查是否有生物识别工具类
-        if (typeof BiometricAuth === 'undefined') {
-          // 演示模式：模拟人脸识别过程
-          setTimeout(async () => {
-            uni.showToast({
-              title: '人脸识别成功（演示模式）',
-              icon: 'success'
-            });
-            this.loading = false;
-            // 可以在这里添加演示登录逻辑
-          }, 3000);
+        // 检查是否有最近登录的用户
+        if (this.lastLoginUsers.length === 0) {
+          uni.showModal({
+            title: '提示',
+            content: '暂无可用的人脸登录账户，请先使用其他方式登录并注册人脸信息',
+            showCancel: false
+          });
           return;
         }
         
-        const result = await BiometricAuth.authenticateWithFace();
-        
-        if (result.success) {
-          await this.biometricLoginSuccess();
-        } else {
-          uni.showToast({
-            title: result.message || '人脸识别失败',
-            icon: 'none'
-          });
+        // 如果只有一个用户，直接使用
+        if (this.lastLoginUsers.length === 1) {
+          this.selectedUserId = this.lastLoginUsers[0].userId;
+          this.startFaceRecognition();
+          return;
         }
+        
+        // 多个用户时，让用户选择
+        const itemList = this.lastLoginUsers.map(user => user.username || user.phone);
+        
+        uni.showActionSheet({
+          itemList: itemList,
+          success: (res) => {
+            const selectedUser = this.lastLoginUsers[res.tapIndex];
+            this.selectedUserId = selectedUser.userId;
+            this.startFaceRecognition();
+          }
+        });
+        
       } catch (error) {
+        console.error('人脸登录启动失败:', error);
         uni.showToast({
-          title: error.message || '人脸识别失败',
+          title: '启动人脸识别失败',
           icon: 'none'
         });
-      } finally {
-        this.loading = false;
+      }
+    },
+    
+    /**
+     * 启动人脸识别组件
+     */
+    startFaceRecognition() {
+      this.faceRecognitionType = 'login';
+      this.showFaceRecognition = true;
+    },
+    
+    /**
+     * 人脸识别成功回调
+     */
+    handleFaceRecognitionSuccess(result) {
+      console.log('人脸识别登录成功:', result);
+      
+      // 保存登录信息
+      uni.setStorageSync('token', result.token);
+      uni.setStorageSync('userInfo', result.user);
+      
+      // 更新最近登录用户记录
+      this.updateLastLoginUser(result.user);
+      
+      uni.showToast({
+        title: '人脸登录成功',
+        icon: 'success'
+      });
+      
+      // 登录成功直接跳转到首页
+      setTimeout(() => {
+        uni.switchTab({
+          url: '/pages/home/home'
+        });
+      }, 1500);
+    },
+    
+    /**
+     * 关闭人脸识别组件
+     */
+    closeFaceRecognition() {
+      this.showFaceRecognition = false;
+      this.selectedUserId = '';
+    },
+    
+    /**
+     * 加载最近登录的用户
+     */
+    loadLastLoginUsers() {
+      try {
+        const savedUsers = uni.getStorageSync('lastLoginUsers') || [];
+        this.lastLoginUsers = savedUsers;
+        console.log('加载最近登录用户:', this.lastLoginUsers);
+      } catch (error) {
+        console.error('加载最近登录用户失败:', error);
+        this.lastLoginUsers = [];
+      }
+    },
+    
+    /**
+     * 更新最近登录用户记录
+     */
+    updateLastLoginUser(user) {
+      try {
+        let savedUsers = uni.getStorageSync('lastLoginUsers') || [];
+        
+        // 移除已存在的用户记录
+        savedUsers = savedUsers.filter(u => u.userId !== user.id);
+        
+        // 添加到最前面
+        savedUsers.unshift({
+          userId: user.id,
+          username: user.username,
+          phone: user.phone,
+          avatar: user.avatar,
+          lastLoginTime: new Date().getTime()
+        });
+        
+        // 最多保存5个用户
+        if (savedUsers.length > 5) {
+          savedUsers = savedUsers.slice(0, 5);
+        }
+        
+        uni.setStorageSync('lastLoginUsers', savedUsers);
+        this.lastLoginUsers = savedUsers;
+        
+        console.log('更新最近登录用户记录:', savedUsers);
+      } catch (error) {
+        console.error('更新最近登录用户记录失败:', error);
       }
     },
     
@@ -546,20 +645,11 @@ export default {
             icon: 'success'
           });
           
-          // 检查是否需要完善个人信息
-          const user = res.data.data.userInfo || {};
-          const needProfile = !user.address || !user.address.receiverName || !user.address.province;
-          
+          // 登录成功直接跳转到首页
           setTimeout(() => {
-            if (needProfile) {
-              uni.navigateTo({
-                url: '/pages/UserProfile/UserProfile'
-              });
-            } else {
-              uni.switchTab({
-                url: '/pages/home/home'
-              });
-            }
+            uni.switchTab({
+              url: '/pages/home/home'
+            });
           }, 1500);
         }
       }
