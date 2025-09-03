@@ -29,9 +29,9 @@
                   <span class="sidebar-mini">مع</span>
                   <span class="sidebar-normal">ملف</span>
                 </a>
-                <a v-else @click="goToProfile">
-                  <span class="sidebar-mini">MP</span>
-                  <span class="sidebar-normal">My Profile</span>
+                <a @click="goToProfile">
+                  <span class="sidebar-mini">我</span>
+                  <span class="sidebar-normal">我的资料</span>
                 </a>
               </li>
               <li>
@@ -39,9 +39,9 @@
                   <span class="sidebar-mini">و</span>
                   <span class="sidebar-normal">إعدادات</span>
                 </a>
-                <a v-else @click="logout">
-                  <span class="sidebar-mini">L</span>
-                  <span class="sidebar-normal">Logout</span>
+                <a @click="logout">
+                  <span class="sidebar-mini">退</span>
+                  <span class="sidebar-normal">退出登录</span>
                 </a>
               </li>
             </slot>
@@ -57,7 +57,7 @@ export default {
   data() {
     return {
       isClosed: true,
-      title: 'Profile',
+      title: '个人资料',
       rtlTitle: "تانيا أندرو",
       avatar: process.env.VUE_APP_BASE_URL + "/img/faces/marc.jpg"
     };
@@ -78,7 +78,7 @@ export default {
       this.isClosed = !this.isClosed;
     },
     goToProfile() {
-      this.$router.push({name: "User Profile"})
+      this.$router.push({name: "用户资料"})
     },
     logout() {
       this.$store.dispatch("logout");
