@@ -384,7 +384,7 @@ export default {
             tension: 0
           }),
           low: 0,
-          high: 50, // creative tim: we recommend you to set the high sa the biggest value + something for a better look
+          high: 50, // 建议设置为最大值加上一些额外值以获得更好的外观
           chartPadding: {
             top: 0,
             right: 0,
@@ -404,7 +404,7 @@ export default {
             tension: 0
           }),
           low: 0,
-          high: 1000, // creative tim: we recommend you to set the high sa the biggest value + something for a better look
+          high: 1000, // 建议设置为最大值加上一些额外值以获得更好的外观
           chartPadding: {
             top: 0,
             right: 0,

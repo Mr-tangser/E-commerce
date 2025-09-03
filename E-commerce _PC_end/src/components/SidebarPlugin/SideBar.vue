@@ -7,12 +7,12 @@
     :style="sidebarStyle"
   >
     <div class="logo">
-      <a href="https://www.creative-tim.com" class="simple-text logo-mini" target="_blank">
-        <div style="padding: 4px 0;">
-          CT
+      <a class="logo-mini">
+        <div class="logo-img">
+          <span style="font-weight: bold; color: white;">全</span>
         </div>
       </a>
-      <a href="https://www.creative-tim.com" class="simple-text logo-normal" target="_blank">
+      <a class="logo-normal">
         <template v-if="$route.meta.rtlActive">{{ rtlTitle }}</template>
         <template v-else>{{ title }}</template>
       </a>
@@ -59,11 +59,11 @@ export default {
   props: {
     title: {
       type: String,
-      default: "Creative Tim"
+      default: "全品汇管理平台"
     },
     rtlTitle: {
       type: String,
-      default: "توقيت الإبداعية"
+      default: "全品汇管理平台"
     },
     activeColor: {
       type: String,
@@ -141,5 +141,104 @@ export default {
   .nav-mobile-menu {
     display: none;
   }
+}
+
+/* 隐藏侧边栏滚动条 */
+.sidebar {
+  overflow: hidden !important;
+}
+
+.sidebar .sidebar-wrapper {
+  overflow: hidden !important;
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.sidebar .sidebar-wrapper::-webkit-scrollbar {
+  display: none !important; /* Chrome, Safari and Opera */
+}
+
+/* 确保PerfectScrollbar的滚动条不显示 */
+.sidebar .ps-scrollbar-y-rail,
+.sidebar .ps-scrollbar-x-rail {
+  display: none !important;
+  opacity: 0 !important;
+}
+
+/* Logo居中样式 */
+.sidebar .logo {
+  text-align: center;
+  padding: 20px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 20px;
+  position: relative;
+  min-height: 60px;
+}
+
+/* 正常状态下显示logo-normal，隐藏logo-mini */
+.sidebar .logo .logo-mini {
+  display: none !important;
+  opacity: 0;
+  visibility: hidden;
+}
+
+.sidebar .logo .logo-normal {
+  display: block !important;
+  text-align: center;
+  color: white;
+  font-size: 20px;
+  font-weight: 400;
+  line-height: 1.2;
+  text-decoration: none;
+  letter-spacing: 1px;
+  transition: all 0.3s ease;
+  opacity: 1;
+  visibility: visible;
+}
+
+.sidebar .logo .logo-normal:hover {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* Mini状态下显示logo-mini，隐藏logo-normal */
+.sidebar-mini .sidebar .logo .logo-mini {
+  display: flex !important;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  margin: 0;
+  position: relative;
+  top: 0;
+  text-decoration: none;
+  opacity: 1;
+  visibility: visible;
+}
+
+.sidebar-mini .sidebar .logo .logo-mini .logo-img {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.sidebar-mini .sidebar .logo .logo-mini .logo-img:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.05);
+}
+
+.sidebar-mini .sidebar .logo .logo-mini .logo-img span {
+  font-size: 18px;
+  font-weight: bold;
+  color: white;
+}
+
+.sidebar-mini .sidebar .logo .logo-normal {
+  display: none !important;
+  opacity: 0;
+  visibility: hidden;
 }
 </style>

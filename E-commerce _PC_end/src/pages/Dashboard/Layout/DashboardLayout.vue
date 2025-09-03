@@ -15,71 +15,139 @@
       <user-menu></user-menu>
       <mobile-menu></mobile-menu>
       <template slot="links">
-        <!-- 全品汇管理系统主页 -->
         <sidebar-item
-          :link="{ name: '仪表板', icon: 'dashboard', path: '/dashboard' }"
+          v-if="$route.meta.rtlActive"
+          :link="{
+            name: 'لوحة القيادةة',
+            icon: 'dashboard',
+            path: '/dashboard',
+          }"
         />
-        
-        <!-- 商品管理 -->
         <sidebar-item
-          :link="{ name: '商品管理', icon: 'inventory_2' }"
-          opened
-        >
-          <sidebar-item
-            :link="{ name: '商品列表', path: '/products' }"
-          />
-          <sidebar-item
-            :link="{ name: '添加商品', path: '/products/add' }"
-          />
-          <sidebar-item
-            :link="{ name: '商品分类', path: '/categories' }"
-          />
-        </sidebar-item>
-
-        <!-- 订单管理 -->
-        <sidebar-item
-          :link="{ name: '订单管理', icon: 'receipt_long' }"
-          opened
-        >
-          <sidebar-item
-            :link="{ name: '订单列表', path: '/orders' }"
-          />
-          <sidebar-item
-            :link="{ name: '订单统计', path: '/orders/statistics' }"
-          />
-        </sidebar-item>
-
-        <!-- 用户管理 -->
-        <sidebar-item
-          :link="{ name: '用户管理', icon: 'people' }"
-          opened
-        >
-          <sidebar-item
-            :link="{ name: '用户列表', path: '/users' }"
-          />
-          <sidebar-item
-            :link="{ name: '管理员管理', path: '/admins' }"
-          />
-        </sidebar-item>
-
-        <!-- 数据统计 -->
-        <sidebar-item
-          :link="{ name: '数据统计', icon: 'analytics', path: '/analytics' }"
+          v-else
+          :link="{ name: 'Dashboard', icon: 'dashboard', path: '/dashboard' }"
         />
 
-        <!-- 系统设置 -->
+        <sidebar-item opened :link="{ name: 'Examples (API)', image: image }">
+          <sidebar-item
+            :link="{ name: 'User Profile', path: '/examples/user-profile' }"
+          />
+          <sidebar-item
+            :link="{
+              name: 'User Management',
+              path: '/examples/user-management/list-users',
+            }"
+          />
+        </sidebar-item>
+
         <sidebar-item
-          :link="{ name: '系统设置', icon: 'settings', path: '/settings' }"
+          v-if="$route.meta.rtlActive"
+          :link="{
+            name: 'الجداول',
+            icon: 'content_paste',
+            path: '/components/table',
+          }"
+        />
+        <sidebar-item
+          :link="{
+            name: 'Table Lists',
+            icon: 'content_paste',
+            path: '/components/table',
+          }"
+        />
+
+        <sidebar-item
+          v-if="$route.meta.rtlActive"
+          :link="{
+            name: 'طباعة',
+            icon: 'library_books',
+            path: '/components/typography',
+          }"
+        />
+        <sidebar-item
+          v-else
+          :link="{
+            name: 'Typography',
+            icon: 'library_books',
+            path: '/components/typography',
+          }"
+        />
+
+        <sidebar-item
+          v-if="$route.meta.rtlActive"
+          :link="{
+            name: 'الرموز',
+            icon: 'bubble_chart',
+            path: '/components/icons',
+          }"
+        />
+        <sidebar-item
+          v-else
+          :link="{
+            name: 'Icons',
+            icon: 'bubble_chart',
+            path: '/components/icons',
+          }"
+        />
+
+        <sidebar-item
+          v-if="$route.meta.rtlActive"
+          :link="{
+            name: 'خرائط جوجل',
+            icon: 'place',
+            path: '/components/maps',
+          }"
+        />
+        <sidebar-item
+          v-else
+          :link="{ name: 'Maps', icon: 'place', path: '/components/maps' }"
+        />
+
+        <sidebar-item
+          v-if="$route.meta.rtlActive"
+          :link="{
+            name: 'إخطارات',
+            icon: 'notifications',
+            path: '/components/notifications',
+          }"
+        />
+        <sidebar-item
+          v-else
+          :link="{
+            name: 'Notifications',
+            icon: 'notifications',
+            path: '/components/notifications',
+          }"
+        />
+
+        <sidebar-item
+          v-if="$route.meta.rtlActive"
+          :link="{ name: 'دعم رتل', icon: 'language', path: '/components/rtl' }"
+        />
+        <sidebar-item
+          v-else
+          :link="{
+            name: 'RTL Support',
+            icon: 'language',
+            path: '/components/rtl',
+          }"
         />
       </template>
 
-      <!-- 全品汇管理系统 - 无需升级按钮 -->
+
     </side-bar>
 
     <div class="main-panel">
       <top-navbar></top-navbar>
 
-      <!-- 全品汇管理系统 - 移除主题配置插件 -->
+      <fixed-plugin
+        :color.sync="sidebarBackground"
+        :colorBg.sync="sidebarBackgroundColor"
+        :sidebarMini.sync="sidebarMini"
+        :sidebarImg.sync="sidebarImg"
+        :image.sync="sidebarBackgroundImage"
+      >
+      </fixed-plugin>
 
       <div :class="{ content: !$route.meta.hideContent }">
         <zoom-center-transition :duration="200" mode="out-in">
@@ -117,8 +185,9 @@ function reinitScrollbar() {
   let isWindows = navigator.platform.startsWith("Win");
   if (isWindows) {
     // if we are on windows OS we activate the perfectScrollbar function
-    initScrollbar("sidebar");
-    initScrollbar("sidebar-wrapper");
+    // 注释掉sidebar相关的滚动条，避免不必要的滚动条显示
+    // initScrollbar("sidebar");
+    // initScrollbar("sidebar-wrapper");
     initScrollbar("main-panel");
 
     docClasses.add("perfect-scrollbar-on");
@@ -130,12 +199,14 @@ function reinitScrollbar() {
 import TopNavbar from "./TopNavbar.vue";
 import ContentFooter from "./ContentFooter.vue";
 import MobileMenu from "./Extra/MobileMenu.vue";
+import FixedPlugin from "../../FixedPlugin.vue";
 import UserMenu from "./Extra/UserMenu.vue";
 
 export default {
   components: {
     TopNavbar,
     ContentFooter,
+    FixedPlugin,
     MobileMenu,
     UserMenu,
   },
