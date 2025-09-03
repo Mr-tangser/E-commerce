@@ -83,7 +83,7 @@ export default {
     },
     backgroundImage: {
       type: String,
-      default: `${process.env.VUE_APP_BASE_URL}/img/sidebar-2.jpg`
+      default: process.env.BASE_URL + "img/back/back_2.jpg"
     },
     backgroundColor: {
       type: String,

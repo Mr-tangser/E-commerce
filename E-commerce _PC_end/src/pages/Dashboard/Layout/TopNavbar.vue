@@ -31,14 +31,13 @@
               :md-options="employees"
               :md-open-on-focus="false"
             >
-              <label v-if="$route.meta.rtlActive">بحث...</label>
-              <label v-else>Search...</label>
+              <label>搜索...</label>
             </md-autocomplete>
           </div>
           <md-list>
             <md-list-item href="#/">
               <i class="material-icons">dashboard</i>
-              <p class="hidden-lg hidden-md">Dashboard</p>
+              <p class="hidden-lg hidden-md">仪表板</p>
             </md-list-item>
 
             <li class="md-list-item">
@@ -55,14 +54,14 @@
                     >
                       <md-icon>notifications</md-icon>
                       <span class="notification">5</span>
-                      <p class="hidden-lg hidden-md">Notifications</p>
+                      <p class="hidden-lg hidden-md">通知</p>
                     </md-button>
                     <ul class="dropdown-menu dropdown-menu-right">
-                      <li><a href="#">Mike John responded to your email</a></li>
-                      <li><a href="#">You have 5 new tasks</a></li>
-                      <li><a href="#">You're now friend with Andrew</a></li>
-                      <li><a href="#">Another Notification</a></li>
-                      <li><a href="#">Another One</a></li>
+                      <li><a href="#">张三回复了您的邮件</a></li>
+                      <li><a href="#">您有5个新任务</a></li>
+                      <li><a href="#">李四添加您为好友</a></li>
+                      <li><a href="#">系统维护通知</a></li>
+                      <li><a href="#">订单状态更新</a></li>
                     </ul>
                   </drop-down>
                 </div>
@@ -71,7 +70,7 @@
 
             <md-list-item @click="goToUsers">
               <i class="material-icons">person</i>
-              <p class="hidden-lg hidden-md">Profile</p>
+              <p class="hidden-lg hidden-md">个人资料</p>
             </md-list-item>
           </md-list>
         </div>
@@ -111,7 +110,7 @@ export default {
       this.$router.push({ name: "Notifications" });
     },
     goToUsers() {
-      this.$router.push({ name: "User Profile" });
+      this.$router.push({ name: "用户资料" });
     },
   },
 };

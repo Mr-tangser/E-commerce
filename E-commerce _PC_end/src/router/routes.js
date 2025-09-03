@@ -89,13 +89,13 @@ let examplesMenu = {
   children: [
     {
       path: "user-profile",
-      name: "User Profile",
+      name: "用户资料",
       components: { default: UserProfile },
       meta: { middleware: auth }
     },
     {
       path: "user-management/list-users",
-      name: "List Users",
+      name: "用户列表",
       components: { default: ListUserPage },
       meta: { middleware: auth }
     }
@@ -137,7 +137,7 @@ const routes = [
     children: [
       {
         path: "dashboard",
-        name: "Dashboard",
+        name: "仪表板",
         components: { default: Dashboard },
         meta: { middleware: auth }
       }

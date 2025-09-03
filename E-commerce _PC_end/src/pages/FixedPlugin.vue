@@ -5,7 +5,7 @@
         <i class="fa fa-cog fa-2x" @click="toggleDropDown"> </i>
       </a>
       <ul class="dropdown-menu" :class="{ show: isOpen }">
-        <li class="header-title">Sidebar Filters</li>
+        <li class="header-title">侧边栏颜色</li>
         <li class="adjustments-line text-center">
           <span
               v-for="item in sidebarColors"
@@ -17,7 +17,7 @@
           >
           </span>
         </li>
-        <li class="header-title">Sidebar Background</li>
+        <li class="header-title">侧边栏背景</li>
         <li class="adjustments-line text-center">
           <span
               v-for="item in sidebarBg"
@@ -30,21 +30,21 @@
           </span>
         </li>
         <li class="adjustments-line sidebar-mini">
-          Sidebar Mini
+          侧边栏收缩
           <md-switch
               :value="!sidebarMini"
               @change="val => updateValue('sidebarMini', val)"
           ></md-switch>
         </li>
         <li class="adjustments-line sidebar-img">
-          Sidebar Image
+          背景图片
           <md-switch
               :value="!sidebarImg"
               @change="val => updateValueImg('sidebarImg', val)"
           ></md-switch>
         </li>
 
-        <li class="header-title">Images</li>
+        <li class="header-title">背景图片</li>
         <li
             v-for="item in sidebarImages"
             :key="item.image"
@@ -86,10 +86,10 @@
           {colorBg: "red", active: false}
         ],
         sidebarImages: [
-          {image: `${process.env.VUE_APP_BASE_URL}/img/sidebar-1.jpg`, active: false},
-          {image: `${process.env.VUE_APP_BASE_URL}/img/sidebar-2.jpg`, active: true},
-          {image: `${process.env.VUE_APP_BASE_URL}/img/sidebar-3.jpg`, active: false},
-          {image: `${process.env.VUE_APP_BASE_URL}/img/sidebar-4.jpg`, active: false}
+          {image: process.env.BASE_URL + 'img/back/back_1.jpg', active: false},
+          {image: process.env.BASE_URL + 'img/back/back_2.jpg', active: true},
+          {image: process.env.BASE_URL + 'img/back/back_3.jpg', active: false},
+          {image: process.env.BASE_URL + 'img/back/back_4.jpg', active: false}
         ]
       };
     },
