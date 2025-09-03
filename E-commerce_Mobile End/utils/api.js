@@ -1,5 +1,5 @@
 // API工具函数
-const BASE_URL = 'http://192.168.92.58:3000/api'
+const BASE_URL = 'http://192.168.160.128:3000/api'
 
 // 构建查询字符串的兼容性函数
 function buildQuery(params = {}) {
@@ -35,7 +35,8 @@ function request(url, options = {}) {
           actualResponse = res[1];
         }
         
-        if (actualResponse.statusCode === 200) {
+        // 检查成功状态码范围（200-299）
+        if (actualResponse.statusCode >= 200 && actualResponse.statusCode < 300) {
           console.log(`API响应数据:`, actualResponse.data);
           resolve(actualResponse.data);
         } else {
@@ -114,11 +115,43 @@ const api = {
 
   // 用户相关
   user: {
-    // 用户登录
-    login(username, password) {
+    // 用户登录（邮箱密码）
+    login(email, password) {
       return request('/auth/login', {
         method: 'POST',
-        data: { username, password }
+        data: { email, password }
+      });
+    },
+    
+    // 手机验证码登录
+    loginByPhone(phone, code) {
+      return request('/auth/login-by-phone', {
+        method: 'POST',
+        data: { phone, code }
+      });
+    },
+    
+    // 手机密码登录
+    loginByPhonePassword(phone, password) {
+      return request('/auth/login-by-phone-password', {
+        method: 'POST',
+        data: { phone, password }
+      });
+    },
+    
+    // 微信登录
+    wechatLogin(code, phoneNumber, encryptedData, iv) {
+      return request('/auth/wechat-login', {
+        method: 'POST',
+        data: { code, phoneNumber, encryptedData, iv }
+      });
+    },
+    
+    // 发送手机验证码
+    sendCode(phone, type = 'login') {
+      return request('/auth/send-code', {
+        method: 'POST',
+        data: { phone, type }
       });
     },
     
@@ -130,9 +163,33 @@ const api = {
       });
     },
     
+    // 更新用户信息
+    updateUserInfo(userInfo, token) {
+      return request('/users/profile', {
+        method: 'PUT',
+        data: userInfo,
+        token
+      });
+    },
+    
     // 获取用户信息
     getUserInfo(token) {
       return request('/auth/me', {
+        token
+      });
+    },
+    
+    // 获取用户人脸注册状态
+    getFaceStatus(token) {
+      return request('/auth/face-status', {
+        token
+      });
+    },
+    
+    // 删除用户人脸信息
+    deleteFaceData(token) {
+      return request('/auth/face-data', {
+        method: 'DELETE',
         token
       });
     }
