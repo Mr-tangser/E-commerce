@@ -554,6 +554,8 @@ canvas {
     animation: fadeInDown 1s ease-out forwards;
     opacity: 0;
     transform: translateY(-30px);
+    font-size: 3.5rem;
+    font-weight: 700;
 }
 
 .title-part:nth-child(1) {
@@ -562,13 +564,19 @@ canvas {
     font-weight: 300;
 }
 
+.title-part.bold {
+    animation-delay: 0.2s;
+    color: var(--fg);
+    font-weight: 900; /* 超粗字体 */
+}
+
 .title-part.highlight {
     animation-delay: 0.4s;
     background: linear-gradient(135deg, var(--fg), var(--accent));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
-    font-weight: 600;
+    font-weight: 600; /* 恢复原来的字重 */
     position: relative;
 }
 

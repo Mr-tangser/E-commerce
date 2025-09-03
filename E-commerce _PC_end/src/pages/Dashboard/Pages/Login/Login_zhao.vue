@@ -13,7 +13,7 @@
         <div class="hero-content">
           <div class="header" ref="header">
             <h1 class="main-title">
-              <span class="title-part">全品汇</span>
+              <span class="title-part bold">全品汇</span>
               <span class="title-part highlight">管理平台</span>
             </h1>
             <p class="subtitle">全球好物汇聚，智慧管理引领</p>
