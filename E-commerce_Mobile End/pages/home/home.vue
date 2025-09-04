@@ -171,39 +171,15 @@
 						<text>今日上新</text>
 					</view>
 					<view class="describe">
-						<text>{{ newProductsStats.total > 0 ? `为您精选了 ${newProductsStats.total} 款新品` : '今日上新商品是否有你心仪礼物' }}</text>
+						<text>今日上新商品是否有你心仪礼物</text>
 					</view>
 				</view>
-				
-				<!-- 新品加载状态 -->
-				<view class="new-products-loading" v-if="loadingNewProducts">
-					<view class="loading-content">
-						<view class="loading-spinner"></view>
-						<text>正在加载新品...</text>
-					</view>
-				</view>
-				
-				<!-- 新品商品列表 -->
-				<view class="goods-list" v-else-if="newProductsList.length > 0">
-					<view class="list" v-for="item in newProductsList.slice(0, 4)" :key="item.id" @click="onGoodsClick(item)">
-						<view class="pictrue">
-							<image :src="item.img" mode="aspectFill"></image>
-							<view class="new-badge">NEW</view>
-						</view>
-						<view class="price">
-							<text class="selling-price">￥{{ item.price }}</text>
-							<text class="original-price" v-if="item.originalPrice">￥{{ item.originalPrice }}</text>
-						</view>
-					</view>
-				</view>
-				
-				<!-- 默认展示 -->
-				<view class="goods-list" v-else>
+				<view class="goods-list">
 					<view class="list" @click="onSkip('goods')">
 						<view class="pictrue">
 							<image src="/static/img/goods_07.png"></image>
 						</view>
-						<view class="price">
+						<view class="price" @click="onSkip('goods')">
 							<text class="selling-price">￥59</text>
 							<text class="original-price">￥19</text>
 						</view>
@@ -243,62 +219,37 @@
 					<view class="title">
 						<image src="/static/wntj_title.png" mode=""></image>
 					</view>
-					<!-- 个性化推荐提示 -->
-					<view class="recommend-hint" v-if="showPersonalizedHint">
-						<text class="hint-text">🎯 根据您的浏览记录为您推荐</text>
-					</view>
-					<!-- 推荐统计信息 -->
-					<view class="recommend-stats" v-if="recommendationStats.total > 0">
-						<text class="stats-text">为您精选了 {{ recommendationStats.total }} 款商品</text>
-						<view class="stats-reasons" v-if="Object.keys(recommendationStats.reasons).length > 0">
-							<view class="reason-tag" v-for="(count, reason) in recommendationStats.reasons" :key="reason">
-								<text>{{ reason }} {{ count }}个</text>
+				</view>
+				<view class="goods-list" v-if="goodsList.length > 0">
+					<view class="list" v-for="(item,index) in goodsList" @click="onSkip('goods', item)" :key="item.id || index">
+						<view class="pictrue">
+							<image :src="item.img" mode="heightFix"></image>
+						</view>
+						<view class="title-tag">
+							<view class="tag">
+								<text v-if="item.is_goods === 1">特价</text>
+								{{item.name}}
+							</view>
+						</view>
+						<view class="price-info">
+							<view class="user-price">
+								<text class="min">￥</text>
+								<text class="max">{{item.price}}</text>
+							</view>
+							<view class="vip-price">
+								<image src="/static/vip_ico.png"></image>
+								<text>￥{{item.vip_price}}</text>
 							</view>
 						</view>
 					</view>
 				</view>
-				
 				<!-- 加载状态 -->
-				<view class="loading-state" v-if="loading">
-					<view class="loading-content">
-						<view class="loading-spinner"></view>
-						<text class="loading-text">{{ loadingText }}</text>
-						<view class="loading-progress">
-							<view class="progress-bar" :style="{ width: loadingProgress + '%' }"></view>
-						</view>
-					</view>
+				<view class="loading-state" v-else-if="loading">
+					<text>正在加载商品...</text>
 				</view>
-				
-				<!-- 瀑布流商品列表 -->
-				<WaterfallFlow 
-					:dataList="goodsList"
-					:showLoadMore="false"
-					@item-click="onGoodsClick"
-					v-else-if="!loading && goodsList.length > 0"
-				/>
-				
 				<!-- 空状态 -->
-				<view class="empty-state" v-else-if="!loading && goodsList.length === 0">
-					<view class="empty-content">
-						<text class="empty-icon">🛒</text>
-						<text class="empty-title">暂无商品数据</text>
-						<text class="empty-desc">商品正在补充中，请稍后再来看看</text>
-						<view class="empty-actions">
-							<button class="retry-btn" @click="loadPageData">重新加载</button>
-						</view>
-					</view>
-				</view>
-				
-				<!-- 错误状态 -->
-				<view class="error-state" v-else-if="hasError">
-					<view class="error-content">
-						<text class="error-icon">⚠️</text>
-						<text class="error-title">加载失败</text>
-						<text class="error-desc">{{ errorMessage }}</text>
-						<view class="error-actions">
-							<button class="retry-btn" @click="retryLoad">重试</button>
-						</view>
-					</view>
+				<view class="empty-state" v-else>
+					<text>暂无商品数据</text>
 				</view>
 			</view>
 		</view>
@@ -312,17 +263,14 @@
 <script>
 import TabBar from '../../components/TabBar/TabBar.vue';
 import ClassifyData from '../../components/ClassifyData/ClassifyData.vue';
-import WaterfallFlow from '../../components/WaterfallFlow/WaterfallFlow.vue';
 // 引入mescroll-mixins.js
 import MescrollMixin from "@/components/mescroll-uni/mescroll-mixins.js";
 import api from '@/utils/api.js';
-import RecommendationService from '@/utils/recommendation-service.js';
 export default {
   mixins: [MescrollMixin], // 使用mixin
 	components:{
 		TabBar,
 		ClassifyData,
-		WaterfallFlow,
 		},
 	data(){
 		return{
@@ -507,24 +455,6 @@ export default {
 			pageHeight: 500,
 			// 加载状态
 			loading: false,
-			loadingText: '正在加载商品...',
-			loadingProgress: 0,
-			// 错误状态
-			hasError: false,
-			errorMessage: '',
-			// 是否显示个性化推荐提示
-			showPersonalizedHint: false,
-			// 推荐统计信息
-			recommendationStats: {
-				total: 0,
-				reasons: {}
-			},
-			// 新品推荐数据
-			newProductsList: [],
-			loadingNewProducts: false,
-			newProductsStats: {
-				total: 0
-			},
 		}
 	},
 	onReady() {
@@ -657,45 +587,22 @@ export default {
 		async loadPageData() {
 			console.log('🚀 开始加载页面数据...');
 			this.loading = true;
-			this.hasError = false;
-			this.errorMessage = '';
-			this.loadingProgress = 0;
-			
 			try {
-				// 阶段1: 测试API连通性 (20%)
-				this.loadingText = '检查网络连接...';
+				// 首先测试API连通性
 				await this.testApiConnection();
-				this.loadingProgress = 20;
 				
-				// 阶段2: 加载分类数据 (60%)
-				this.loadingText = '加载商品分类...';
-				await this.loadHomepageCategories();
-				this.loadingProgress = 60;
-				
-				// 阶段3: 加载推荐商品 (80%)
-				this.loadingText = '加载推荐商品...';
-				await this.loadRecommendedProducts();
-				this.loadingProgress = 80;
-				
-				// 阶段4: 加载新品推荐 (100%)
-				this.loadingText = '加载新品推荐...';
-				await this.loadNewProducts();
-				this.loadingProgress = 100;
-				
-				console.log('⏹️ 数据加载完成');
+				// 并行加载数据
+				await Promise.all([
+					this.loadHomepageCategories(),
+					this.loadRecommendedProducts()
+				]);
 			} catch (error) {
 				console.error('❌ 加载页面数据失败:', error);
-				this.hasError = true;
-				this.errorMessage = error.message || '网络连接失败，请检查网络后重试';
-				// 不再显示全局错误提示，由界面状态展示
+				api.handleError(error, '加载数据失败');
 			} finally {
 				this.loading = false;
+				console.log('⏹️ 数据加载完成');
 			}
-		},
-		
-		// 重试加载
-		async retryLoad() {
-			await this.loadPageData();
 		},
 
 		// 测试API连通性
@@ -708,38 +615,24 @@ export default {
 			timeout: 30000
 		});
 				
-				// 获取系统信息
-				const systemInfo = await api.system.getSystemInfo();
-				console.log('📱 运行环境:', {
-					platform: systemInfo.platform,
-					system: systemInfo.system,
-					networkType: systemInfo.networkType
-				});
+				console.log('🌐 API连通性测试结果:', testResponse);
 				
-				// 检查网络状态
-				const networkType = await api.system.checkNetworkStatus();
-				console.log('📶 网络状态正常:', networkType);
+				// 处理可能的数组响应
+				let actualResponse = testResponse;
+				if (Array.isArray(testResponse) && testResponse.length > 1) {
+					actualResponse = testResponse[1];
+				}
 				
-				// 测试API连接
-				const isConnected = await api.system.testAPIConnection();
-				if (isConnected) {
+				if (actualResponse.statusCode === 200) {
 					console.log('✅ API连接正常');
-					return true;
+					console.log('📊 原始API响应数据:', JSON.stringify(actualResponse.data, null, 2));
+					return actualResponse.data;
 				} else {
-					throw new Error('API服务器无响应，请检查服务器是否启动');
+					throw new Error(`API连接失败: ${actualResponse.statusCode}`);
 				}
 			} catch (error) {
 				console.error('❌ API连通性测试失败:', error);
-				
-				// 提供详细的错误信息和解决建议
-				let errorMessage = error.message;
-				if (error.message.includes('网络未连接')) {
-					errorMessage = '网络未连接，请检查WiFi或移动网络设置';
-				} else if (error.message.includes('无法连接到服务器')) {
-					errorMessage = '无法连接到服务器，请确保：\n1. 手机和电脑在同一WiFi网络\n2. 后端服务已启动(npm start)\n3. 防火墙未阻止端口3000';
-				}
-				
-				throw new Error(errorMessage);
+				throw error;
 			}
 		},
 
@@ -815,242 +708,31 @@ export default {
 			try {
 				console.log('🛒 开始加载推荐商品数据...');
 				
-				// 使用推荐服务获取个性化推荐商品
-				const recommendations = await RecommendationService.getPersonalizedRecommendations(20);
-				
-				if (recommendations && recommendations.length > 0) {
-					// 使用推荐商品
-					this.goodsList = recommendations;
-					
-					// 判断是否显示个性化提示
-					const hasPersonalizedItems = recommendations.some(p => 
-						p.reason && !['精选推荐', '热销推荐', '好评推荐'].includes(p.reason)
-					);
-					this.showPersonalizedHint = hasPersonalizedItems;
-					
-					// 更新推荐统计信息
-					const reasons = this.getRecommendationReasons(recommendations);
-					this.recommendationStats = {
-						total: recommendations.length,
-						reasons: reasons
-					};
-					
-					this.$forceUpdate();
-					
-					console.log('✅ 个性化推荐商品加载成功:', recommendations.length, '个商品');
-					console.log('🎯 推荐原因分布:', reasons);
-					
-					if (hasPersonalizedItems) {
-						console.log('💡 为您展示个性化推荐商品');
-					}
-				} else {
-					// 降级到普通商品列表
-					console.warn('⚠️ 推荐系统无商品，降级到普通商品列表');
-					await this.loadFallbackProducts();
-				}
-			} catch (error) {
-				console.error('❌ 加载推荐商品失败:', error);
-				// 降级到普通商品列表
-				await this.loadFallbackProducts();
-			}
-		},
-
-		// 降级商品加载方案
-		async loadFallbackProducts() {
-			try {
-				console.log('🔄 使用降级方案加载商品...');
+				// 直接获取所有商品，不进行精选过滤
 				const response = await api.product.getProducts({
 					limit: 20
 				});
+				console.log('📦 商品API响应:', response);
 				
 				if (response && response.success && response.data && response.data.products && response.data.products.length > 0) {
+					// 转换商品数据格式
 					const products = response.data.products.map(product => 
 						api.transformers.productToFrontend(product)
 					);
 					
+					// 强制更新数据
 					this.goodsList = products;
 					this.$forceUpdate();
 					
-					console.log('✅ 降级商品数据加载成功:', products.length, '个商品');
+					console.log('✅ 商品数据加载成功:', products.length, '个商品');
+					console.log('🔍 商品数据预览:', products.slice(0, 2));
 				} else {
 					console.warn('⚠️ 无法获取商品数据');
+					console.log('📊 API响应详情:', JSON.stringify(response, null, 2));
 				}
 			} catch (error) {
-				console.error('❌ 降级商品加载失败:', error);
+				console.error('❌ 加载推荐商品失败:', error);
 				api.handleError(error, '商品数据加载失败');
-			}
-		},
-
-		// 获取推荐原因统计
-		getRecommendationReasons(recommendations) {
-			const reasons = {};
-			recommendations.forEach(product => {
-				const reason = product.reason || '其他';
-				reasons[reason] = (reasons[reason] || 0) + 1;
-			});
-			return reasons;
-		},
-
-		// 加载新品推荐
-		async loadNewProducts() {
-			try {
-				console.log('🆕 开始加载新品推荐...');
-				this.loadingNewProducts = true;
-				
-				// 获取新品推荐
-				const newProducts = await RecommendationService.getNewProductRecommendations(8);
-				
-				if (newProducts && newProducts.length > 0) {
-					this.newProductsList = newProducts;
-					this.newProductsStats = {
-						total: newProducts.length
-					};
-					console.log('✅ 新品推荐加载成功:', newProducts.length, '个商品');
-				} else {
-					console.log('ℹ️ 暂无新品推荐');
-				}
-			} catch (error) {
-				console.error('❌ 加载新品推荐失败:', error);
-				// 静默失败，不影响主要功能
-			} finally {
-				this.loadingNewProducts = false;
-			}
-		},
-
-		// 商品点击处理
-		async onGoodsClick(item) {
-			console.log('🛒 点击商品:', item.name, item);
-			
-			try {
-				// 1. 先记录浏览历史（用于实时推荐）
-				const historyItem = {
-					id: item.id,
-					name: item.name,
-					price: item.price,
-					img: item.img,
-					category: item.category,
-					subcategory: item.subcategory,
-					tags: item.tags || []
-				};
-				
-				// 记录到浏览历史
-				const BrowsingHistory = (await import('@/utils/browsing-history.js')).default;
-				BrowsingHistory.addProduct(historyItem);
-				console.log('📖 商品浏览记录已保存:', item.name);
-				
-				// 2. 实时更新推荐商品（异步执行，不阻塞跳转）
-				this.updateRecommendationsRealtime(item);
-				
-				// 3. 跳转到商品详情页
-				let goodsUrl = '/pages/GoodsDetails/GoodsDetails';
-				if (item && item.id) {
-					goodsUrl += `?id=${item.id}`;
-				}
-				uni.navigateTo({
-					url: goodsUrl,
-					animationType: 'zoom-fade-out',
-					animationDuration: 200
-				});
-				
-			} catch (error) {
-				console.error('❌ 商品点击处理失败:', error);
-				// 即使出错也要跳转
-				let goodsUrl = '/pages/GoodsDetails/GoodsDetails';
-				if (item && item.id) {
-					goodsUrl += `?id=${item.id}`;
-				}
-				uni.navigateTo({
-					url: goodsUrl,
-					animationType: 'zoom-fade-out',
-					animationDuration: 200
-				});
-			}
-		},
-
-		// 实时更新推荐商品
-		async updateRecommendationsRealtime(clickedItem) {
-			try {
-				console.log('🔄 开始实时更新推荐商品...');
-				
-				// 异步执行，不阻塞UI
-				setTimeout(async () => {
-					try {
-						// 获取基于新浏览记录的推荐，传入实时上下文
-						const updatedRecommendations = await RecommendationService.getPersonalizedRecommendations(20, clickedItem);
-						
-						if (updatedRecommendations && updatedRecommendations.length > 0) {
-							// 过滤掉刚点击的商品（避免重复推荐）
-							const filteredRecommendations = updatedRecommendations.filter(product => 
-								product.id !== clickedItem.id
-							);
-							
-							// 如果过滤后商品不足，补充一些新商品
-							if (filteredRecommendations.length < 15) {
-								try {
-									const additionalProducts = await this.getAdditionalProducts(filteredRecommendations.length);
-									filteredRecommendations.push(...additionalProducts);
-								} catch (error) {
-									console.warn('⚠️ 获取补充商品失败:', error);
-								}
-							}
-							
-							// 更新推荐商品列表
-							this.goodsList = filteredRecommendations.slice(0, 20);
-							
-							// 更新推荐统计信息
-							const hasPersonalizedItems = filteredRecommendations.some(p => 
-								p.reason && !['精选推荐', '热销推荐', '好评推荐'].includes(p.reason)
-							);
-							this.showPersonalizedHint = hasPersonalizedItems;
-							
-							const reasons = this.getRecommendationReasons(filteredRecommendations);
-							this.recommendationStats = {
-								total: filteredRecommendations.length,
-								reasons: reasons
-							};
-							
-							// 强制更新UI
-							this.$forceUpdate();
-							
-							console.log('✅ 实时推荐更新成功:', filteredRecommendations.length, '个商品');
-							console.log('🎯 新推荐原因分布:', reasons);
-							
-							// 显示推荐更新提示
-							if (hasPersonalizedItems) {
-								uni.showToast({
-									title: '已为您刷新推荐',
-									icon: 'none',
-									duration: 1500
-								});
-							}
-						}
-					} catch (error) {
-						console.error('❌ 实时推荐更新失败:', error);
-					}
-				}, 300); // 300ms后执行，确保跳转动画流畅
-				
-			} catch (error) {
-				console.error('❌ 启动实时推荐更新失败:', error);
-			}
-		},
-
-		// 获取补充商品（当推荐商品不足时）
-		async getAdditionalProducts(currentCount) {
-			try {
-				const response = await api.product.getProducts({
-					limit: 20 - currentCount,
-					offset: Math.floor(Math.random() * 50) // 随机偏移，增加多样性
-				});
-				
-				if (response && response.success && response.data && response.data.products) {
-					return response.data.products.map(product => 
-						api.transformers.productToFrontend(product)
-					);
-				}
-				return [];
-			} catch (error) {
-				console.error('❌ 获取补充商品失败:', error);
-				return [];
 			}
 		},
 
@@ -1095,233 +777,4 @@ export default {
 
 <style scoped lang="scss">
 @import 'home.scss';
-
-/* 个性化推荐提示样式 */
-.recommend-hint {
-  margin-top: 10rpx;
-  text-align: center;
-  
-  .hint-text {
-    font-size: 24rpx;
-    color: #ff6b3d;
-    background: linear-gradient(135deg, #ff6b3d, #ff8f4d);
-    background-clip: text;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    font-weight: 500;
-    padding: 8rpx 16rpx;
-    border-radius: 20rpx;
-    background-color: rgba(255, 107, 61, 0.1);
-    border: 1rpx solid rgba(255, 107, 61, 0.2);
-  }
-}
-
-/* 推荐统计信息样式 */
-.recommend-stats {
-  margin-top: 15rpx;
-  text-align: center;
-  
-  .stats-text {
-    font-size: 26rpx;
-    color: #666;
-    margin-bottom: 10rpx;
-  }
-  
-  .stats-reasons {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 8rpx;
-    
-    .reason-tag {
-      background: linear-gradient(135deg, #f8f9fa, #e9ecef);
-      border: 1rpx solid #dee2e6;
-      border-radius: 15rpx;
-      padding: 4rpx 12rpx;
-      
-      text {
-        font-size: 22rpx;
-        color: #495057;
-      }
-    }
-  }
-}
-
-/* 优化加载状态样式 */
-.loading-state {
-  padding: 60rpx 40rpx;
-  text-align: center;
-  
-  .loading-content {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    
-    .loading-spinner {
-      width: 60rpx;
-      height: 60rpx;
-      border: 4rpx solid #f3f3f3;
-      border-top: 4rpx solid #fe3b0f;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      margin-bottom: 20rpx;
-    }
-    
-    .loading-text {
-      font-size: 28rpx;
-      color: #666;
-      margin-bottom: 20rpx;
-    }
-    
-    .loading-progress {
-      width: 200rpx;
-      height: 6rpx;
-      background: #f0f0f0;
-      border-radius: 3rpx;
-      overflow: hidden;
-      
-      .progress-bar {
-        height: 100%;
-        background: linear-gradient(90deg, #fe3b0f, #ff6b3d);
-        border-radius: 3rpx;
-        transition: width 0.3s ease;
-      }
-    }
-  }
-}
-
-/* 空状态样式 */
-.empty-state {
-  padding: 80rpx 40rpx;
-  text-align: center;
-  
-  .empty-content {
-    .empty-icon {
-      font-size: 80rpx;
-      margin-bottom: 20rpx;
-    }
-    
-    .empty-title {
-      font-size: 32rpx;
-      color: #333;
-      margin-bottom: 10rpx;
-      display: block;
-    }
-    
-    .empty-desc {
-      font-size: 26rpx;
-      color: #999;
-      margin-bottom: 30rpx;
-      display: block;
-    }
-    
-    .empty-actions {
-      .retry-btn {
-        background: linear-gradient(135deg, #fe3b0f, #ff6b3d);
-        color: white;
-        border: none;
-        border-radius: 25rpx;
-        padding: 12rpx 30rpx;
-        font-size: 28rpx;
-      }
-    }
-  }
-}
-
-/* 错误状态样式 */
-.error-state {
-  padding: 80rpx 40rpx;
-  text-align: center;
-  
-  .error-content {
-    .error-icon {
-      font-size: 80rpx;
-      margin-bottom: 20rpx;
-    }
-    
-    .error-title {
-      font-size: 32rpx;
-      color: #e74c3c;
-      margin-bottom: 10rpx;
-      display: block;
-    }
-    
-    .error-desc {
-      font-size: 26rpx;
-      color: #999;
-      margin-bottom: 30rpx;
-      display: block;
-    }
-    
-    .error-actions {
-      .retry-btn {
-        background: linear-gradient(135deg, #e74c3c, #c0392b);
-        color: white;
-        border: none;
-        border-radius: 25rpx;
-        padding: 12rpx 30rpx;
-        font-size: 28rpx;
-      }
-    }
-  }
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-/* 新品推荐样式优化 */
-.new-product {
-  .goods-list {
-    .list {
-      position: relative;
-      
-      .pictrue {
-        position: relative;
-        
-        .new-badge {
-          position: absolute;
-          top: 8rpx;
-          right: 8rpx;
-          background: linear-gradient(135deg, #ff6b3d, #ff8f4d);
-          color: white;
-          font-size: 20rpx;
-          padding: 4rpx 8rpx;
-          border-radius: 8rpx;
-          font-weight: 600;
-          z-index: 2;
-          box-shadow: 0 2rpx 4rpx rgba(255, 107, 61, 0.3);
-        }
-      }
-    }
-  }
-}
-
-/* 新品加载状态 */
-.new-products-loading {
-  padding: 40rpx;
-  text-align: center;
-  
-  .loading-content {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    
-    .loading-spinner {
-      width: 40rpx;
-      height: 40rpx;
-      border: 3rpx solid #f3f3f3;
-      border-top: 3rpx solid #fe3b0f;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      margin-bottom: 15rpx;
-    }
-    
-    text {
-      font-size: 24rpx;
-      color: #999;
-    }
-  }
-}
 </style>
