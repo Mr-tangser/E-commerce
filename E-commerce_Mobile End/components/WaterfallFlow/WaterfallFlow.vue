@@ -4,7 +4,7 @@
     <view class="waterfall-column left-column">
       <view 
         v-for="(item, index) in leftColumnData" 
-        :key="`left-${item.id || index}`"
+        :key="`left-col-${index}-${item._waterfallId || item.id || 'item-' + index}`"
         class="waterfall-item"
         @click="onItemClick(item)"
       >
@@ -47,7 +47,7 @@
     <view class="waterfall-column right-column">
       <view 
         v-for="(item, index) in rightColumnData" 
-        :key="`right-${item.id || index}`"
+        :key="`right-col-${index}-${item._waterfallId || item.id || 'item-' + index}`"
         class="waterfall-item"
         @click="onItemClick(item)"
       >
@@ -174,9 +174,15 @@ export default {
       this.leftColumnHeight = 0;
       this.rightColumnHeight = 0;
       
-      // 为每个商品分配到左右列
+      // 为每个商品分配到左右列，确保每个商品都有唯一标识
       this.dataList.forEach((item, index) => {
-        this.addItemToColumn(item, index);
+        // 确保每个商品都有唯一的内部ID
+        const uniqueItem = {
+          ...item,
+          _waterfallIndex: index, // 添加瀑布流内部索引
+          _waterfallId: item.id || `item-${index}-${Date.now()}` // 确保有唯一ID
+        };
+        this.addItemToColumn(uniqueItem, index);
       });
       
       console.log('✅ 瀑布流布局完成', {
@@ -248,8 +254,15 @@ export default {
       
       console.log('➕ 添加更多数据到瀑布流:', newData.length, '个商品');
       
+      const currentLength = this.dataList.length;
       newData.forEach((item, index) => {
-        this.addItemToColumn(item, this.dataList.length + index);
+        // 确保新数据也有唯一标识
+        const uniqueItem = {
+          ...item,
+          _waterfallIndex: currentLength + index,
+          _waterfallId: item.id || `item-${currentLength + index}-${Date.now()}`
+        };
+        this.addItemToColumn(uniqueItem, currentLength + index);
       });
     },
     
