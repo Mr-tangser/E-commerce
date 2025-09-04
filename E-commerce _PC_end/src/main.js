@@ -1,15 +1,8 @@
 // =========================================================
-// * Vue Material Dashboard Laravel - v1.1.0
+// * 全品汇电商管理系统 - v1.4.0
 // =========================================================
-//
-// * Product Page: https://www.creative-tim.com/product/vue-material-dashboard-laravel
-// * Copyright Creative Tim (https://www.creative-tim.com) & UPDIVISION (https://www.updivision.com)
-//
-// * Coded by www.creative-tim.com & www.updivision.com
-//
-// =========================================================
-//
-// * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+// 基于Vue Material Dashboard开发
+// Licensed under MIT
 
 import Vue from "vue";
 import axios from "axios";

@@ -16,135 +16,25 @@
       <mobile-menu></mobile-menu>
       <template slot="links">
         <sidebar-item
-          v-if="$route.meta.rtlActive"
-          :link="{
-            name: 'لوحة القيادةة',
-            icon: 'dashboard',
-            path: '/dashboard',
-          }"
-        />
-        <sidebar-item
-          v-else
-          :link="{ name: 'Dashboard', icon: 'dashboard', path: '/dashboard' }"
+          :link="{ name: '仪表板', icon: 'dashboard', path: '/dashboard' }"
         />
 
-        <sidebar-item opened :link="{ name: 'Examples (API)', image: image }">
+        <sidebar-item opened :link="{ name: '用户管理', image: image }">
           <sidebar-item
-            :link="{ name: 'User Profile', path: '/examples/user-profile' }"
+            :link="{ name: '用户资料', path: '/examples/user-profile' }"
           />
           <sidebar-item
             :link="{
-              name: 'User Management',
+              name: '用户管理',
               path: '/examples/user-management/list-users',
             }"
           />
         </sidebar-item>
 
-        <sidebar-item
-          v-if="$route.meta.rtlActive"
-          :link="{
-            name: 'الجداول',
-            icon: 'content_paste',
-            path: '/components/table',
-          }"
-        />
-        <sidebar-item
-          :link="{
-            name: 'Table Lists',
-            icon: 'content_paste',
-            path: '/components/table',
-          }"
-        />
 
-        <sidebar-item
-          v-if="$route.meta.rtlActive"
-          :link="{
-            name: 'طباعة',
-            icon: 'library_books',
-            path: '/components/typography',
-          }"
-        />
-        <sidebar-item
-          v-else
-          :link="{
-            name: 'Typography',
-            icon: 'library_books',
-            path: '/components/typography',
-          }"
-        />
-
-        <sidebar-item
-          v-if="$route.meta.rtlActive"
-          :link="{
-            name: 'الرموز',
-            icon: 'bubble_chart',
-            path: '/components/icons',
-          }"
-        />
-        <sidebar-item
-          v-else
-          :link="{
-            name: 'Icons',
-            icon: 'bubble_chart',
-            path: '/components/icons',
-          }"
-        />
-
-        <sidebar-item
-          v-if="$route.meta.rtlActive"
-          :link="{
-            name: 'خرائط جوجل',
-            icon: 'place',
-            path: '/components/maps',
-          }"
-        />
-        <sidebar-item
-          v-else
-          :link="{ name: 'Maps', icon: 'place', path: '/components/maps' }"
-        />
-
-        <sidebar-item
-          v-if="$route.meta.rtlActive"
-          :link="{
-            name: 'إخطارات',
-            icon: 'notifications',
-            path: '/components/notifications',
-          }"
-        />
-        <sidebar-item
-          v-else
-          :link="{
-            name: 'Notifications',
-            icon: 'notifications',
-            path: '/components/notifications',
-          }"
-        />
-
-        <sidebar-item
-          v-if="$route.meta.rtlActive"
-          :link="{ name: 'دعم رتل', icon: 'language', path: '/components/rtl' }"
-        />
-        <sidebar-item
-          v-else
-          :link="{
-            name: 'RTL Support',
-            icon: 'language',
-            path: '/components/rtl',
-          }"
-        />
       </template>
 
-      <div style="width: 100%; position: absolute; bottom: 0; padding: 16px">
-        <md-button
-          v-if="sidebarMini"
-          class="md-button md-danger md-block"
-          href="https://www.creative-tim.com/product/vue-material-dashboard-laravel-pro-bs4"
-          target="_blanck"
-        >
-          <i class="fas fa-download" style="margin-right: 4px"></i>Upgrade to
-          PRO
-        </md-button>
-      </div>
+
     </side-bar>
 
     <div class="main-panel">
@@ -195,8 +85,9 @@ function reinitScrollbar() {
   let isWindows = navigator.platform.startsWith("Win");
   if (isWindows) {
     // if we are on windows OS we activate the perfectScrollbar function
-    initScrollbar("sidebar");
-    initScrollbar("sidebar-wrapper");
+    // 注释掉sidebar相关的滚动条，避免不必要的滚动条显示
+    // initScrollbar("sidebar");
+    // initScrollbar("sidebar-wrapper");
     initScrollbar("main-panel");
 
     docClasses.add("perfect-scrollbar-on");
@@ -223,8 +114,7 @@ export default {
     return {
       sidebarBackgroundColor: "black",
       sidebarBackground: "green",
-      sidebarBackgroundImage:
-        process.env.VUE_APP_BASE_URL + "/img/sidebar-2.jpg",
+      sidebarBackgroundImage: process.env.BASE_URL + "img/back/back_2.jpg",
       sidebarMini: true,
       sidebarImg: true,
       image: process.env.VUE_APP_BASE_URL + "/img/laravel-vue.svg",

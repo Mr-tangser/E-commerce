@@ -5,7 +5,7 @@
         <i class="fa fa-cog fa-2x" @click="toggleDropDown"> </i>
       </a>
       <ul class="dropdown-menu" :class="{ show: isOpen }">
-        <li class="header-title">Sidebar Filters</li>
+        <li class="header-title">侧边栏颜色</li>
         <li class="adjustments-line text-center">
           <span
               v-for="item in sidebarColors"
@@ -17,7 +17,7 @@
           >
           </span>
         </li>
-        <li class="header-title">Sidebar Background</li>
+        <li class="header-title">侧边栏背景</li>
         <li class="adjustments-line text-center">
           <span
               v-for="item in sidebarBg"
@@ -30,21 +30,21 @@
           </span>
         </li>
         <li class="adjustments-line sidebar-mini">
-          Sidebar Mini
+          侧边栏收缩
           <md-switch
               :value="!sidebarMini"
               @change="val => updateValue('sidebarMini', val)"
           ></md-switch>
         </li>
         <li class="adjustments-line sidebar-img">
-          Sidebar Image
+          背景图片
           <md-switch
               :value="!sidebarImg"
               @change="val => updateValueImg('sidebarImg', val)"
           ></md-switch>
         </li>
 
-        <li class="header-title">Images</li>
+        <li class="header-title">背景图片</li>
         <li
             v-for="item in sidebarImages"
             :key="item.image"
@@ -56,88 +56,13 @@
           </a>
         </li>
 
-        <li class="button-container">
-          <div class="">
-            <md-button
-                class="md-success md-block"
-                :href="downloadUrl"
-                target="_blank"
-            >Download Now
-            </md-button
-            >
-          </div>
-        </li>
 
-        <li class="button-container">
-          <div class="">
-            <md-button
-                class="md-default md-block"
-                :href="documentationLink"
-                target="_blank"
-            >Documentation
-            </md-button
-            >
-          </div>
-        </li>
-
-        <li class="button-container">
-          <div class="">
-            <md-button class="md-block md-danger" :href="upgradeUrl" target="_blank"
-            >Upgrade to PRO
-            </md-button
-            >
-          </div>
-        </li>
-
-        <li class="github-buttons">
-          <gh-btns-star
-              slug="creativetimofficial/vue-material-dashboard-laravel-bs4"
-              show-count
-          ></gh-btns-star>
-        </li>
-
-        <li class="header-title d-flex justify-content-center">
-          Thank you for sharing!
-        </li>
-
-        <li class="button-container">
-          <social-sharing
-              :url="shareUrl"
-              inline-template
-              title="Vue Material Dashboard - Premium Admin Template for Vue.js"
-              hashtags="vuejs, dashboard, vuematerial"
-              twitter-user="creativetim"
-          >
-            <div class="centered-buttons">
-              <network
-                  network="twitter"
-                  class="md-button md-round md-twitter"
-                  url="https://vue-material-dashboard-laravel-bs4.creative-tim.com/"
-              >
-                <i class="fab fa-twitter"></i> · 45
-              </network>
-              <network
-                  network="facebook"
-                  url="https://vue-material-dashboard-laravel-bs4.creative-tim.com/"
-                  class="md-button md-round md-facebook"
-              >
-                <i class="fab fa-facebook-f"></i> · 50
-              </network>
-            </div>
-          </social-sharing>
-        </li>
       </ul>
     </div>
   </div>
 </template>
 <script>
-  import Vue from "vue";
-  import SocialSharing from "vue-social-sharing";
-  import VueGitHubButtons from "vue-github-buttons";
-  import "vue-github-buttons/dist/vue-github-buttons.css";
 
-  Vue.use(SocialSharing);
-  Vue.use(VueGitHubButtons, {useCache: true});
   export default {
     props: {
       sidebarMini: Boolean,
@@ -145,11 +70,6 @@
     },
     data() {
       return {
-        documentationLink: "https://vue-material-dashboard-laravel-bs4.creative-tim.com/documentation/",
-        shareUrl: "https://www.creative-tim.com/product/vue-material-dashboard-laravel-bs4",
-        buyUrl: "",
-        downloadUrl: "https://www.creative-tim.com/product/vue-material-dashboard-laravel-bs4",
-        upgradeUrl: "https://www.creative-tim.com/product/vue-material-dashboard-laravel-pro-bs4",
         isOpen: false,
         backgroundImage: `${process.env.VUE_APP_BASE_URL}/img/sidebar-2.jpg`,
         sidebarColors: [
@@ -166,10 +86,10 @@
           {colorBg: "red", active: false}
         ],
         sidebarImages: [
-          {image: `${process.env.VUE_APP_BASE_URL}/img/sidebar-1.jpg`, active: false},
-          {image: `${process.env.VUE_APP_BASE_URL}/img/sidebar-2.jpg`, active: true},
-          {image: `${process.env.VUE_APP_BASE_URL}/img/sidebar-3.jpg`, active: false},
-          {image: `${process.env.VUE_APP_BASE_URL}/img/sidebar-4.jpg`, active: false}
+          {image: process.env.BASE_URL + 'img/back/back_1.jpg', active: false},
+          {image: process.env.BASE_URL + 'img/back/back_2.jpg', active: true},
+          {image: process.env.BASE_URL + 'img/back/back_3.jpg', active: false},
+          {image: process.env.BASE_URL + 'img/back/back_4.jpg', active: false}
         ]
       };
     },

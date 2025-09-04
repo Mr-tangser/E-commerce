@@ -38,9 +38,14 @@ axios.interceptors.response.use(
   },
   error => {
     if (error.response?.status === 401) {
-      // Token过期或无效，清除本地存储并跳转登录
+      // Token过期或无效，清除本地存储
       localStorage.removeItem('vue-authenticate.vueauth_access_token');
-      window.location.href = '/login';
+      localStorage.removeItem('admin_info');
+      
+      // 只有不在登录页面时才跳转
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }

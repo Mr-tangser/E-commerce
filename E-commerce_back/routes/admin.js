@@ -17,9 +17,9 @@ const generateAdminToken = (id) => {
 
 // 管理员登录
 router.post('/login', [
-  body('email')
-    .isEmail()
-    .withMessage('请输入有效的邮箱地址'),
+  body('identifier')
+    .notEmpty()
+    .withMessage('请输入用户名或邮箱'),
   body('password')
     .notEmpty()
     .withMessage('密码不能为空')
@@ -36,16 +36,23 @@ router.post('/login', [
       });
     }
 
-    const { email, password } = req.body;
+    const { identifier, password } = req.body;
 
+    // 判断输入的是邮箱还是用户名
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const isEmail = emailRegex.test(identifier);
+    
+    // 构建查询条件
+    const query = isEmail ? { email: identifier } : { username: identifier };
+    
     // 查找管理员（包含密码字段）
-    const admin = await Admin.findOne({ email }).select('+password');
+    const admin = await Admin.findOne(query).select('+password');
 
     if (!admin) {
       return res.status(401).json({
         success: false,
         error: {
-          message: '邮箱或密码错误'
+          message: '用户名/邮箱或密码错误'
         }
       });
     }
@@ -65,7 +72,7 @@ router.post('/login', [
       return res.status(401).json({
         success: false,
         error: {
-          message: '邮箱或密码错误'
+          message: '用户名/邮箱或密码错误'
         }
       });
     }
@@ -106,8 +113,78 @@ router.post('/login', [
   }
 });
 
+// 公开注册接口（用于PC端注册）
+router.post('/register', [
+  body('username')
+    .isLength({ min: 2, max: 20 })
+    .withMessage('用户名长度必须在2-20个字符之间')
+    .matches(/^[\u4e00-\u9fa5a-zA-Z0-9_]+$/)
+    .withMessage('用户名只能包含中文、字母、数字和下划线'),
+  body('password')
+    .isLength({ min: 6 })
+    .withMessage('密码至少6个字符')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: '输入验证失败',
+          details: errors.array()
+        }
+      });
+    }
+
+    const { username, password } = req.body;
+
+    // 检查用户名是否已存在
+    const existingAdmin = await Admin.findOne({ username });
+
+    if (existingAdmin) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: '用户名已被使用'
+        }
+      });
+    }
+
+    // 生成临时邮箱（实际应用中可能需要用户提供邮箱）
+    const tempEmail = `${username}@temp.local`;
+
+    // 创建新管理员
+    const admin = await Admin.create({
+      username,
+      email: tempEmail,
+      password,
+      role: 'staff' // 新注册用户默认为staff权限
+    });
+
+    res.status(201).json({
+      success: true,
+      message: '注册成功',
+      data: {
+        admin: {
+          id: admin._id,
+          username: admin.username,
+          role: admin.role
+        }
+      }
+    });
+  } catch (error) {
+    console.error('注册错误:', error);
+    res.status(500).json({
+      success: false,
+      error: {
+        message: '注册失败，请稍后重试'
+      }
+    });
+  }
+});
+
 // 管理员注册（仅超级管理员可操作）
-router.post('/register', protect, authorize('super_admin'), [
+router.post('/admin-register', protect, authorize('super_admin'), [
   body('username')
     .isLength({ min: 3, max: 20 })
     .withMessage('用户名长度必须在3-20个字符之间'),

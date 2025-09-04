@@ -265,4 +265,99 @@ router.patch('/:id/toggle-status', protect, authorize('admin'), async (req, res)
   }
 });
 
+// 更新当前用户资料
+router.put('/profile', protect, [
+  body('nickname')
+    .optional()
+    .isLength({ min: 1, max: 20 })
+    .withMessage('昵称长度必须在1-20个字符之间'),
+  body('gender')
+    .optional()
+    .isIn(['male', 'female'])
+    .withMessage('性别只能是male或female'),
+  body('birthday')
+    .optional()
+    .isISO8601()
+    .withMessage('请输入有效的生日日期'),
+  body('address.receiverName')
+    .optional()
+    .isLength({ min: 1, max: 20 })
+    .withMessage('收货人姓名长度必须在1-20个字符之间'),
+  body('address.receiverPhone')
+    .optional()
+    .matches(/^1[3-9]\d{9}$/)
+    .withMessage('请输入有效的收货人手机号')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: '输入验证失败',
+          details: errors.array()
+        }
+      });
+    }
+
+    const { nickname, gender, birthday, address } = req.body;
+    const updateData = {};
+
+    // 更新基本信息
+    if (nickname) updateData.username = nickname; // 使用nickname更新username字段
+    if (gender) updateData.gender = gender;
+    if (birthday) updateData.birthday = birthday;
+    
+    // 更新地址信息
+    if (address) {
+      updateData.address = {
+        ...req.user.address, // 保留原有地址信息
+        ...address // 更新新的地址信息
+      };
+      
+      // 构建完整地址字段
+      if (address.receiverName) updateData.address.receiverName = address.receiverName;
+      if (address.receiverPhone) updateData.address.receiverPhone = address.receiverPhone;
+      if (address.province) updateData.address.province = address.province;
+      if (address.city) updateData.address.city = address.city;
+      if (address.district) updateData.address.district = address.district;
+      if (address.street) updateData.address.street = address.street;
+      if (address.zipCode) updateData.address.zipCode = address.zipCode;
+    }
+
+    // 更新用户信息
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      updateData,
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          message: '用户不存在'
+        }
+      });
+    }
+
+    res.json({
+      success: true,
+      message: '用户资料更新成功',
+      data: {
+        user
+      }
+    });
+
+  } catch (error) {
+    console.error('更新用户资料错误:', error);
+    res.status(500).json({
+      success: false,
+      error: {
+        message: '更新用户资料失败'
+      }
+    });
+  }
+});
+
 module.exports = router; 

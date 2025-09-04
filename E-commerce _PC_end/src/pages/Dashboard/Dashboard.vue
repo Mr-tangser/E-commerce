@@ -6,7 +6,7 @@
           <div class="card-icon">
             <i class="fab fa-twitter"></i>
           </div>
-          <p class="category">Folowers</p>
+          <p class="category">关注者</p>
           <h3 class="title">
             +245
           </h3>
@@ -15,7 +15,7 @@
         <template slot="footer">
           <div class="stats">
             <md-icon>update</md-icon>
-            Just Updated
+            刚刚更新
           </div>
         </template>
       </stats-card>
@@ -26,7 +26,7 @@
           <div class="card-icon">
             <md-icon>equalizer</md-icon>
           </div>
-          <p class="category">Website Visits</p>
+          <p class="category">网站访问量</p>
           <h3 class="title">
             75.521
           </h3>
@@ -46,7 +46,7 @@
           <div class="card-icon">
             <md-icon>store</md-icon>
           </div>
-          <p class="category">Revenue</p>
+          <p class="category">营收</p>
           <h3 class="title">
             $ 34.245
           </h3>
@@ -55,7 +55,7 @@
         <template slot="footer">
           <div class="stats">
             <md-icon>date_range</md-icon>
-            Last 24 Hours
+            过去24小时
           </div>
         </template>
       </stats-card>
@@ -66,7 +66,7 @@
           <div class="card-icon">
             <md-icon>weekend</md-icon>
           </div>
-          <p class="category">Bookings</p>
+          <p class="category">预订量</p>
           <h3 class="title">
             184
           </h3>
@@ -75,7 +75,7 @@
         <template slot="footer">
           <div class="stats">
             <md-icon class="text-danger">warning</md-icon>
-            <a href="#pablo">Get More Space...</a>
+            <a href="#pablo">获取更多空间...</a>
           </div>
         </template>
       </stats-card>
@@ -102,16 +102,16 @@
         </md-button>
 
         <template slot="content">
-          <h4 class="title">Website Views</h4>
+          <h4 class="title">网站浏览量</h4>
           <p class="category">
-            Last Campaign Performance
+            上次营销活动表现
           </p>
         </template>
 
         <template slot="footer">
           <div class="stats">
             <md-icon>access_time</md-icon>
-            updated 10 days ago
+            10天前更新
           </div>
         </template>
       </chart-card>
@@ -136,20 +136,20 @@
         </md-button>
 
         <template slot="content">
-          <h4 class="title">Daily Sales</h4>
+          <h4 class="title">每日销售</h4>
           <p class="category">
             <span class="text-success"
               ><i class="fas fa-long-arrow-alt-up"></i>
               55%
             </span>
-            increase in today sales.
+            今日销售增长。
           </p>
         </template>
 
         <template slot="footer">
           <div class="stats">
             <md-icon>access_time</md-icon>
-            updated 4 minutes ago
+            4分钟前更新
           </div>
         </template>
       </chart-card>
@@ -183,7 +183,7 @@
         <template slot="footer">
           <div class="stats">
             <md-icon>access_time</md-icon>
-            campaign sent 26 minutes ago
+            26分钟前发送的营销活动
           </div>
         </template>
       </chart-card>
@@ -384,7 +384,7 @@ export default {
             tension: 0
           }),
           low: 0,
-          high: 50, // creative tim: we recommend you to set the high sa the biggest value + something for a better look
+          high: 50, // 建议设置为最大值加上一些额外值以获得更好的外观
           chartPadding: {
             top: 0,
             right: 0,
@@ -404,7 +404,7 @@ export default {
             tension: 0
           }),
           low: 0,
-          high: 1000, // creative tim: we recommend you to set the high sa the biggest value + something for a better look
+          high: 1000, // 建议设置为最大值加上一些额外值以获得更好的外观
           chartPadding: {
             top: 0,
             right: 0,

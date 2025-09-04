@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
 const User = require('../models/User');
 const { protect } = require('../middleware/auth');
+const smsService = require('../utils/smsService');
 
 const router = express.Router();
 
@@ -92,7 +93,143 @@ router.post('/register', [
   }
 });
 
-// 用户登录
+// 发送手机验证码
+router.post('/send-code', [
+  body('phone')
+    .matches(/^1[3-9]\d{9}$/)
+    .withMessage('请输入有效的手机号码'),
+  body('type')
+    .optional()
+    .isIn(['login', 'register', 'reset-password', 'bind-phone'])
+    .withMessage('验证码类型无效')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: '输入验证失败',
+          details: errors.array()
+        }
+      });
+    }
+
+    const { phone, type = 'login' } = req.body;
+    const clientIP = req.ip || req.connection.remoteAddress || '';
+
+    // 调用SMS服务发送验证码
+    const result = await smsService.sendCode(phone, type, clientIP);
+
+    res.json({
+      success: true,
+      message: result.message,
+      data: result.data
+    });
+
+  } catch (error) {
+    console.error('发送验证码错误:', error);
+    res.status(400).json({
+      success: false,
+      error: {
+        message: error.message || '发送验证码失败，请稍后重试'
+      }
+    });
+  }
+});
+
+// 手机验证码登录
+router.post('/login-by-phone', [
+  body('phone')
+    .matches(/^1[3-9]\d{9}$/)
+    .withMessage('请输入有效的手机号码'),
+  body('code')
+    .isLength({ min: 4, max: 6 })
+    .withMessage('请输入正确的验证码')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: '输入验证失败',
+          details: errors.array()
+        }
+      });
+    }
+
+    const { phone, code } = req.body;
+
+    // 验证验证码
+    const verifyResult = await smsService.verifyCode(phone, code, 'login');
+    
+    if (!verifyResult.success) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: verifyResult.message
+        }
+      });
+    }
+
+    // 查找用户（必须已存在）
+    const user = await User.findOne({ phone });
+    
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        error: {
+          message: '该手机号未注册，请先注册账户'
+        }
+      });
+    }
+
+    if (!user.isActive) {
+      return res.status(401).json({
+        success: false,
+        error: {
+          message: '账户已被禁用，请联系管理员'
+        }
+      });
+    }
+
+    // 更新最后登录时间
+    user.lastLogin = new Date();
+    await user.save();
+
+    // 生成令牌
+    const token = generateToken(user._id);
+
+    res.json({
+      success: true,
+      message: '登录成功',
+      data: {
+        user: {
+          id: user._id,
+          username: user.username,
+          email: user.email,
+          phone: user.phone,
+          role: user.role,
+          avatar: user.avatar,
+          lastLogin: user.lastLogin
+        },
+        token
+      }
+    });
+
+  } catch (error) {
+    console.error('手机验证码登录错误:', error);
+    res.status(500).json({
+      success: false,
+      error: {
+        message: '登录失败，请稍后重试'
+      }
+    });
+  }
+});
+
+// 用户登录（邮箱密码）
 router.post('/login', [
   body('email')
     .isEmail()
@@ -117,7 +254,7 @@ router.post('/login', [
 
     // 查找用户（包含密码字段）
     const user = await User.findOne({ email }).select('+password');
-
+    
     if (!user) {
       return res.status(401).json({
         success: false,
@@ -347,6 +484,198 @@ router.post('/reset-password/:token', [
       success: false,
       error: {
         message: '重置密码失败'
+      }
+    });
+  }
+});
+
+// 手机密码登录
+router.post('/login-by-phone-password', [
+  body('phone')
+    .matches(/^1[3-9]\d{9}$/)
+    .withMessage('请输入有效的手机号码'),
+  body('password')
+    .notEmpty()
+    .withMessage('密码不能为空')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: '输入验证失败',
+          details: errors.array()
+        }
+      });
+    }
+
+    const { phone, password } = req.body;
+    
+    // 通过手机号查找用户（包含密码字段）
+    const user = await User.findOne({ phone }).select('+password');
+
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        error: {
+          message: '手机号或密码错误'
+        }
+      });
+    }
+
+    if (!user.isActive) {
+      return res.status(401).json({
+        success: false,
+        error: {
+          message: '账户已被禁用，请联系管理员'
+        }
+      });
+    }
+
+    // 验证密码
+    const isPasswordValid = await user.comparePassword(password);
+    if (!isPasswordValid) {
+      return res.status(401).json({
+        success: false,
+        error: {
+          message: '手机号或密码错误'
+        }
+      });
+    }
+
+    // 更新最后登录时间
+    user.lastLogin = new Date();
+    await user.save();
+
+    // 生成令牌
+    const token = generateToken(user._id);
+
+    res.json({
+      success: true,
+      message: '登录成功',
+      data: {
+        user: {
+          id: user._id,
+          username: user.username,
+          email: user.email,
+          phone: user.phone,
+          role: user.role,
+          avatar: user.avatar,
+          lastLogin: user.lastLogin
+        },
+        token
+      }
+    });
+
+  } catch (error) {
+    console.error('手机密码登录错误:', error);
+    res.status(500).json({
+      success: false,
+      error: {
+        message: '登录失败，请稍后重试'
+      }
+    });
+  }
+});
+
+// 微信登录
+router.post('/wechat-login', [
+  body('code')
+    .notEmpty()
+    .withMessage('微信授权码不能为空'),
+  body('encryptedData')
+    .optional()
+    .notEmpty()
+    .withMessage('加密数据不能为空'),
+  body('iv')
+    .optional()
+    .notEmpty()
+    .withMessage('初始向量不能为空')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: '输入验证失败',
+          details: errors.array()
+        }
+      });
+    }
+
+    const { code, encryptedData, iv } = req.body;
+
+    // 这里应该调用微信API获取用户信息
+    // 为了演示，我们假设已经解密获得了手机号
+    // 实际应用中需要：
+    // 1. 用code换取session_key
+    // 2. 解密encryptedData获取手机号
+    
+    // 临时模拟：从请求中获取手机号（实际应从微信API解密获得）
+    const phoneNumber = req.body.phoneNumber; // 这应该从微信API解密获得
+    
+    if (!phoneNumber) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: '获取微信手机号失败，请重试'
+        }
+      });
+    }
+
+    // 通过手机号查找用户
+    const user = await User.findOne({ phone: phoneNumber });
+    
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        error: {
+          message: '该微信绑定的手机号未注册，请先注册账户'
+        }
+      });
+    }
+
+    if (!user.isActive) {
+      return res.status(401).json({
+        success: false,
+        error: {
+          message: '账户已被禁用，请联系管理员'
+        }
+      });
+    }
+
+    // 更新最后登录时间
+    user.lastLogin = new Date();
+    await user.save();
+
+    // 生成令牌
+    const token = generateToken(user._id);
+
+    res.json({
+      success: true,
+      message: '微信登录成功',
+      data: {
+        user: {
+          id: user._id,
+          username: user.username,
+          email: user.email,
+          phone: user.phone,
+          role: user.role,
+          avatar: user.avatar,
+          lastLogin: user.lastLogin
+        },
+        token
+      }
+    });
+
+  } catch (error) {
+    console.error('微信登录错误:', error);
+    res.status(500).json({
+      success: false,
+      error: {
+        message: '微信登录失败，请稍后重试'
       }
     });
   }

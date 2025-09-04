@@ -4,52 +4,31 @@
       <nav>
         <ul>
           <li>
-            <a v-if="$route.meta.rtlActive" href="https://www.creative-tim.com" target="_blank">
-              منزل
-            </a>
-            <a v-else href="https://www.creative-tim.com" target="_blank">
-              Creative Tim
+            <a href="#" @click.prevent>
+              首页
             </a>
           </li>
           <li>
-            <a href="https://www.updivision.com/" target="_blank">
-              UPDIVISION
+            <a href="#" @click.prevent>
+              关于我们
             </a>
           </li>
           <li>
-            <a v-if="$route.meta.rtlActive" href="http://blog.creative-tim.com" target="_blank">
-              شركة
-            </a>
-            <a v-else href="https://creative-tim.com/presentation">
-              About Us
+            <a href="#" @click.prevent>
+              帮助中心
             </a>
           </li>
           <li>
-            <a v-if="$route.meta.rtlActive" href="http://blog.creative-tim.com" target="_blank">
-              محفظة
-            </a>
-            <a v-else href="http://blog.creative-tim.com" target="_blank">
-              Blog
-            </a>
-          </li>
-          <li>
-            <a v-if="$route.meta.rtlActive" href="https://www.creative-tim.com/license" target="_blank">
-              بلوق
-            </a>
-            <a v-else href="https://www.creative-tim.com/license" target="_blank">
-              Licenses
+            <a href="#" @click.prevent>
+              联系我们
             </a>
           </li>
         </ul>
       </nav>
       <div class="copyright text-center">
-        &copy; {{ new Date().getFullYear() }},
-        made with <i class="fa fa-heart heart"></i>
-        by
-        <a href="https://www.creative-tim.com/?ref=mdp-vuejs-api" target="_blank">Creative Tim</a>
-        and
-        <a href="https://www.updivision.com/?ref=mdp-vuejs-api" target="_blank">UPDIVISION</a>
-        for a better web.
+        &copy; {{ new Date().getFullYear() }} 全品汇电商管理平台
+        <i class="fa fa-heart heart"></i>
+        版权所有
       </div>
     </div>
   </footer>
