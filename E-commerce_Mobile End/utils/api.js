@@ -1,5 +1,5 @@
 // API工具函数
-const BASE_URL = 'http://192.168.160.128:3000/api'
+const BASE_URL = 'http://192.168.157.4:3000/api'
 
 // 构建查询字符串的兼容性函数
 function buildQuery(params = {}) {

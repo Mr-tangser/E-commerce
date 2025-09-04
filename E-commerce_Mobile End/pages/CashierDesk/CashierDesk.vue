@@ -305,7 +305,7 @@
 						console.log('查询订单号:', queryOrderNumber);
 						
 									const response = await uni.request({
-				url: `http://192.168.160.128:3000/api/payment/alipay/query/${queryOrderNumber}`,
+				url: `http://192.168.157.4:3000/api/payment/alipay/query/${queryOrderNumber}`,
 				method: 'GET',
 				header: {
 								'Authorization': `Bearer ${uni.getStorageSync('token')}`
