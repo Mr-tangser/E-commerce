@@ -12,7 +12,6 @@
       :background-image="sidebarBackgroundImage"
       :data-background-color="sidebarBackgroundColor"
     >
-      <user-menu></user-menu>
       <mobile-menu></mobile-menu>
       <template slot="links">
         <sidebar-item
@@ -21,7 +20,7 @@
 
         <sidebar-item opened :link="{ name: '用户管理', image: image }">
           <sidebar-item
-            :link="{ name: '用户资料', path: '/examples/user-profile' }"
+            :link="{ name: '个人资料', path: '/examples/user-profile' }"
           />
           <sidebar-item
             :link="{
@@ -100,7 +99,6 @@ import TopNavbar from "./TopNavbar.vue";
 import ContentFooter from "./ContentFooter.vue";
 import MobileMenu from "./Extra/MobileMenu.vue";
 import FixedPlugin from "../../FixedPlugin.vue";
-import UserMenu from "./Extra/UserMenu.vue";
 
 export default {
   components: {
@@ -108,7 +106,6 @@ export default {
     ContentFooter,
     FixedPlugin,
     MobileMenu,
-    UserMenu,
   },
   data() {
     return {
@@ -117,9 +114,25 @@ export default {
       sidebarBackgroundImage: process.env.BASE_URL + "img/back/back_2.jpg",
       sidebarMini: true,
       sidebarImg: true,
-      image: process.env.VUE_APP_BASE_URL + "/img/laravel-vue.svg",
+      image: process.env.BASE_URL + "img/default.jpg", // 默认头像
     };
   },
+
+  computed: {
+    currentUser() {
+      return this.$store.getters.currentUser;
+    },
+    isAuthenticated() {
+      return this.$store.getters.isAuthenticated;
+    },
+    userAvatar() {
+      if (this.currentUser?.avatar && this.currentUser.avatar !== '/img/default.jpg') {
+        return process.env.BASE_URL + this.currentUser.avatar.replace(/^\//, '');
+      }
+      return process.env.BASE_URL + "img/default.jpg";
+    }
+  },
+
   methods: {
     toggleSidebar() {
       if (this.$sidebar.showSidebar) {
@@ -135,13 +148,23 @@ export default {
   updated() {
     reinitScrollbar();
   },
-  mounted() {
+  async mounted() {
     reinitScrollbar();
+    // 如果已认证但没有用户信息，则获取用户信息
+    if (this.isAuthenticated && !this.currentUser) {
+      await this.$store.dispatch('fetchCurrentUser');
+    }
+    // 更新image为用户头像
+    this.image = this.userAvatar;
   },
   watch: {
     sidebarMini() {
       this.minimizeSidebar();
     },
+    userAvatar() {
+      // 当用户头像更新时，同步更新侧边栏头像
+      this.image = this.userAvatar;
+    }
   },
 };
 </script>

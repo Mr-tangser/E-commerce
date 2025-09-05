@@ -5,8 +5,42 @@ const Admin = require('../models/Admin');
 const { protect, authorize, checkOwnership } = require('../middleware/auth');
 const { verifyCaptcha } = require('../utils/captcha');
 const { decryptAES, isTimestampValid } = require('../utils/crypto');
+const multer = require('multer');
+const path = require('path');
 
 const router = express.Router();
+
+// 配置头像上传存储
+const avatarStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    // 存储到前端public/img/avatars目录
+    cb(null, path.join(__dirname, '../../E-commerce _PC_end/public/img/avatars'));
+  },
+  filename: function (req, file, cb) {
+    // 生成唯一文件名：用户ID_时间戳.扩展名
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const ext = path.extname(file.originalname);
+    cb(null, `admin_${req.user.id}_${uniqueSuffix}${ext}`);
+  }
+});
+
+// 文件过滤器（只允许图片）
+const avatarFilter = (req, file, cb) => {
+  if (file.mimetype.startsWith('image/')) {
+    cb(null, true);
+  } else {
+    cb(new Error('只允许上传图片文件'), false);
+  }
+};
+
+// 配置multer上传
+const uploadAvatar = multer({
+  storage: avatarStorage,
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB限制
+  },
+  fileFilter: avatarFilter
+});
 
 // 生成JWT令牌（Admin专用）
 const generateAdminToken = (id) => {
@@ -51,10 +85,8 @@ router.post('/login', [
 
     const { identifier, password, captchaId, captchaCode, timestamp } = req.body;
 
-    console.log('后端登录调试信息:');
-    console.log('接收到的数据:', { identifier, captchaId, captchaCode, timestamp });
-    console.log('加密密码长度:', password ? password.length : 0);
-    console.log('加密密码格式检查:', password ? password.split(':').length : 0, '部分');
+    // 基本日志记录
+    console.log('管理员登录尝试:', { identifier, timestamp });
 
     // 首先验证验证码
     const captchaResult = await verifyCaptcha(captchaId, captchaCode);
@@ -78,17 +110,7 @@ router.post('/login', [
     // 解密密码
     let decryptedPassword;
     try {
-      console.log('开始解密密码...');
-      console.log('接收到的加密密码:', password.substring(0, 50) + '...');
-      console.log('时间戳:', timestamp, '类型:', typeof timestamp);
-      
-      // 检查密钥长度
-      const { generateDynamicKey } = require('../utils/crypto');
-      const testKey = generateDynamicKey(parseInt(timestamp));
-      console.log('生成的密钥长度:', testKey.length, '字符 (应该是64字符=32字节)');
-      
       decryptedPassword = decryptAES(password, parseInt(timestamp));
-      console.log('解密成功！解密后密码:', decryptedPassword);
     } catch (error) {
       console.error('密码解密失败详细错误:', error);
       console.error('错误堆栈:', error.stack);
@@ -530,6 +552,239 @@ router.post('/forgot-password', [
       success: false,
       error: {
         message: '处理忘记密码请求失败'
+      }
+    });
+  }
+});
+
+// 上传头像
+router.post('/upload-avatar', protect, uploadAvatar.single('avatar'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: '请选择要上传的头像文件'
+        }
+      });
+    }
+
+    // 构建头像URL（相对于前端public目录）
+    const avatarUrl = `/img/avatars/${req.file.filename}`;
+
+    // 更新管理员头像
+    const admin = await Admin.findByIdAndUpdate(
+      req.user.id,
+      { avatar: avatarUrl },
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    if (!admin) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          message: '管理员不存在'
+        }
+      });
+    }
+
+    res.json({
+      success: true,
+      message: '头像上传成功',
+      data: {
+        avatar: admin.avatar,
+        admin: admin
+      }
+    });
+
+  } catch (error) {
+    console.error('头像上传失败:', error);
+    res.status(500).json({
+      success: false,
+      error: {
+        message: '头像上传失败'
+      }
+    });
+  }
+});
+
+// 获取当前管理员信息
+router.get('/profile', protect, async (req, res) => {
+  try {
+    const admin = await Admin.findById(req.user.id).select('-password');
+    
+    if (!admin) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          message: '管理员不存在'
+        }
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        admin: admin
+      }
+    });
+
+  } catch (error) {
+    console.error('获取管理员资料失败:', error);
+    res.status(500).json({
+      success: false,
+      error: {
+        message: '获取管理员资料失败'
+      }
+    });
+  }
+});
+
+// 更新管理员资料
+router.put('/profile', protect, [
+  body('firstName').optional().trim().isLength({ max: 50 }).withMessage('名字最多50个字符'),
+  body('lastName').optional().trim().isLength({ max: 50 }).withMessage('姓氏最多50个字符'),
+  body('phone').optional().trim().matches(/^1[3-9]\d{9}$/).withMessage('请输入有效的手机号'),
+  body('email').optional().isEmail().withMessage('请输入有效的邮箱地址')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: '输入验证失败',
+          details: errors.array()
+        }
+      });
+    }
+
+    const { firstName, lastName, phone, email } = req.body;
+    
+    // 检查邮箱是否已被其他管理员使用
+    if (email) {
+      const existingAdmin = await Admin.findOne({ 
+        email, 
+        _id: { $ne: req.user.id } 
+      });
+      
+      if (existingAdmin) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            message: '该邮箱已被其他管理员使用'
+          }
+        });
+      }
+    }
+
+    const updateData = {};
+    if (firstName !== undefined) updateData.firstName = firstName;
+    if (lastName !== undefined) updateData.lastName = lastName;
+    if (phone !== undefined) updateData.phone = phone;
+    if (email !== undefined) updateData.email = email;
+
+    const admin = await Admin.findByIdAndUpdate(
+      req.user.id,
+      updateData,
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    if (!admin) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          message: '管理员不存在'
+        }
+      });
+    }
+
+    res.json({
+      success: true,
+      message: '资料更新成功',
+      data: {
+        admin: admin
+      }
+    });
+
+  } catch (error) {
+    console.error('更新管理员资料失败:', error);
+    res.status(500).json({
+      success: false,
+      error: {
+        message: '更新管理员资料失败'
+      }
+    });
+  }
+});
+
+// 修改密码
+router.put('/change-password', protect, [
+  body('currentPassword').notEmpty().withMessage('请输入当前密码'),
+  body('newPassword').isLength({ min: 6 }).withMessage('新密码长度不能少于6位'),
+  body('confirmPassword').notEmpty().withMessage('请确认新密码')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: '输入验证失败',
+          details: errors.array()
+        }
+      });
+    }
+
+    const { currentPassword, newPassword, confirmPassword } = req.body;
+
+    // 验证新密码和确认密码是否一致
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: '新密码和确认密码不一致'
+        }
+      });
+    }
+
+    // 获取当前管理员信息（包含密码）
+    const admin = await Admin.findById(req.user.id).select('+password');
+    if (!admin) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          message: '管理员不存在'
+        }
+      });
+    }
+
+    // 验证当前密码
+    const isCurrentPasswordValid = await admin.comparePassword(currentPassword);
+    if (!isCurrentPasswordValid) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: '当前密码不正确'
+        }
+      });
+    }
+
+    // 更新密码
+    admin.password = newPassword;
+    await admin.save();
+
+    res.json({
+      success: true,
+      message: '密码修改成功'
+    });
+
+  } catch (error) {
+    console.error('修改密码失败:', error);
+    res.status(500).json({
+      success: false,
+      error: {
+        message: '修改密码失败'
       }
     });
   }

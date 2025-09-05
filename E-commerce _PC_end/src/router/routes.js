@@ -89,7 +89,7 @@ let examplesMenu = {
   children: [
     {
       path: "user-profile",
-      name: "用户资料",
+      name: "个人资料",
       components: { default: UserProfile },
       meta: { middleware: auth }
     },

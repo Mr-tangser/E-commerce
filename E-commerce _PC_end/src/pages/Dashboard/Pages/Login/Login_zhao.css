@@ -284,10 +284,11 @@ canvas {
     will-change: transform, opacity;
 }
 
-/* 登录容器样式 */
+/* 登录容器样式 - 透明背景 */
 .login-container {
     display: flex;
-    background: rgba(20, 30, 60, 0.95);
+    /* 透明背景 - 初始状态非常透明 */
+    background: rgba(20, 30, 60, 0.1);
     border-radius: 20px;
     backdrop-filter: blur(20px);
     box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
@@ -298,9 +299,24 @@ canvas {
     height: auto;
     position: relative;
     z-index: 10;
-    opacity: 1;
-    transition: opacity 0.3s ease;
+    opacity: 0;
+    transform: scale(0.8);
+    transition: all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
     overflow: hidden;
+}
+
+.login-container.show {
+    opacity: 1;
+    transform: scale(1);
+    /* 显示时背景变得不透明 */
+    background: rgba(20, 30, 60, 0.8);
+}
+
+.login-container.hide {
+    opacity: 0;
+    transform: scale(0.8);
+    /* 隐藏时背景变得极透明 */
+    background: rgba(20, 30, 60, 0.05);
 }
 
 /* 左侧背景图 */
@@ -314,8 +330,45 @@ canvas {
 .space-bg {
     width: 100%;
     height: 100%;
-    background: linear-gradient(45deg, rgba(0, 20, 40, 0.3), rgba(20, 40, 80, 0.2));
+    /* 减少渐变背景的不透明度，让整体透明效果更明显 */
+    background: linear-gradient(45deg, rgba(0, 20, 40, 0.1), rgba(20, 40, 80, 0.1));
     border-radius: 20px 0 0 20px;
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding-bottom: 60px;
+}
+
+/* 星空寄语文字样式 */
+.space-quote {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 1.2rem;
+    font-weight: 300;
+    font-family: "Host Grotesk", sans-serif;
+    text-align: center;
+    letter-spacing: 2px;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+    opacity: 0;
+    transform: translateY(20px);
+    animation: fadeInQuote 1s ease-out 0.8s forwards;
+    backdrop-filter: blur(4px);
+    background: rgba(255, 255, 255, 0.05);
+    padding: 12px 20px;
+    border-radius: 25px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    max-width: 80%;
+}
+
+@keyframes fadeInQuote {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 /* 右侧表单 */
@@ -325,7 +378,8 @@ canvas {
     display: flex;
     flex-direction: column;
     justify-content: center;
-    background: rgba(15, 25, 45, 0.9);
+    /* 移除背景，让容器的透明背景显示出来 */
+    background: transparent;
     border-radius: 0 20px 20px 0;
     min-height: 550px;
 }
@@ -972,6 +1026,14 @@ canvas {
     
     .space-bg {
         border-radius: 20px 20px 0 0;
+        padding-bottom: 40px;
+    }
+    
+    .space-quote {
+        font-size: 1rem;
+        padding: 10px 16px;
+        letter-spacing: 1px;
+        max-width: 90%;
     }
     
     .login-right {

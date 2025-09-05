@@ -32,14 +32,33 @@
       user: null
     }),
 
-    created() {
-      this.getProfile();
+    computed: {
+      currentUser() {
+        return this.$store.getters.currentUser;
+      }
+    },
+
+    async created() {
+      await this.getProfile();
     },
 
     methods: {
       async getProfile() {
-        await this.$store.dispatch("profile/me")
-        this.user = await this.$store.getters["profile/me"]
+        try {
+          // 使用 Vuex store 获取用户信息
+          if (!this.currentUser) {
+            await this.$store.dispatch('fetchCurrentUser');
+          }
+          this.user = this.$store.getters.currentUser;
+        } catch (error) {
+          console.error('获取个人资料失败:', error);
+          this.$notify({
+            message: '获取个人资料失败，请重试',
+            horizontalAlign: 'right',
+            verticalAlign: 'top',
+            type: 'danger'
+          });
+        }
       }
     }
   }

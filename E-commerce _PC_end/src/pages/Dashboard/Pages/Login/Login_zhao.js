@@ -295,6 +295,15 @@ export default {
             // 动画完成后显示登录表单，添加延迟让动画完全结束
             setTimeout(() => {
               this.showLoginForm = true;
+              // 给Vue足够时间更新DOM，然后触发动画
+              this.$nextTick(() => {
+                setTimeout(() => {
+                  const loginContainer = document.querySelector('.login-container');
+                  if (loginContainer) {
+                    loginContainer.classList.add('show');
+                  }
+                }, 100);
+              });
             }, 500);
           }
         }
@@ -314,17 +323,10 @@ export default {
         // 重新启用加密功能
         const timestamp = getCurrentTimestamp();
         
-        console.log('登录调试信息:');
-        console.log('用户名/邮箱:', this.loginForm.identifier);
-        console.log('原始密码:', this.loginForm.password);
-        console.log('时间戳:', timestamp);
-        
         // 加密密码
         let encryptedPassword;
         try {
           encryptedPassword = encryptAES(this.loginForm.password, timestamp);
-          console.log('加密成功，加密后密码:', encryptedPassword);
-          console.log('加密后密码长度:', encryptedPassword.length);
         } catch (error) {
           console.error('前端加密失败:', error);
           this.errorMessage = '密码加密失败，请重试';
@@ -492,11 +494,26 @@ export default {
         setTimeout(() => {
           const loginContainer = document.querySelector('.login-container');
           if (loginContainer) {
-            loginContainer.style.display = 'flex';
-            loginContainer.style.opacity = '1';
+            loginContainer.classList.add('show');
           }
         }, 800); // 增加延迟确保滚动和动画完成
       });
+    },
+
+    // 隐藏登录表单
+    hideLoginForm() {
+      const loginContainer = document.querySelector('.login-container');
+      
+      // 先添加hide类，触发退出动画
+      if (loginContainer) {
+        loginContainer.classList.remove('show');
+        loginContainer.classList.add('hide');
+      }
+      
+      // 等待动画完成后隐藏元素
+      setTimeout(() => {
+        this.showLoginForm = false;
+      }, 600); // 与CSS transition时间一致
     }
   }
 }

@@ -21,10 +21,17 @@
         </div>
         <div class="hero-img-container">
           <div class="hero-img" ref="heroImg">
-            <div class="login-container" v-show="showLoginForm">
+            <div 
+              class="login-container" 
+              v-show="showLoginForm"
+              :class="{ 'show': showLoginForm, 'hide': !showLoginForm }"
+              @click.self="hideLoginForm"
+            >
               <!-- 左侧背景图 -->
               <div class="login-left">
-                <div class="space-bg"></div>
+                <div class="space-bg">
+                  <div class="space-quote">愿此行，终抵群星</div>
+                </div>
               </div>
               
               <!-- 右侧表单 -->

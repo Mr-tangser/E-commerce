@@ -31,7 +31,7 @@ const adminSchema = new mongoose.Schema({
   },
   avatar: {
     type: String,
-    default: ''
+    default: '/img/default.jpg' // 默认头像路径
   },
   firstName: {
     type: String,
