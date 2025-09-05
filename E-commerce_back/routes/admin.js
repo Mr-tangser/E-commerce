@@ -3,6 +3,8 @@ const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
 const Admin = require('../models/Admin');
 const { protect, authorize, checkOwnership } = require('../middleware/auth');
+const { verifyCaptcha } = require('../utils/captcha');
+const { decryptAES, isTimestampValid } = require('../utils/crypto');
 
 const router = express.Router();
 
@@ -22,7 +24,18 @@ router.post('/login', [
     .withMessage('请输入用户名或邮箱'),
   body('password')
     .notEmpty()
-    .withMessage('密码不能为空')
+    .withMessage('密码不能为空'),
+  body('captchaId')
+    .notEmpty()
+    .withMessage('验证码ID不能为空'),
+  body('captchaCode')
+    .notEmpty()
+    .withMessage('请输入验证码')
+    .isLength({ min: 4, max: 4 })
+    .withMessage('验证码必须为4位'),
+  body('timestamp')
+    .isNumeric()
+    .withMessage('时间戳必须为数字')
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -36,7 +49,56 @@ router.post('/login', [
       });
     }
 
-    const { identifier, password } = req.body;
+    const { identifier, password, captchaId, captchaCode, timestamp } = req.body;
+
+    console.log('后端登录调试信息:');
+    console.log('接收到的数据:', { identifier, captchaId, captchaCode, timestamp });
+    console.log('加密密码长度:', password ? password.length : 0);
+    console.log('加密密码格式检查:', password ? password.split(':').length : 0, '部分');
+
+    // 首先验证验证码
+    const captchaResult = await verifyCaptcha(captchaId, captchaCode);
+    if (!captchaResult.success) {
+      return res.status(400).json({
+        success: false,
+        error: captchaResult.error
+      });
+    }
+
+    // 验证时间戳有效性
+    if (!isTimestampValid(parseInt(timestamp))) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: '请求已过期，请重新登录'
+        }
+      });
+    }
+
+    // 解密密码
+    let decryptedPassword;
+    try {
+      console.log('开始解密密码...');
+      console.log('接收到的加密密码:', password.substring(0, 50) + '...');
+      console.log('时间戳:', timestamp, '类型:', typeof timestamp);
+      
+      // 检查密钥长度
+      const { generateDynamicKey } = require('../utils/crypto');
+      const testKey = generateDynamicKey(parseInt(timestamp));
+      console.log('生成的密钥长度:', testKey.length, '字符 (应该是64字符=32字节)');
+      
+      decryptedPassword = decryptAES(password, parseInt(timestamp));
+      console.log('解密成功！解密后密码:', decryptedPassword);
+    } catch (error) {
+      console.error('密码解密失败详细错误:', error);
+      console.error('错误堆栈:', error.stack);
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: '密码解密失败，请重新输入'
+        }
+      });
+    }
 
     // 判断输入的是邮箱还是用户名
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -66,8 +128,8 @@ router.post('/login', [
       });
     }
 
-    // 验证密码
-    const isPasswordValid = await admin.comparePassword(password);
+    // 验证密码（使用解密后的密码）
+    const isPasswordValid = await admin.comparePassword(decryptedPassword);
     if (!isPasswordValid) {
       return res.status(401).json({
         success: false,

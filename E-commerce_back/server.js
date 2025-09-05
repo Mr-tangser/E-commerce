@@ -18,10 +18,14 @@ const orderRoutes = require('./routes/orders');
 const categoryRoutes = require('./routes/categories');
 const adminRoutes = require('./routes/admin');
 const paymentRoutes = require('./routes/payment');
+const captchaRoutes = require('./routes/captcha');
 
 // 导入中间件
 const errorHandler = require('./middleware/errorHandler');
 const notFound = require('./middleware/notFound');
+
+// 导入Redis配置
+const { connectRedis } = require('./config/redis');
 
 // 创建Express应用
 const app = express();
@@ -70,6 +74,7 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/payment', paymentRoutes);
+app.use('/api/captcha', captchaRoutes);
 
 // 健康检查端点
 app.get('/health', (req, res) => {
@@ -87,26 +92,35 @@ app.use(notFound);
 // 错误处理中间件
 app.use(errorHandler);
 
-// 连接MongoDB
-mongoose.connect(MONGODB_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
-.then(() => {
-  console.log('✅ MongoDB连接成功');
-  
-  // 启动服务器
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 服务器运行在端口 ${PORT}`);
-    console.log(`📱 本地访问: http://localhost:${PORT}`);
-    console.log(`📱 局域网访问: http://192.168.92.58:${PORT}`);
-    console.log(`🔍 健康检查: http://localhost:${PORT}/health`);
-  });
-})
-.catch((error) => {
-  console.error('❌ MongoDB连接失败:', error);
-  process.exit(1);
-});
+// 连接数据库和Redis
+const startServer = async () => {
+  try {
+    // 连接MongoDB
+    await mongoose.connect(MONGODB_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+    console.log('✅ MongoDB连接成功');
+
+    // 连接Redis（不阻塞启动）
+    await connectRedis();
+
+    // 启动服务器
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`🚀 服务器运行在端口 ${PORT}`);
+      console.log(`📱 本地访问: http://localhost:${PORT}`);
+      console.log(`📱 局域网访问: http://192.168.92.58:${PORT}`);
+      console.log(`🔍 健康检查: http://localhost:${PORT}/health`);
+      console.log(`🎨 验证码API: http://localhost:${PORT}/api/captcha/generate`);
+    });
+  } catch (error) {
+    console.error('❌ 启动服务器失败:', error);
+    process.exit(1);
+  }
+};
+
+// 启动服务器
+startServer();
 
 // 优雅关闭
 process.on('SIGTERM', () => {

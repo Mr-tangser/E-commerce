@@ -30,57 +30,56 @@
               <!-- 右侧表单 -->
               <div class="login-right">
                 <!-- 登录表单 -->
-                <transition name="form-slide" mode="out-in">
-                  <div v-if="!showRegister" key="login" class="form-container">
-                    <div class="login-header">
-                      <h2>登录</h2>
-                      <p>使用用户名或邮箱登录</p>
-                    </div>
-                    
-                    <form @submit.prevent="handleLogin" class="auth-form">
-                      <div class="form-group">
-                        <input type="text" v-model="loginForm.identifier" placeholder="用户名或邮箱" required>
-                      </div>
-                      <div class="form-group">
-                        <input type="password" v-model="loginForm.password" placeholder="密码" required>
-                      </div>
-                      <button type="submit" class="submit-btn" :disabled="loginLoading">
-                        <span v-if="loginLoading">登录中...</span>
-                        <span v-else>登录</span>
-                      </button>
-                      <div class="form-footer">
-                        <a href="#" @click.prevent="switchToRegister" class="switch-link">还没有账号？立即注册</a>
-                      </div>
-                    </form>
+                <div class="form-container">
+                  <div class="login-header">
+                    <h2>登录</h2>
+                    <p>使用用户名或邮箱登录</p>
                   </div>
-
-                  <!-- 注册表单 -->
-                  <div v-else key="register" class="form-container">
-                    <div class="login-header">
-                      <h2>注册</h2>
-                      <p>创建您的新账户</p>
+                  
+                  <form @submit.prevent="handleLogin" class="auth-form">
+                    <div class="form-group">
+                      <input type="text" v-model="loginForm.identifier" placeholder="用户名或邮箱" required>
                     </div>
-                    
-                    <form @submit.prevent="handleRegister" class="auth-form">
-                      <div class="form-group">
-                        <input type="text" v-model="registerForm.username" placeholder="用户名" required minlength="2" maxlength="20">
-                      </div>
-                      <div class="form-group">
-                        <input type="password" v-model="registerForm.password" placeholder="密码 (至少6位)" required minlength="6">
-                      </div>
-                      <div class="form-group">
-                        <input type="password" v-model="registerForm.confirmPassword" placeholder="确认密码" required minlength="6">
-                      </div>
-                      <button type="submit" class="submit-btn" :disabled="registerLoading">
-                        <span v-if="registerLoading">注册中...</span>
-                        <span v-else>注册</span>
+                    <div class="form-group password-group">
+                      <input 
+                        :type="showPassword ? 'text' : 'password'" 
+                        v-model="loginForm.password" 
+                        placeholder="密码" 
+                        required
+                      >
+                      <button 
+                        type="button" 
+                        class="password-toggle" 
+                        @click="togglePassword"
+                        :title="showPassword ? '隐藏密码' : '显示密码'"
+                      >
+                        <img 
+                          :src="showPassword ? '/img/睁眼.svg' : '/img/闭眼 .svg'" 
+                          :alt="showPassword ? '隐藏密码' : '显示密码'"
+                          class="password-icon"
+                        >
                       </button>
-                      <div class="form-footer">
-                        <a href="#" @click.prevent="switchToLogin" class="switch-link">已有账号？立即登录</a>
+                    </div>
+                    <div class="form-group captcha-group">
+                      <input 
+                        type="text" 
+                        v-model="loginForm.captchaCode" 
+                        placeholder="请输入验证码" 
+                        maxlength="4"
+                        required
+                      >
+                      <div class="captcha-container" @click="refreshCaptcha">
+                        <div v-if="captchaLoading" class="captcha-loading">加载中...</div>
+                        <div v-else-if="captchaSvg" class="captcha-image" v-html="captchaSvg"></div>
+                        <div v-else class="captcha-error" @click="loadCaptcha">点击加载验证码</div>
                       </div>
-                    </form>
-                  </div>
-                </transition>
+                    </div>
+                    <button type="submit" class="submit-btn" :disabled="loginLoading">
+                      <span v-if="loginLoading">登录中...</span>
+                      <span v-else>登录</span>
+                    </button>
+                  </form>
+                </div>
                 
                 <!-- 错误提示 -->
                 <transition name="error-fade">
