@@ -1,5 +1,10 @@
 <template>
     <div>
+      <LoadingZhao
+        :progress="preloadProgress"
+        :show="preloaderShow"
+        @finished="handlePreloaderFinished"
+      />
       <nav>
         <div class="nav-left"></div>
         <div class="nav-buttons">
@@ -113,9 +118,11 @@
   <script>
   import './Login_zhao.css'
   import loginScript from './Login_zhao.js'
+  import LoadingZhao from '@/components/Loading/Loading_zhao.vue'
   
   export default {
     name: 'LoginPage',
+    components: { LoadingZhao },
     ...loginScript
   }
   </script>

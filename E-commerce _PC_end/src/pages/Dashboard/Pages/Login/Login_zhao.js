@@ -13,6 +13,9 @@ export default {
       context: null,
       lenis: null,
       currentTheme: 'morning', // 当前主题
+      // 预加载组件控制
+      preloaderShow: true,
+      preloadProgress: 0,
       // 表单控制
       showLoginForm: false,
       loginLoading: false,
@@ -169,9 +172,16 @@ export default {
     onLoad() {
       this.imagesToLoad--;
 
+      // 更新预加载进度（四舍五入为整数）
+      const loaded = this.frameCount - this.imagesToLoad;
+      this.preloadProgress = Math.max(0, Math.min(100, Math.round((loaded / this.frameCount) * 100)));
+
       if(!this.imagesToLoad) {
+        this.preloadProgress = 100;
         this.render();
         this.setupScrollTrigger();
+        // 让预加载组件完成100%后上浮离场
+        // 组件收到100%会自动触发退出动画
       }
     },
 
@@ -308,6 +318,12 @@ export default {
           }
         }
       })
+    },
+
+    // 预加载完成回调
+    handlePreloaderFinished() {
+      // 隐藏预加载组件的占位
+      this.preloaderShow = false;
     },
 
     // 处理登录
