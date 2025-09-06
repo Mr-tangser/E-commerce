@@ -88,8 +88,13 @@ function initScrollbar(className) {
 function reinitScrollbar() {
   let docClasses = document.body.classList;
   let isWindows = navigator.platform.startsWith("Win");
-  if (isWindows) {
-    // if we are on windows OS we activate the perfectScrollbar function
+  
+  // 检查是否开启了主背景图片
+  const mainPanel = document.querySelector('.main-panel');
+  const hasMainBackground = mainPanel && mainPanel.classList.contains('main-background-enabled');
+  
+  if (isWindows && !hasMainBackground) {
+    // 只有在没有主背景图片时才启用PerfectScrollbar
     // 注释掉sidebar相关的滚动条，避免不必要的滚动条显示
     // initScrollbar("sidebar");
     // initScrollbar("sidebar-wrapper");
@@ -98,6 +103,12 @@ function reinitScrollbar() {
     docClasses.add("perfect-scrollbar-on");
   } else {
     docClasses.add("perfect-scrollbar-off");
+    // 清理可能存在的PerfectScrollbar实例
+    const existingScrollbar = document.querySelector('.main-panel .ps-container');
+    if (existingScrollbar) {
+      // 移除PerfectScrollbar的类名，恢复原生滚动
+      existingScrollbar.classList.remove('ps-container', 'ps-active-y', 'ps-active-x');
+    }
   }
 }
 
@@ -126,10 +137,10 @@ export default {
 
   computed: {
     currentUser() {
-      return this.$store.getters.currentUser;
+      return this.$store.getters['auth/currentUser'];
     },
     isAuthenticated() {
-      return this.$store.getters.isAuthenticated;
+      return this.$store.getters['auth/isAuthenticated'];
     },
     userAvatar() {
       if (this.currentUser?.avatar && this.currentUser.avatar !== '/img/default.jpg') {
@@ -158,7 +169,7 @@ export default {
     reinitScrollbar();
     // 如果已认证但没有用户信息，则获取用户信息
     if (this.isAuthenticated && !this.currentUser) {
-      await this.$store.dispatch('fetchCurrentUser');
+      await this.$store.dispatch('auth/fetchCurrentUser');
     }
     // 更新image为用户头像
     this.image = this.userAvatar;
@@ -167,9 +178,19 @@ export default {
     sidebarMini() {
       this.minimizeSidebar();
     },
-    userAvatar() {
-      // 当用户头像更新时，同步更新侧边栏头像
-      this.image = this.userAvatar;
+    userAvatar: {
+      handler(newAvatar) {
+        // 当用户头像更新时，同步更新侧边栏头像
+        console.log('🖼️ 用户头像更新:', newAvatar);
+        this.image = newAvatar;
+      },
+      immediate: true
+    },
+    mainBgImg() {
+      // 当主背景图片状态改变时，重新初始化滚动条
+      this.$nextTick(() => {
+        reinitScrollbar();
+      });
     }
   },
 };
@@ -207,32 +228,22 @@ $scaleSize: 0.95;
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  background-attachment: fixed;
+  background-attachment: scroll; // 改为scroll，避免fixed导致的滚动性能问题
   transition: background-image 0.8s ease-in-out;
-  min-height: 100vh;
+  height: 100vh; // 固定高度为视口高度，避免无限滚动
+  overflow: hidden; // main-panel本身不滚动，由内容区域处理滚动
   
-  // 增强背景图片效果
-  &::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: inherit;
-    filter: contrast(1.1) saturate(1.1) brightness(1.05);
-    z-index: -1;
-  }
-  
+  // 简化背景效果，避免复杂的伪元素影响滚动性能
   &::before {
     content: '';
-    position: absolute;
+    position: fixed; // 使用fixed让遮罩层不受滚动影响
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.15);
     z-index: 0;
+    pointer-events: none; // 确保不阻止鼠标事件
     transition: background 0.3s ease;
   }
   
@@ -323,11 +334,58 @@ body.main-background-image .main-panel.main-background-enabled::before {
   }
 }
 
+// 滚动性能优化
+.main-panel.main-background-enabled {
+  // 启用硬件加速
+  transform: translateZ(0);
+  
+  // 优化滚动性能
+  -webkit-overflow-scrolling: touch;
+  
+  // 确保内容区域可以正常滚动
+  .content {
+    position: relative;
+    z-index: 2;
+    height: calc(100vh - 70px); // 设置固定高度，减去导航栏高度
+    min-height: auto !important; // 覆盖默认的min-height设置，防止无限滚动
+    max-height: calc(100vh - 70px); // 确保不会超出视口高度
+    overflow-y: auto; // 内容区域自己处理滚动
+    overflow-x: hidden; // 防止水平滚动
+    padding: 20px; // 正常的内边距
+    box-sizing: border-box; // 确保padding不会增加总高度
+  }
+  
+  // 禁用PerfectScrollbar的样式，使用原生滚动
+  &.ps-container {
+    overflow: hidden !important; // 保持hidden，让content区域处理滚动
+    
+    .ps-scrollbar-y-rail,
+    .ps-scrollbar-x-rail {
+      display: none !important;
+    }
+  }
+}
+
+// 修复可能的滚动冲突
+body.perfect-scrollbar-on .main-panel.main-background-enabled {
+  overflow: hidden !important; // 保持hidden
+  
+  // 强制禁用PerfectScrollbar
+  &.ps-container {
+    overflow: hidden !important;
+  }
+}
+
 // 响应式设计
 @media (max-width: 768px) {
   .main-panel.main-background-enabled {
     background-attachment: scroll;
     background-size: cover;
+    
+    // 移动设备上简化效果
+    &::before {
+      display: none;
+    }
   }
 }
 </style>

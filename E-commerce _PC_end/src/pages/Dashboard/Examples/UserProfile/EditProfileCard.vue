@@ -13,6 +13,17 @@
       <md-card-content>
         <div class="md-layout">
           <label class="md-layout-item md-size-15 md-form-label">
+            用户名
+          </label>
+          <div class="md-layout-item">
+            <md-field>
+              <md-input v-model="user.username" :readonly="true" placeholder="用户名不可修改" />
+            </md-field>
+          </div>
+        </div>
+
+        <div class="md-layout">
+          <label class="md-layout-item md-size-15 md-form-label">
             姓名
           </label>
           <div class="md-layout-item">
@@ -44,6 +55,7 @@
               <md-input v-model="editForm.email" type="email" placeholder="请输入邮箱" />
               <validation-error :errors="apiValidationErrors.email" />
             </md-field>
+            <small class="text-muted">修改邮箱可能影响登录，请谨慎操作</small>
           </div>
         </div>
 
@@ -133,6 +145,10 @@ export default {
           
           // 通知父组件刷新数据
           this.$emit('profile-updated', response.data.data.admin);
+          
+          // 更新store中的用户信息
+          this.$store.dispatch('auth/updateUserInfo', response.data.data.admin);
+          
           this.$parent.getProfile();
         }
       } catch (error) {

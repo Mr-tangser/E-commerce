@@ -76,10 +76,10 @@ export default {
 
   computed: {
     currentUser() {
-      return this.$store.getters.currentUser;
+      return this.$store.getters['auth/currentUser'];
     },
     isAuthenticated() {
-      return this.$store.getters.isAuthenticated;
+      return this.$store.getters['auth/isAuthenticated'];
     },
     currentUserAvatar() {
       if (this.currentUser?.avatar && this.currentUser.avatar !== '/img/default.jpg') {
@@ -95,7 +95,7 @@ export default {
   async mounted() {
     // 如果已认证但没有用户信息，则获取用户信息
     if (this.isAuthenticated && !this.currentUser) {
-      await this.$store.dispatch('fetchCurrentUser');
+      await this.$store.dispatch('auth/fetchCurrentUser');
     }
   },
   methods: {

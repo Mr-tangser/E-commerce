@@ -30,7 +30,9 @@ export default {
         identifier: '', // 用户名或邮箱
         password: '',
         captchaCode: '' // 验证码
-      }
+      },
+      // 事件处理器引用，用于清理
+      handleResize: null
     }
   },
 
@@ -41,10 +43,33 @@ export default {
   },
 
   beforeUnmount() {
+    // 完全清理所有滚动相关的实例
     if (this.lenis) {
       this.lenis.destroy();
+      this.lenis = null;
     }
+    
+    // 清理所有ScrollTrigger实例
     ScrollTrigger.getAll().forEach(trigger => trigger.kill());
+    ScrollTrigger.refresh();
+    
+    // 移除所有GSAP动画
+    gsap.killTweensOf("*");
+    
+    // 清理window事件监听器
+    window.removeEventListener("resize", this.handleResize);
+    
+    // 重置body类名，清理可能的滚动干扰
+    document.body.classList.remove('no-scroll', 'login-page');
+    
+    // 确保恢复正常的滚动行为
+    document.documentElement.style.overflow = '';
+    document.body.style.overflow = '';
+  },
+
+  beforeDestroy() {
+    // Vue 2兼容性
+    this.beforeUnmount();
   },
 
   methods: {
@@ -70,7 +95,8 @@ export default {
         this.context = canvas.getContext("2d");
         this.setCanvasSize();
         
-        window.addEventListener("resize", () => {
+        // 定义resize处理器，以便后续清理
+        this.handleResize = () => {
           try {
             this.setCanvasSize();
             this.render();
@@ -78,7 +104,9 @@ export default {
           } catch (error) {
             console.warn('Canvas resize error suppressed:', error);
           }
-        });
+        };
+        
+        window.addEventListener("resize", this.handleResize);
       } catch (error) {
         console.warn('Canvas setup error suppressed:', error);
       }
@@ -370,8 +398,8 @@ export default {
           localStorage.setItem('admin_info', JSON.stringify(adminInfo));
           
           // 更新Vuex状态
-          this.$store.commit('SET_AUTHENTICATED', true);
-          this.$store.commit('SET_USER', adminInfo);
+          this.$store.commit('auth/SET_AUTHENTICATED', true);
+          this.$store.commit('auth/SET_USER', adminInfo);
           
           // 登录成功提示
           this.$notify({

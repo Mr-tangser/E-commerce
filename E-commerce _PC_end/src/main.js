@@ -13,6 +13,9 @@ import Chartist from "chartist";
 import VueAxios from "vue-axios";
 import DashboardPlugin from "./material-dashboard";
 
+// 导入axios配置
+import "./axios";
+
 // plugin setup
 Vue.use(DashboardPlugin);
 Vue.use(VueAxios, axios);

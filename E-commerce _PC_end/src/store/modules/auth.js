@@ -3,6 +3,7 @@ import router from "@/router";
 import axios from "axios";
 
 export default {
+  namespaced: true,
   state: {
     isAuthenticated: localStorage.getItem("vue-authenticate.vueauth_access_token") !== null,
     user: null,
@@ -116,7 +117,12 @@ export default {
       }
 
       try {
-        const response = await axios.get('http://localhost:3000/api/admin/me');
+        const response = await axios.get('http://localhost:3000/api/admin/me', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
         
         if (response.data.success) {
           context.commit('SET_USER', response.data.data.admin);
@@ -126,7 +132,13 @@ export default {
         console.error('获取用户信息失败:', error);
         context.commit('CLEAR_AUTH');
         localStorage.removeItem('vue-authenticate.vueauth_access_token');
+        throw error; // 重新抛出错误，让中间件能够处理
       }
+    },
+
+    updateUserInfo(context, userInfo) {
+      // 更新store中的用户信息
+      context.commit('SET_USER', userInfo);
     },
 
     logout(context) {
