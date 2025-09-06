@@ -7,6 +7,9 @@
         <text>加载商品详情中...</text>
       </view>
     </view>
+    
+    <!-- 商品详情内容 - 只有在不加载时才显示 -->
+    <view v-if="!loading">
     <view class="goods-head" :style="'background:rgba(255,255,255,' + PageScrollTop / 100 + ')'">
       <!-- 返回 -->
       <view class="back" @click="onBack">
@@ -346,6 +349,7 @@
     <goods-coupon ref="GoodsCoupon"></goods-coupon>
     <!-- 属性规格 -->
     <goods-attr ref="GoodsAttr"></goods-attr>
+    </view>
   </view>
 </template>
 
@@ -413,6 +417,23 @@ export default {
 		
 		if (this.productId) {
 			console.log('📦 接收到商品ID:', this.productId);
+			
+			// 添加测试：直接设置一些测试数据
+			console.log('🧪 设置测试数据验证页面渲染');
+			setTimeout(() => {
+				this.goodsDetail = {
+					name: '测试商品名称',
+					price: 99.99,
+					memberPrice: 89.99,
+					originalPrice: 199.99,
+					description: '这是一个测试商品描述',
+					images: ['/static/img/goods_thumb_01.png']
+				};
+				this.loading = false;
+				console.log('🧪 测试数据设置完成，loading:', this.loading);
+			}, 2000);
+			
+			// 同时执行真实的数据加载
 			this.loadProductDetail();
 		} else {
 			console.warn('⚠️ 未接收到商品ID参数');
@@ -511,17 +532,47 @@ export default {
 		 * 加载商品详情数据
 		 */
 		async loadProductDetail() {
+			let loadingTimeout = null;
 			try {
 				this.loading = true;
 				console.log('🔄 开始加载商品详情，ID:', this.productId);
 				
-				// 调用API获取商品详情
-				const response = await api.product.getProductById(this.productId);
+				// 添加超时保护，防止loading状态一直为true
+				loadingTimeout = setTimeout(() => {
+					if (this.loading) {
+						console.warn('⏰ 加载超时，强制结束loading状态');
+						this.loading = false;
+					}
+				}, 10000); // 10秒超时
+				
+				// 直接使用uni.request获取商品详情
+				const response = await new Promise((resolve, reject) => {
+					uni.request({
+						url: `http://192.168.143.4:3000/api/products/${this.productId}`,
+						method: 'GET',
+						timeout: 10000,
+						success: (res) => {
+							console.log('📦 商品详情API原始响应:', res);
+							resolve(res);
+						},
+						fail: (error) => {
+							console.error('📦 商品详情API请求失败:', error);
+							reject(new Error(`获取商品详情失败: ${error.errMsg || 'unknown error'}`));
+						}
+					});
+				});
+				
 				console.log('📦 商品详情API响应:', response);
 				
-				if (response && response.success && response.data && response.data.product) {
-					const product = response.data.product;
+				if (response.statusCode === 200 && response.data && response.data.success && response.data.data && response.data.data.product) {
+					const product = response.data.data.product;
+					console.log('📦 原始商品数据:', JSON.stringify(product, null, 2));
+					
 					this.goodsDetail = product;
+					console.log('🔄 goodsDetail设置后:', this.goodsDetail);
+					
+					// 强制更新视图
+					this.$forceUpdate();
 					
 					console.log('✅ 商品详情加载成功:', product.name);
 					
@@ -534,7 +585,11 @@ export default {
 					});
 					
 					// 记录商品浏览历史
-					this.recordBrowsingHistory(product);
+					try {
+						this.recordBrowsingHistory(product);
+					} catch (error) {
+						console.warn('⚠️ 浏览历史记录失败:', error);
+					}
 					
 					console.log('🖼️ 商品图片数量:', product.images?.length || 0);
 					console.log('💰 商品价格:', product.price);
@@ -548,14 +603,23 @@ export default {
 				}
 			} catch (error) {
 				console.error('❌ 加载商品详情失败:', error);
-				api.handleError(error, '获取商品详情失败');
+				uni.showToast({
+					title: '获取商品详情失败',
+					icon: 'error'
+				});
 				
 				// 返回上一页
 				setTimeout(() => {
 					uni.navigateBack();
 				}, 2000);
 			} finally {
+				// 清除超时定时器
+				if (loadingTimeout) {
+					clearTimeout(loadingTimeout);
+				}
+				
 				this.loading = false;
+				console.log('🔄 loading状态已设置为false');
 			}
 		},
 

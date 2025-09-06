@@ -220,29 +220,19 @@
 						<image src="/static/wntj_title.png" mode=""></image>
 					</view>
 				</view>
-				<view class="goods-list" v-if="goodsList.length > 0">
-					<view class="list" v-for="(item,index) in goodsList" @click="onSkip('goods', item)" :key="item.id || index">
-						<view class="pictrue">
-							<image :src="item.img" mode="heightFix"></image>
-						</view>
-						<view class="title-tag">
-							<view class="tag">
-								<text v-if="item.is_goods === 1">特价</text>
-								{{item.name}}
-							</view>
-						</view>
-						<view class="price-info">
-							<view class="user-price">
-								<text class="min">￥</text>
-								<text class="max">{{item.price}}</text>
-							</view>
-							<view class="vip-price">
-								<image src="/static/vip_ico.png"></image>
-								<text>￥{{item.vip_price}}</text>
-							</view>
-						</view>
-					</view>
-				</view>
+				
+				<!-- 瀑布流商品展示 -->
+				<WaterfallFlow 
+					v-if="waterfallGoodsList.length > 0"
+					:dataList="waterfallGoodsList"
+					:showLoadMore="true"
+					:isLoading="isLoadingMore"
+					:hasMore="hasMoreProducts"
+					:loadMoreText="loadMoreText"
+					@item-click="onGoodsClick"
+					@load-more="onLoadMoreProducts"
+				/>
+				
 				<!-- 加载状态 -->
 				<view class="loading-state" v-else-if="loading">
 					<text>正在加载商品...</text>
@@ -263,6 +253,7 @@
 <script>
 import TabBar from '../../components/TabBar/TabBar.vue';
 import ClassifyData from '../../components/ClassifyData/ClassifyData.vue';
+import WaterfallFlow from '../../components/WaterfallFlow/WaterfallFlow.vue';
 // 引入mescroll-mixins.js
 import MescrollMixin from "@/components/mescroll-uni/mescroll-mixins.js";
 import api from '@/utils/api.js';
@@ -271,15 +262,31 @@ export default {
 	components:{
 		TabBar,
 		ClassifyData,
+		WaterfallFlow,
 		},
 	data(){
 		return{
       mescroll: null, // mescroll实例对象 (此行可删,mixins已默认)
       // 下拉刷新的配置(可选, 绝大部分情况无需配置)
       downOption: {},
-      // 上拉加载的配置(可选, 绝大部分情况无需配置)
+      // 上拉加载的配置
       upOption: {
-        use: false
+        use: true,
+        auto: false, // 不自动加载
+        page: {
+          num: 0, // 当前页码,默认0,回调之前会加1,即callback(page)会从1开始
+          size: 6 // 每页数据的数量改为6个，确保是偶数
+        },
+        noMoreSize: 5,
+        // 完全隐藏mescroll的UI，只使用其滚动检测功能
+        textLoading: '', // 不显示加载文本
+        textNoMore: '', // 不显示无更多数据文本
+        bgColor: 'transparent', // 透明背景
+        textColor: 'transparent', // 透明文字
+        inOffsetRate: 1, // 减小触发距离
+        outOffsetRate: 1,
+        showLoading: false, // 不显示加载动画
+        showNoMore: false, // 不显示无更多数据
       },
 			swiperList: [
 				{
@@ -450,11 +457,19 @@ export default {
 					is_goods: 0,
 				}
 			], // goodsList数据临时保留，将通过API替换
+			// 瀑布流推荐商品数据
+			waterfallGoodsList: [],
 			classifyShow: 0,
 			// 页面高度
 			pageHeight: 500,
 			// 加载状态
 			loading: false,
+			// 无限滚动相关
+			isLoadingMore: false,
+			hasMoreProducts: true,
+			currentPage: 1,
+			pageSize: 6, // 改为6个，确保是偶数
+			loadMoreText: '正在加载中...',
 		}
 	},
 	onReady() {
@@ -474,6 +489,19 @@ export default {
 		// 异步加载真实数据
 		this.loadPageData();
 	},
+	
+	// 页面卸载时清理
+	onUnload() {
+		console.log('首页onUnload执行，清理资源');
+		this.cleanup();
+	},
+	
+	// Vue组件销毁前清理
+	beforeDestroy() {
+		console.log('首页beforeDestroy执行，清理资源');
+		this.cleanup();
+	},
+	
 	onPageScroll(e){
 		let scrollTop = e.scrollTop;
 		if(scrollTop > 0){
@@ -488,13 +516,20 @@ export default {
 	methods:{
     /*下拉刷新的回调, 有三种处理方式:*/
     downCallback(){
-      this.mescroll.endSuccess();
+      console.log('下拉刷新回调');
+      if (this.mescroll && !this._isDestroyed) {
+        // 重新加载数据
+        this.loadPageData().finally(() => {
+          this.mescroll && this.mescroll.endSuccess();
+        });
+      }
     },
     /*上拉加载的回调*/
     upCallback(page) {
-      setTimeout(() =>{
-        this.mescroll.endByPage(10, 20);
-      },2000)
+      console.log('📖 上拉加载回调，页码:', page.num);
+      if (this.mescroll && !this._isDestroyed) {
+        this.loadMoreProducts(page);
+      }
     },
 		/**
 		 * 菜单导航滚动
@@ -569,15 +604,38 @@ export default {
 					break;
 				case 'goods':
 					// 跳转到商品详情，如果有商品数据则传递ID
+					console.log('🚀 开始跳转商品详情页');
+					console.log('📦 接收到的数据:', data);
+					
 					let goodsUrl = '/pages/GoodsDetails/GoodsDetails';
 					if (data && data.id) {
 						goodsUrl += `?id=${data.id}`;
-						console.log('🔍 跳转商品详情页:', goodsUrl, data);
+						console.log('🔍 跳转商品详情页:', goodsUrl);
+						console.log('📋 完整商品数据:', JSON.stringify(data, null, 2));
+					} else {
+						console.error('❌ 商品数据或ID缺失:', data);
+						uni.showToast({
+							title: '商品数据异常',
+							icon: 'error'
+						});
+						return;
 					}
+					
+					console.log('🔄 执行页面跳转...');
 					uni.navigateTo({
 						url: goodsUrl,
 						animationType: 'zoom-fade-out',
-						animationDuration: 200
+						animationDuration: 200,
+						success: () => {
+							console.log('✅ 页面跳转成功');
+						},
+						fail: (error) => {
+							console.error('❌ 页面跳转失败:', error);
+							uni.showToast({
+								title: '页面跳转失败',
+								icon: 'error'
+							});
+						}
 					})
 					break;
 			}
@@ -607,46 +665,94 @@ export default {
 
 		// 测试API连通性
 		async testApiConnection() {
+			if (this._isDestroyed) {
+				console.log('⚠️ 组件已销毁，停止API连通性测试');
+				throw new Error('组件已销毁');
+			}
+			
 			try {
 				console.log('🔗 测试API连通性...');
-						const testResponse = await uni.request({
-			url: 'http://192.168.157.4:3000/api/categories/homepage',
-			method: 'GET',
-			timeout: 30000
-		});
+				console.log('📍 当前API地址:', 'http://192.168.143.4:3000/api');
+				
+				// 使用Promise封装uni.request以获得更好的错误处理
+				const testResponse = await new Promise((resolve, reject) => {
+					uni.request({
+						url: 'http://192.168.143.4:3000/health',
+						method: 'GET',
+						timeout: 10000,
+						success: (res) => {
+							console.log('📡 uni.request成功响应:', res);
+							resolve(res);
+						},
+						fail: (error) => {
+							console.error('📡 uni.request失败:', error);
+							reject(new Error(`网络请求失败: ${error.errMsg || 'unknown error'}`));
+						}
+					});
+				});
 				
 				console.log('🌐 API连通性测试结果:', testResponse);
 				
-				// 处理可能的数组响应
-				let actualResponse = testResponse;
-				if (Array.isArray(testResponse) && testResponse.length > 1) {
-					actualResponse = testResponse[1];
-				}
-				
-				if (actualResponse.statusCode === 200) {
+				if (testResponse.statusCode === 200) {
 					console.log('✅ API连接正常');
-					console.log('📊 原始API响应数据:', JSON.stringify(actualResponse.data, null, 2));
-					return actualResponse.data;
+					console.log('📊 API响应数据:', JSON.stringify(testResponse.data, null, 2));
+					return testResponse.data;
 				} else {
-					throw new Error(`API连接失败: ${actualResponse.statusCode}`);
+					throw new Error(`API服务器响应异常: HTTP ${testResponse.statusCode}`);
 				}
 			} catch (error) {
 				console.error('❌ API连通性测试失败:', error);
-				throw error;
+				let errorMessage = error.message || 'unknown error';
+				
+				if (errorMessage.includes('网络未连接') || errorMessage.includes('fail')) {
+					errorMessage = '网络连接失败，请检查：\n1. 手机和电脑是否在同一WiFi网络\n2. 网络连接是否正常\n3. 服务器地址是否正确';
+				} else if (errorMessage.includes('timeout')) {
+					errorMessage = '连接超时，请检查：\n1. 后端服务是否启动(npm start)\n2. 服务器地址是否正确\n3. 防火墙设置';
+				}
+				
+				throw new Error(errorMessage);
 			}
 		},
 
 		// 加载首页分类和导航数据
 		async loadHomepageCategories() {
+			// 防止组件销毁后执行
+			if (this._isDestroyed) {
+				console.log('⚠️ 组件已销毁，停止加载分类数据');
+				return;
+			}
+			
 			try {
 				console.log('🔄 开始加载首页分类数据...');
-				console.log('🌐 API基础URL:', 'http://192.168.157.4:3000/api');
+				console.log('🌐 API基础URL:', 'http://192.168.143.4:3000/api');
 				
-				const response = await api.category.getHomepageCategories();
+				// 直接使用uni.request获取分类数据
+				const response = await new Promise((resolve, reject) => {
+					uni.request({
+						url: 'http://192.168.143.4:3000/api/categories/homepage',
+						method: 'GET',
+						timeout: 10000,
+						success: (res) => {
+							console.log('📡 分类API原始响应:', res);
+							resolve(res);
+						},
+						fail: (error) => {
+							console.error('📡 分类API请求失败:', error);
+							reject(new Error(`获取分类失败: ${error.errMsg || 'unknown error'}`));
+						}
+					});
+				});
+				
 				console.log('📡 完整API响应:', JSON.stringify(response, null, 2));
 				
-				if (response && response.success && response.data && response.data.categories) {
-					const categories = response.data.categories;
+				// 再次检查组件是否已销毁
+				if (this._isDestroyed) {
+					console.log('⚠️ 组件已销毁，停止处理分类数据');
+					return;
+				}
+				
+				if (response.statusCode === 200 && response.data && response.data.success && response.data.data && response.data.data.categories) {
+					const categories = response.data.data.categories;
 					console.log('✅ 获取到分类数据:', categories.length, '个分类');
 					console.log('📦 分类详细数据:', JSON.stringify(categories, null, 2));
 					
@@ -669,13 +775,23 @@ export default {
 					console.log('🏠 首页显示分类:', homeCategories.length, '个');
 					
 					if (homeCategories.length > 0) {
-						// 更新导航数据 (9宫格导航)
-						const navData = api.transformers.categoryToNavigation(homeCategories);
+						// 手动转换导航数据 (9宫格导航)
+						const navData = homeCategories.slice(0, 10).map((category, index) => ({
+							id: category._id || category.id,
+							name: category.homeDisplay?.homeTitle || category.name,
+							icon: category.icon || `/static/nav/nav_ico${(index % 10) + 1}.png`
+						}));
 						console.log('🧭 转换后的导航数据:', navData);
 						this.$set(this, 'navList', navData);
 						
-						// 更新分类标签 (顶部横向滚动标签)
-						const newClassList = api.transformers.categoryToClassList(homeCategories);
+						// 手动转换分类标签 (顶部横向滚动标签)
+						const newClassList = [
+							{ id: 0, name: '首页' },
+							...homeCategories.slice(0, 7).map((category, index) => ({
+								id: category._id || category.id,
+								name: category.homeDisplay?.homeTitle || category.name
+							}))
+						];
 						console.log('🏷️  转换后的分类标签:', newClassList);
 						this.$set(this, 'classList', newClassList);
 						
@@ -705,34 +821,84 @@ export default {
 
 		// 加载推荐商品数据
 		async loadRecommendedProducts() {
+			// 防止组件销毁后执行
+			if (this._isDestroyed) {
+				console.log('⚠️ 组件已销毁，停止加载商品数据');
+				return;
+			}
+			
 			try {
 				console.log('🛒 开始加载推荐商品数据...');
 				
-				// 直接获取所有商品，不进行精选过滤
-				const response = await api.product.getProducts({
-					limit: 20
+				// 直接使用uni.request获取商品数据，初始加载6个商品（偶数）
+				const response = await new Promise((resolve, reject) => {
+					uni.request({
+						url: 'http://192.168.143.4:3000/api/products',
+						method: 'GET',
+						data: {
+							limit: 6, // 初始加载6个商品，确保偶数
+							page: 1
+						},
+						timeout: 10000,
+						success: (res) => {
+							console.log('📦 商品API原始响应:', res);
+							resolve(res);
+						},
+						fail: (error) => {
+							console.error('📦 商品API请求失败:', error);
+							reject(new Error(`获取商品失败: ${error.errMsg || 'unknown error'}`));
+						}
+					});
 				});
-				console.log('📦 商品API响应:', response);
 				
-				if (response && response.success && response.data && response.data.products && response.data.products.length > 0) {
-					// 转换商品数据格式
-					const products = response.data.products.map(product => 
-						api.transformers.productToFrontend(product)
-					);
+				// 再次检查组件是否已销毁
+				if (this._isDestroyed) {
+					console.log('⚠️ 组件已销毁，停止处理商品数据');
+					return;
+				}
+				
+				if (response.statusCode === 200 && response.data && response.data.success && response.data.data && response.data.data.products) {
+					let products = response.data.data.products;
+					console.log('📦 获取到商品数据:', products.length, '个商品');
 					
-					// 强制更新数据
-					this.goodsList = products;
+					// 确保商品数量为偶数
+					if (products.length % 2 !== 0) {
+						products = products.slice(0, products.length - 1);
+						console.log('🔧 调整为偶数商品:', products.length, '个');
+					}
+					
+					// 转换商品数据格式为瀑布流格式
+					const waterfallProducts = products.map((product, index) => ({
+						id: product._id || product.id,
+						name: product.name,
+						price: product.price,
+						vip_price: product.memberPrice || (product.price * 0.8).toFixed(2),
+						img: this.getProductImage(product),
+						is_goods: product.isFeatured ? 1 : 0,
+						sales: product.sales?.totalSold || Math.floor(Math.random() * 1000),
+						rating: product.rating?.average || (4 + Math.random()).toFixed(1)
+					}));
+					
+					// 更新瀑布流数据
+					this.waterfallGoodsList = waterfallProducts;
 					this.$forceUpdate();
 					
-					console.log('✅ 商品数据加载成功:', products.length, '个商品');
-					console.log('🔍 商品数据预览:', products.slice(0, 2));
+					console.log('✅ 瀑布流商品数据加载成功:', waterfallProducts.length, '个商品');
+					console.log('🔢 商品数量是否为偶数:', waterfallProducts.length % 2 === 0 ? '✅是' : '❌否');
+					console.log('🔍 瀑布流商品数据预览:', waterfallProducts.slice(0, 2));
 				} else {
 					console.warn('⚠️ 无法获取商品数据');
 					console.log('📊 API响应详情:', JSON.stringify(response, null, 2));
+					
+					// 使用默认商品数据作为备选方案
+					this.setDefaultProductData();
 				}
 			} catch (error) {
-				console.error('❌ 加载推荐商品失败:', error);
-				api.handleError(error, '商品数据加载失败');
+				if (!this._isDestroyed) {
+					console.error('❌ 加载推荐商品失败:', error);
+					// 使用默认商品数据作为备选方案
+					this.setDefaultProductData();
+				}
 			}
 		},
 
@@ -770,6 +936,296 @@ export default {
 			this.$set(this, 'classList', defaultClassList);
 			
 			console.log('默认导航数据设置完成');
+		},
+		
+		// 设置默认商品数据
+		setDefaultProductData() {
+			console.log('设置默认商品数据');
+			
+			// 使用一些真实的后端商品ID作为默认数据
+			const realProductIds = [
+				'68b039483b0bc493f4cc4aef', // 任天堂 Nintendo Switch OLED
+				'68b039483b0bc493f4cc4aee', // 戴森V15 Detect无线吸尘器
+				'68b039483b0bc493f4cc4aed', // ZARA女装连衣裙
+				'68b039483b0bc493f4cc4aec', // 小米13 Ultra
+				'68b039483b0bc493f4cc4aeb', // 耐克 Air Max 270
+				'68b039483b0bc493f4cc4aea', // iPhone 15 Pro Max
+				'68b039483b0bc493f4cc4ae9', // MacBook Pro M3
+				'68b039483b0bc493f4cc4ae8', // AirPods Pro 3
+				'68b039483b0bc493f4cc4ae7', // iPad Pro 12.9
+				'68b039483b0bc493f4cc4ae6', // Apple Watch Ultra 2
+				'68b039483b0bc493f4cc4ae5', // Sony WH-1000XM5
+				'68b039483b0bc493f4cc4ae4'  // Tesla Model Y
+			];
+			
+			// 使用现有的goodsList数据转换为瀑布流格式，初始显示前6个商品（偶数）
+			const defaultWaterfallProducts = this.goodsList.slice(0, 6).map((product, index) => ({
+				id: realProductIds[index] || `68b039483b0bc493f4cc4ae${index}`, // 使用真实的MongoDB ObjectId格式
+				name: product.name,
+				price: product.price,
+				vip_price: product.vip_price,
+				img: product.img,
+				is_goods: product.is_goods,
+				sales: Math.floor(Math.random() * 1000),
+				rating: (4 + Math.random()).toFixed(1)
+			}));
+			
+			this.waterfallGoodsList = defaultWaterfallProducts;
+			this.$forceUpdate();
+			
+			console.log('默认商品数据设置完成，商品数量:', defaultWaterfallProducts.length);
+			console.log('默认商品ID列表:', defaultWaterfallProducts.map(p => p.id));
+			console.log('📖 无限滚动设置: 初始显示6个商品，每次加载6个，确保左右两列平衡');
+		},
+		
+		// 获取商品图片
+		getProductImage(product) {
+			if (product.images && product.images.length > 0) {
+				return product.images[0];
+			}
+			// 使用默认图片
+			return '/static/img/goods_thumb_01.png';
+		},
+		
+		// 瀑布流商品点击事件
+		onGoodsClick(item) {
+			console.log('🛒 瀑布流商品点击:', item);
+			console.log('🔍 商品ID:', item.id);
+			console.log('🔍 商品名称:', item.name);
+			
+			if (!item.id) {
+				console.error('❌ 商品ID缺失，无法跳转');
+				uni.showToast({
+					title: '商品ID缺失',
+					icon: 'error'
+				});
+				return;
+			}
+			
+			this.onSkip('goods', item);
+		},
+		
+		// 瀑布流加载更多事件
+		onLoadMoreProducts() {
+			console.log('🔄 瀑布流触发加载更多');
+			// 这个方法由瀑布流组件触发，但实际加载由mescroll控制
+		},
+		
+		// 加载更多商品数据
+		async loadMoreProducts(page) {
+			if (this._isDestroyed) {
+				console.log('⚠️ 组件已销毁，停止加载更多');
+				return;
+			}
+			
+			try {
+				this.isLoadingMore = true;
+				console.log('🔄 开始加载第', page.num, '页商品数据...');
+				
+				// 从后端API获取更多商品数据
+				const response = await new Promise((resolve, reject) => {
+					uni.request({
+						url: 'http://192.168.143.4:3000/api/products',
+						method: 'GET',
+						data: {
+							limit: 6, // 每次加载6个商品，确保偶数
+							page: page.num
+						},
+						timeout: 10000,
+						success: (res) => {
+							console.log('📦 加载更多商品API响应:', res);
+							resolve(res);
+						},
+						fail: (error) => {
+							console.error('📦 加载更多商品API失败:', error);
+							reject(new Error(`获取更多商品失败: ${error.errMsg || 'unknown error'}`));
+						}
+					});
+				});
+				
+				if (response.statusCode === 200 && response.data && response.data.success && response.data.data && response.data.data.products) {
+					let products = response.data.data.products;
+					console.log('📦 获取到更多商品数据:', products.length, '个商品');
+					
+					// 检查是否还有更多数据
+					const hasMoreFromAPI = response.data.data.hasMore !== undefined ? response.data.data.hasMore : products.length >= 6;
+					
+					// 确保商品数量为偶数
+					if (products.length % 2 !== 0 && products.length > 0) {
+						products = products.slice(0, products.length - 1);
+						console.log('🔧 调整为偶数商品:', products.length, '个');
+					}
+					
+					if (products.length > 0) {
+						// 转换商品数据格式为瀑布流格式
+						const newWaterfallProducts = products.map((product, index) => ({
+							id: product._id || product.id,
+							name: product.name,
+							price: product.price,
+							vip_price: product.memberPrice || (product.price * 0.8).toFixed(2),
+							img: this.getProductImage(product),
+							is_goods: product.isFeatured ? 1 : 0,
+							sales: product.sales?.totalSold || Math.floor(Math.random() * 1000),
+							rating: product.rating?.average || (4 + Math.random()).toFixed(1)
+						}));
+						
+						// 添加到现有商品列表
+						this.waterfallGoodsList = [...this.waterfallGoodsList, ...newWaterfallProducts];
+						
+						console.log('✅ 加载更多商品成功:', newWaterfallProducts.length, '个');
+						console.log('📊 当前总商品数:', this.waterfallGoodsList.length);
+						console.log('🔢 商品数量是否为偶数:', this.waterfallGoodsList.length % 2 === 0 ? '✅是' : '❌否');
+						
+						// 检查是否还有更多数据
+						if (!hasMoreFromAPI || products.length < 6) {
+							console.log('🏁 数据加载完毕，没有更多商品了');
+							this.hasMoreProducts = false;
+						}
+						
+						// 通知mescroll加载完成
+						if (this.mescroll) {
+							this.mescroll.endByPage(newWaterfallProducts.length, 6);
+						}
+					} else {
+						// 没有更多数据
+						console.log('📄 API返回空数据，没有更多商品了');
+						this.hasMoreProducts = false;
+						
+						if (this.mescroll) {
+							this.mescroll.endByPage(0, 6);
+						}
+					}
+				} else {
+					// API响应格式异常，尝试生成备用数据
+					console.warn('⚠️ API响应异常，使用备用数据');
+					
+					// 限制备用数据的页数，避免无限生成
+					if (page.num <= 5) { // 最多生成5页备用数据
+						const backupProducts = this.generateEvenProducts(page.num, 6);
+						
+						if (backupProducts.length > 0) {
+							this.waterfallGoodsList = [...this.waterfallGoodsList, ...backupProducts];
+							
+							// 如果已经是第5页备用数据，标记为没有更多
+							if (page.num >= 5) {
+								console.log('🏁 备用数据已达上限，没有更多了');
+								this.hasMoreProducts = false;
+							}
+							
+							if (this.mescroll) {
+								this.mescroll.endByPage(backupProducts.length, 6);
+							}
+						} else {
+							this.hasMoreProducts = false;
+							if (this.mescroll) {
+								this.mescroll.endByPage(0, 6);
+							}
+						}
+					} else {
+						console.log('🏁 备用数据页数已达上限，没有更多了');
+						this.hasMoreProducts = false;
+						if (this.mescroll) {
+							this.mescroll.endByPage(0, 6);
+						}
+					}
+				}
+			} catch (error) {
+				console.error('❌ 加载更多商品失败:', error);
+				
+				// 错误时尝试使用备用数据
+				try {
+					// 限制备用数据的页数
+					if (page.num <= 5) {
+						const backupProducts = this.generateEvenProducts(page.num, 6);
+						if (backupProducts.length > 0) {
+							this.waterfallGoodsList = [...this.waterfallGoodsList, ...backupProducts];
+							console.log('🔄 使用备用数据:', backupProducts.length, '个商品');
+							
+							// 如果已经是第5页备用数据，标记为没有更多
+							if (page.num >= 5) {
+								console.log('🏁 备用数据已达上限（错误处理），没有更多了');
+								this.hasMoreProducts = false;
+							}
+							
+							if (this.mescroll) {
+								this.mescroll.endByPage(backupProducts.length, 6);
+							}
+						} else {
+							this.hasMoreProducts = false;
+							if (this.mescroll) {
+								this.mescroll.endByPage(0, 6);
+							}
+						}
+					} else {
+						console.log('🏁 备用数据页数已达上限（错误处理），没有更多了');
+						this.hasMoreProducts = false;
+						if (this.mescroll) {
+							this.mescroll.endByPage(0, 6);
+						}
+					}
+				} catch (backupError) {
+					console.error('❌ 备用数据也失败:', backupError);
+					this.hasMoreProducts = false;
+					if (this.mescroll) {
+						this.mescroll.endByPage(0, 6);
+					}
+				}
+			} finally {
+				this.isLoadingMore = false;
+			}
+		},
+		
+		// 生成偶数个商品数据
+		generateEvenProducts(pageNum, targetCount) {
+			// 确保targetCount是偶数
+			const evenCount = targetCount % 2 === 0 ? targetCount : targetCount - 1;
+			
+			if (evenCount <= 0) {
+				return [];
+			}
+			
+			const products = [];
+			const baseIndex = (pageNum - 1) * evenCount;
+			
+			// 循环使用goodsList中的商品，生成新的商品数据
+			for (let i = 0; i < evenCount; i++) {
+				const sourceIndex = (baseIndex + i) % this.goodsList.length;
+				const sourceProduct = this.goodsList[sourceIndex];
+				
+				products.push({
+					id: `generated-${pageNum}-${i}-${Date.now()}`,
+					name: `${sourceProduct.name} (第${pageNum}页-${i + 1})`,
+					price: sourceProduct.price,
+					vip_price: sourceProduct.vip_price,
+					img: sourceProduct.img,
+					is_goods: sourceProduct.is_goods,
+					sales: Math.floor(Math.random() * 2000) + 100,
+					rating: (3.5 + Math.random() * 1.5).toFixed(1)
+				});
+			}
+			
+			console.log(`🎯 生成了${evenCount}个商品 (页码:${pageNum})`);
+			return products;
+		},
+		
+		// 清理资源
+		cleanup() {
+			console.log('🧹 清理页面资源...');
+			// 标记组件已销毁，防止异步操作继续执行
+			this._isDestroyed = true;
+			
+			// 清理可能的定时器
+			if (this._loadTimer) {
+				clearTimeout(this._loadTimer);
+				this._loadTimer = null;
+			}
+			
+			// 清理mescroll实例
+			if (this.mescroll) {
+				this.mescroll.destroy && this.mescroll.destroy();
+			}
+			
+			console.log('✅ 资源清理完成');
 		}
 	}
 };

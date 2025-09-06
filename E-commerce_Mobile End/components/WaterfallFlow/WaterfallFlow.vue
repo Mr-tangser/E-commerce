@@ -1,94 +1,106 @@
 <template>
-  <view class="waterfall-container">
-    <!-- 左列 -->
-    <view class="waterfall-column left-column">
-      <view 
-        v-for="(item, index) in leftColumnData" 
-        :key="`left-col-${index}-${item._waterfallId || item.id || 'item-' + index}`"
-        class="waterfall-item"
-        @click="onItemClick(item)"
-      >
-        <view class="item-image">
-          <image 
-            :src="item.img" 
-            mode="widthFix"
-            :lazy-load="true"
-            :fade-show="true"
-            @load="onImageLoad($event, 'left', index)"
-            @error="onImageError($event, item)"
-          />
+  <view class="waterfall-wrapper">
+    <!-- 瀑布流内容区域 -->
+    <view class="waterfall-container">
+      <!-- 左列 -->
+      <view class="waterfall-column left-column">
+        <view 
+          v-for="(item, index) in leftColumnData" 
+          :key="`left-col-${index}-${item._waterfallId || item.id || 'item-' + index}`"
+          class="waterfall-item"
+          @click="onItemClick(item)"
+        >
+          <view class="item-image">
+            <image 
+              :src="item.img" 
+              mode="widthFix"
+              :lazy-load="true"
+              :fade-show="true"
+              @load="onImageLoad($event, 'left', index)"
+              @error="onImageError($event, item)"
+            />
+          </view>
+          <view class="item-content">
+            <view class="item-title">
+              <view class="tag" v-if="item.is_goods === 1">
+                <text>特价</text>
+              </view>
+              <text class="title-text">{{ item.name }}</text>
+            </view>
+            <view class="item-price">
+              <view class="user-price">
+                <text class="currency">￥</text>
+                <text class="price">{{ item.price }}</text>
+              </view>
+              <view class="vip-price">
+                <image src="/static/vip_ico.png"></image>
+                <text>￥{{ item.vip_price }}</text>
+              </view>
+            </view>
+            <view class="item-stats" v-if="item.sales || item.rating">
+              <text class="sales" v-if="item.sales">已售{{ item.sales }}</text>
+              <text class="rating" v-if="item.rating">{{ item.rating }}分</text>
+            </view>
+          </view>
         </view>
-        <view class="item-content">
-          <view class="item-title">
-            <view class="tag" v-if="item.is_goods === 1">
-              <text>特价</text>
-            </view>
-            <text class="title-text">{{ item.name }}</text>
+      </view>
+      
+      <!-- 右列 -->
+      <view class="waterfall-column right-column">
+        <view 
+          v-for="(item, index) in rightColumnData" 
+          :key="`right-col-${index}-${item._waterfallId || item.id || 'item-' + index}`"
+          class="waterfall-item"
+          @click="onItemClick(item)"
+        >
+          <view class="item-image">
+            <image 
+              :src="item.img" 
+              mode="widthFix"
+              :lazy-load="true"
+              :fade-show="true"
+              @load="onImageLoad($event, 'right', index)"
+              @error="onImageError($event, item)"
+            />
           </view>
-          <view class="item-price">
-            <view class="user-price">
-              <text class="currency">￥</text>
-              <text class="price">{{ item.price }}</text>
+          <view class="item-content">
+            <view class="item-title">
+              <view class="tag" v-if="item.is_goods === 1">
+                <text>特价</text>
+              </view>
+              <text class="title-text">{{ item.name }}</text>
             </view>
-            <view class="vip-price">
-              <image src="/static/vip_ico.png"></image>
-              <text>￥{{ item.vip_price }}</text>
+            <view class="item-price">
+              <view class="user-price">
+                <text class="currency">￥</text>
+                <text class="price">{{ item.price }}</text>
+              </view>
+              <view class="vip-price">
+                <image src="/static/vip_ico.png"></image>
+                <text>￥{{ item.vip_price }}</text>
+              </view>
             </view>
-          </view>
-          <view class="item-stats" v-if="item.sales || item.rating">
-            <text class="sales" v-if="item.sales">已售{{ item.sales }}</text>
-            <text class="rating" v-if="item.rating">{{ item.rating }}分</text>
+            <view class="item-stats" v-if="item.sales || item.rating">
+              <text class="sales" v-if="item.sales">已售{{ item.sales }}</text>
+              <text class="rating" v-if="item.rating">{{ item.rating }}分</text>
+            </view>
           </view>
         </view>
       </view>
     </view>
     
-    <!-- 右列 -->
-    <view class="waterfall-column right-column">
-      <view 
-        v-for="(item, index) in rightColumnData" 
-        :key="`right-col-${index}-${item._waterfallId || item.id || 'item-' + index}`"
-        class="waterfall-item"
-        @click="onItemClick(item)"
-      >
-        <view class="item-image">
-          <image 
-            :src="item.img" 
-            mode="widthFix"
-            :lazy-load="true"
-            :fade-show="true"
-            @load="onImageLoad($event, 'right', index)"
-            @error="onImageError($event, item)"
-          />
-        </view>
-        <view class="item-content">
-          <view class="item-title">
-            <view class="tag" v-if="item.is_goods === 1">
-              <text>特价</text>
-            </view>
-            <text class="title-text">{{ item.name }}</text>
-          </view>
-          <view class="item-price">
-            <view class="user-price">
-              <text class="currency">￥</text>
-              <text class="price">{{ item.price }}</text>
-            </view>
-            <view class="vip-price">
-              <image src="/static/vip_ico.png"></image>
-              <text>￥{{ item.vip_price }}</text>
-            </view>
-          </view>
-          <view class="item-stats" v-if="item.sales || item.rating">
-            <text class="sales" v-if="item.sales">已售{{ item.sales }}</text>
-            <text class="rating" v-if="item.rating">{{ item.rating }}分</text>
-          </view>
-        </view>
+    <!-- 底部加载状态 - 独立于瀑布流布局 -->
+    <view class="load-more-container" v-if="showLoadMore">
+      <view class="load-more-content" v-if="isLoading">
+        <view class="loading-spinner"></view>
+        <text class="loading-text">{{ loadMoreText }}</text>
       </view>
-    </view>
-    
-    <!-- 加载更多 -->
-    <view class="load-more" v-if="showLoadMore">
-      <text>{{ loadMoreText }}</text>
+      <view class="load-more-content" v-else-if="hasMore">
+        <text class="loading-text">上拉加载更多</text>
+      </view>
+      <view class="load-more-content no-more" v-else>
+        <text class="loading-text">已经到底了~</text>
+      </view>
     </view>
   </view>
 </template>
@@ -115,7 +127,17 @@ export default {
     // 加载更多文本
     loadMoreText: {
       type: String,
-      default: '加载更多...'
+      default: '正在加载中...'
+    },
+    // 是否正在加载
+    isLoading: {
+      type: Boolean,
+      default: false
+    },
+    // 是否还有更多数据
+    hasMore: {
+      type: Boolean,
+      default: true
     }
   },
   
@@ -130,6 +152,7 @@ export default {
       itemWidth: 0
     };
   },
+  
   
   watch: {
     dataList: {
@@ -168,7 +191,8 @@ export default {
         return;
       }
       
-      console.log('🔄 初始化瀑布流布局...');
+      console.log('🔄 初始化瀑布流布局，商品数量:', this.dataList.length);
+      
       this.leftColumnData = [];
       this.rightColumnData = [];
       this.leftColumnHeight = 0;
@@ -186,10 +210,12 @@ export default {
       });
       
       console.log('✅ 瀑布流布局完成', {
+        总商品数: this.dataList.length,
         左列商品: this.leftColumnData.length,
         右列商品: this.rightColumnData.length,
         左列高度: this.leftColumnHeight,
-        右列高度: this.rightColumnHeight
+        右列高度: this.rightColumnHeight,
+        是否平衡: Math.abs(this.leftColumnData.length - this.rightColumnData.length) <= 1 ? '✅' : '⚠️'
       });
     },
     
@@ -198,13 +224,42 @@ export default {
       // 估算商品卡片高度
       const estimatedHeight = this.estimateItemHeight(item);
       
-      // 选择高度较小的列
-      if (this.leftColumnHeight <= this.rightColumnHeight) {
-        this.leftColumnData.push(item);
-        this.leftColumnHeight += estimatedHeight;
+      // 对于偶数商品，使用更智能的分配策略
+      const totalItems = this.leftColumnData.length + this.rightColumnData.length;
+      const isEvenDistribution = this.dataList.length % 2 === 0;
+      
+      if (isEvenDistribution) {
+        // 偶数商品：优先保持数量平衡，然后考虑高度
+        const leftCount = this.leftColumnData.length;
+        const rightCount = this.rightColumnData.length;
+        
+        if (leftCount < rightCount) {
+          // 左列商品少，优先分配给左列
+          this.leftColumnData.push(item);
+          this.leftColumnHeight += estimatedHeight;
+        } else if (rightCount < leftCount) {
+          // 右列商品少，优先分配给右列
+          this.rightColumnData.push(item);
+          this.rightColumnHeight += estimatedHeight;
+        } else {
+          // 数量相等，按高度分配
+          if (this.leftColumnHeight <= this.rightColumnHeight) {
+            this.leftColumnData.push(item);
+            this.leftColumnHeight += estimatedHeight;
+          } else {
+            this.rightColumnData.push(item);
+            this.rightColumnHeight += estimatedHeight;
+          }
+        }
       } else {
-        this.rightColumnData.push(item);
-        this.rightColumnHeight += estimatedHeight;
+        // 奇数商品：按原来的高度分配
+        if (this.leftColumnHeight <= this.rightColumnHeight) {
+          this.leftColumnData.push(item);
+          this.leftColumnHeight += estimatedHeight;
+        } else {
+          this.rightColumnData.push(item);
+          this.rightColumnHeight += estimatedHeight;
+        }
       }
     },
     
@@ -246,6 +301,12 @@ export default {
       this.$emit('item-click', item);
     },
     
+    // 触发加载更多事件
+    onLoadMore() {
+      console.log('🔄 触发加载更多商品');
+      this.$emit('load-more');
+    },
+    
     // 添加新数据（用于加载更多）
     addMoreData(newData) {
       if (!newData || !newData.length) {
@@ -280,10 +341,14 @@ export default {
 </script>
 
 <style scoped lang="scss">
+.waterfall-wrapper {
+  width: 100%;
+  background-color: #f2f2f2;
+}
+
 .waterfall-container {
   display: flex;
   padding: 0 30rpx;
-  background-color: #f2f2f2;
   min-height: 200rpx;
 }
 
@@ -411,25 +476,6 @@ export default {
   }
 }
 
-.load-more {
-  position: absolute;
-  left: 50%;
-  bottom: 20rpx;
-  transform: translateX(-50%);
-  width: 200rpx;
-  height: 60rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: rgba(0, 0, 0, 0.1);
-  border-radius: 30rpx;
-  
-  text {
-    font-size: 24rpx;
-    color: #666;
-  }
-}
-
 /* 加载状态 */
 .waterfall-container:empty::before {
   content: "加载中...";
@@ -440,5 +486,60 @@ export default {
   height: 200rpx;
   font-size: 28rpx;
   color: #999;
+}
+
+/* 底部加载更多样式 */
+.load-more-container {
+  width: 100%;
+  padding: 30rpx 0 50rpx 0;
+  display: flex;
+  justify-content: center;
+  background-color: #f2f2f2;
+  margin-top: 20rpx;
+}
+
+.load-more-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20rpx;
+  border-radius: 16rpx;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10rpx);
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.1);
+  
+  .loading-spinner {
+    width: 40rpx;
+    height: 40rpx;
+    border: 4rpx solid #e5e5e5;
+    border-top: 4rpx solid #007aff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 16rpx;
+  }
+  
+  .loading-text {
+    font-size: 26rpx;
+    color: #666;
+    font-weight: 500;
+  }
+  
+  &.no-more {
+    background: rgba(245, 245, 245, 0.9);
+    
+    .loading-text {
+      color: #999;
+    }
+  }
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 </style>
