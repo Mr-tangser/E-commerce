@@ -406,7 +406,8 @@ export default {
             message: `欢迎回来，${adminInfo.fullName || adminInfo.username}！`,
             horizontalAlign: 'right',
             verticalAlign: 'top',
-            type: 'success'
+            type: 'success',
+            timeout: 4000  // 欢迎信息显示4秒
           });
           
           // 延迟跳转到仪表板

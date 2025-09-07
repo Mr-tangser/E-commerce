@@ -84,7 +84,8 @@
           message: '获取个人资料失败，请重试',
           horizontalAlign: 'right',
           verticalAlign: 'top',
-          type: 'danger'
+          type: 'danger',
+          timeout: 5000  // 错误信息显示5秒
         });
       }
     }

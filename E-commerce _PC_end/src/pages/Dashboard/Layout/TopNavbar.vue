@@ -129,7 +129,8 @@ export default {
           message: '您已经在个人资料页面了',
           horizontalAlign: 'right',
           verticalAlign: 'top',
-          type: 'info'
+          type: 'info',
+          timeout: 2500  // 提示信息显示2.5秒
         });
         return;
       }

@@ -66,11 +66,20 @@
         currentPassword: '',
         newPassword: '',
         confirmPassword: '',
-        updating: false
+        updating: false,
+        apiValidationErrors: {}
       };
     },
 
     methods: {
+      clearApiValidation() {
+        this.apiValidationErrors = {};
+      },
+
+      setApiValidation(errors) {
+        this.apiValidationErrors = errors;
+      },
+
       async changePassword() {
         this.updating = true;
         this.clearApiValidation();
@@ -82,6 +91,8 @@
         }
 
         try {
+          console.log('🔒 提交密码修改请求...');
+          
           const response = await this.$http.put('http://localhost:3000/api/admin/change-password', {
             currentPassword: this.currentPassword,
             newPassword: this.newPassword,
@@ -89,17 +100,23 @@
           });
 
           if (response.data.success) {
+            console.log('✅ 密码修改成功');
+            
             this.$notify({
               message: '密码修改成功',
               horizontalAlign: 'right',
               verticalAlign: 'top',
-              type: 'success'
+              type: 'success',
+              timeout: 3000  // 成功信息显示3秒
             });
 
             // 清空表单
             this.currentPassword = '';
             this.newPassword = '';
             this.confirmPassword = '';
+            
+            // 清除所有验证错误
+            this.clearApiValidation();
           }
         } catch (error) {
           console.error('密码修改失败:', error);
@@ -120,7 +137,8 @@
               message: error.response?.data?.error?.message || '密码修改失败',
               horizontalAlign: 'right',
               verticalAlign: 'top',
-              type: 'danger'
+              type: 'danger',
+              timeout: 5000  // 错误信息显示5秒
             });
           }
         } finally {
@@ -129,42 +147,53 @@
       },
 
       validateForm() {
+        // 清除之前的验证错误
+        this.clearApiValidation();
+        
         if (!this.currentPassword) {
+          this.setApiValidation({ currentPassword: ['请输入当前密码'] });
           this.$notify({
             message: '请输入当前密码',
             horizontalAlign: 'right',
             verticalAlign: 'top',
-            type: 'warning'
+            type: 'warning',
+            timeout: 4000  // 警告信息显示4秒
           });
           return false;
         }
 
         if (!this.newPassword) {
+          this.setApiValidation({ newPassword: ['请输入新密码'] });
           this.$notify({
             message: '请输入新密码',
             horizontalAlign: 'right',
             verticalAlign: 'top',
-            type: 'warning'
+            type: 'warning',
+            timeout: 4000  // 警告信息显示4秒
           });
           return false;
         }
 
         if (this.newPassword.length < 6) {
+          this.setApiValidation({ newPassword: ['新密码长度不能少于6位'] });
           this.$notify({
             message: '新密码长度不能少于6位',
             horizontalAlign: 'right',
             verticalAlign: 'top',
-            type: 'warning'
+            type: 'warning',
+            timeout: 4000  // 警告信息显示4秒
           });
           return false;
         }
 
         if (this.newPassword !== this.confirmPassword) {
+          this.setApiValidation({ confirmPassword: ['两次输入的密码不一致'] });
           this.$notify({
             message: '两次输入的密码不一致',
             horizontalAlign: 'right',
             verticalAlign: 'top',
-            type: 'warning'
+            type: 'warning',
+            timeout: 4000  // 警告信息显示4秒
           });
           return false;
         }

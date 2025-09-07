@@ -1,55 +1,73 @@
 <template>
-  <md-card class="md-card-profile">
-    <div class="md-card-avatar">
-      <div class="avatar-container" @click="triggerFileUpload" title="点击更换头像">
-        <img class="img" :src="userAvatar" @error="handleImageError"/>
-        <div class="avatar-overlay">
-          <div class="overlay-content">
-            <md-icon class="camera-icon">photo_camera</md-icon>
-            <span class="upload-text">点击更换</span>
+  <div class="profile-card-container">
+    <md-card class="md-card-profile">
+      <div class="md-card-avatar">
+        <div class="avatar-container" @click="triggerFileUpload" title="点击更换头像">
+          <img class="img" :src="userAvatar" @error="handleImageError"/>
+          <div class="avatar-overlay">
+            <div class="overlay-content">
+              <md-icon class="camera-icon">photo_camera</md-icon>
+              <span class="upload-text">点击更换</span>
+            </div>
           </div>
         </div>
+        <input 
+          ref="avatarInput"
+          type="file" 
+          accept="image/*" 
+          @change="handleAvatarUpload"
+          style="display: none;"
+        />
       </div>
-      <input 
-        ref="avatarInput"
-        type="file" 
-        accept="image/*" 
-        @change="handleAvatarUpload"
-        style="display: none;"
-      />
-    </div>
-    <md-card-content>
-      <h6 class="category text-gray">{{ user.role | roleText }}</h6>
-      <h4 class="card-title">{{ user.fullName || user.username }}</h4>
-      <p class="card-description">
-        <strong>用户名:</strong> {{ user.username }}<br>
-        <strong>邮箱:</strong> {{ user.email }}<br>
-        <strong>部门:</strong> {{ user.department | departmentText }}<br>
-        <strong>手机号:</strong> {{ user.phone || '未设置' }}<br>
-        <strong>登录次数:</strong> {{ user.loginCount || 0 }} 次<br>
-        <strong>账户状态:</strong> {{ user.isActive ? '正常' : '已禁用' }}<br>
-        <strong>最后登录:</strong> {{ user.lastLogin | formatDate }}
-      </p>
-      <div class="action-buttons">
-        <md-button 
-          class="md-round md-info"
-          @click="refreshProfile"
-          :disabled="uploading"
-        >
-          {{ uploading ? '上传中...' : '刷新资料' }}
-        </md-button>
-        <md-button 
-          class="md-round md-success"
-          @click="triggerFileUpload"
-          :disabled="uploading"
-          title="选择头像文件"
-        >
-          <md-icon>cloud_upload</md-icon>
-          更换头像
-        </md-button>
-      </div>
-    </md-card-content>
-  </md-card>
+      <md-card-content>
+        <h6 class="category text-gray">{{ user.role | roleText }}</h6>
+        <h4 class="card-title">{{ user.fullName || user.username }}</h4>
+        <p class="card-description">
+          <strong>用户名:</strong> {{ user.username }}<br>
+          <strong>邮箱:</strong> {{ user.email }}<br>
+          <strong>部门:</strong> {{ user.department | departmentText }}<br>
+          <strong>手机号:</strong> {{ user.phone || '未设置' }}<br>
+          <strong>登录次数:</strong> {{ user.loginCount || 0 }} 次<br>
+          <strong>账户状态:</strong> {{ user.isActive ? '正常' : '已禁用' }}<br>
+          <strong>最后登录:</strong> {{ user.lastLogin | formatDate }}
+        </p>
+        <div class="action-buttons">
+          <md-button 
+            class="md-round md-info"
+            @click="refreshProfile"
+            :disabled="uploading"
+          >
+            {{ uploading ? '上传中...' : '刷新资料' }}
+          </md-button>
+          <md-button 
+            class="md-round md-danger"
+            @click="handleLogout"
+            :disabled="uploading"
+            title="退出登录"
+          >
+            <md-icon>exit_to_app</md-icon>
+            退出登录
+          </md-button>
+        </div>
+      </md-card-content>
+    </md-card>
+    
+    <!-- 退出登录确认对话框 -->
+    <md-dialog :md-active.sync="showLogoutDialog" md-backdrop="false">
+      <md-dialog-title>确认退出登录</md-dialog-title>
+      <md-dialog-content>
+        <div class="logout-dialog-content">
+          <md-icon class="logout-icon">exit_to_app</md-icon>
+          <p class="logout-message">您确定要退出登录吗？</p>
+          <p class="logout-hint">退出后需要重新登录才能访问系统</p>
+        </div>
+      </md-dialog-content>
+      <md-dialog-actions>
+        <md-button class="md-primary" @click="cancelLogout">取消</md-button>
+        <md-button class="md-accent" @click="confirmLogout">确定退出</md-button>
+      </md-dialog-actions>
+    </md-dialog>
+  </div>
 </template>
 
 <script>
@@ -64,6 +82,7 @@
     data() {
       return {
         uploading: false,
+        showLogoutDialog: false,
         defaultAvatar: process.env.BASE_URL + "img/default.jpg"
       };
     },
@@ -135,7 +154,8 @@
             message: '文件选择器初始化失败，请刷新页面重试',
             horizontalAlign: 'right',
             verticalAlign: 'top',
-            type: 'danger'
+            type: 'danger',
+            timeout: 5000  // 错误信息显示5秒
           });
         }
       },
@@ -149,7 +169,8 @@
             message: '请选择图片文件',
             horizontalAlign: 'right',
             verticalAlign: 'top',
-            type: 'warning'
+            type: 'warning',
+            timeout: 4000  // 警告信息显示4秒
           });
           return;
         }
@@ -160,7 +181,8 @@
             message: '图片大小不能超过5MB',
             horizontalAlign: 'right',
             verticalAlign: 'top',
-            type: 'warning'
+            type: 'warning',
+            timeout: 4000  // 警告信息显示4秒
           });
           return;
         }
@@ -182,7 +204,8 @@
               message: '头像上传成功',
               horizontalAlign: 'right',
               verticalAlign: 'top',
-              type: 'success'
+              type: 'success',
+              timeout: 3000  // 成功信息显示3秒
             });
             
             // 更新store中的用户信息，确保全局头像同步
@@ -200,7 +223,8 @@
             message: error.response?.data?.error?.message || '头像上传失败',
             horizontalAlign: 'right',
             verticalAlign: 'top',
-            type: 'danger'
+            type: 'danger',
+            timeout: 5000  // 错误信息显示5秒
           });
         } finally {
           this.uploading = false;
@@ -211,6 +235,54 @@
       refreshProfile() {
         this.$parent.getProfile();
       },
+      
+      handleLogout() {
+        // 显示确认对话框
+        this.showLogoutDialog = true;
+      },
+      
+      async confirmLogout() {
+        try {
+          this.showLogoutDialog = false;
+          console.log('🚪 用户退出登录...');
+          
+          // 调用store的logout action
+          await this.$store.dispatch('auth/logout');
+          
+          // 显示退出成功提示
+          this.$notify({
+            message: '已安全退出登录',
+            horizontalAlign: 'right',
+            verticalAlign: 'top',
+            type: 'success',
+            timeout: 3000  // 3秒后自动消失
+          });
+          
+        } catch (error) {
+          console.error('❌ 退出登录失败:', error);
+          
+          // 即使出错也强制清除本地状态并跳转
+          localStorage.removeItem('vue-authenticate.vueauth_access_token');
+          localStorage.removeItem('admin_info');
+          this.$store.commit('auth/CLEAR_AUTH');
+          
+          this.$notify({
+            message: '退出登录时出现错误，但已清除本地数据',
+            horizontalAlign: 'right',
+            verticalAlign: 'top',
+            type: 'warning',
+            timeout: 6000  // 重要警告信息显示6秒
+          });
+          
+          // 跳转到登录页
+          this.$router.push({ name: "Login" });
+        }
+      },
+      
+      cancelLogout() {
+        this.showLogoutDialog = false;
+      },
+      
       goToProfile() {
         // 检查当前是否已在个人资料页面
         if (this.$route.name === "个人资料") {
@@ -320,7 +392,7 @@
 
 .action-buttons {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   justify-content: center;
   flex-wrap: wrap;
   margin-top: 15px;
@@ -329,5 +401,62 @@
 .action-buttons .md-button {
   margin: 0;
   min-width: 120px;
+  font-size: 14px;
+}
+
+.action-buttons .md-button .md-icon {
+  font-size: 16px !important;
+  margin-right: 4px;
+}
+
+/* 退出登录对话框样式 */
+.logout-dialog-content {
+  text-align: center;
+  padding: 20px 10px;
+}
+
+.logout-icon {
+  font-size: 48px !important;
+  color: #ff5722 !important;
+  margin-bottom: 16px;
+}
+
+.logout-message {
+  font-size: 18px;
+  font-weight: 500;
+  color: #333;
+  margin: 16px 0 8px 0;
+}
+
+.logout-hint {
+  font-size: 14px;
+  color: #666;
+  margin: 8px 0 20px 0;
+  line-height: 1.4;
+}
+
+.md-dialog .md-dialog-title {
+  color: #333;
+  font-weight: 600;
+}
+
+.md-dialog .md-dialog-actions {
+  padding: 16px 24px;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.md-dialog .md-dialog-actions .md-button {
+  min-width: 80px;
+  margin: 0;
+}
+
+.md-dialog .md-dialog-actions .md-button.md-accent {
+  background-color: #ff5722 !important;
+  color: white !important;
+}
+
+.md-dialog .md-dialog-actions .md-button.md-accent:hover {
+  background-color: #e64a19 !important;
 }
 </style>

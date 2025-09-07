@@ -101,6 +101,7 @@ export default {
   data() {
     return {
       updating: false,
+      apiValidationErrors: {},
       editForm: {
         firstName: '',
         lastName: '',
@@ -128,19 +129,32 @@ export default {
   },
 
   methods: {
+    clearApiValidation() {
+      this.apiValidationErrors = {};
+    },
+
+    setApiValidation(errors) {
+      this.apiValidationErrors = errors;
+    },
+
     async updateProfile() {
       this.updating = true;
       this.clearApiValidation();
 
       try {
+        console.log('📝 提交个人资料更新:', this.editForm);
+        
         const response = await this.$http.put('http://localhost:3000/api/admin/profile', this.editForm);
         
         if (response.data.success) {
+          console.log('✅ 个人资料更新成功:', response.data);
+          
           this.$notify({
             message: '资料更新成功',
             horizontalAlign: 'right',
             verticalAlign: 'top',
-            type: 'success'
+            type: 'success',
+            timeout: 3000  // 成功信息显示3秒
           });
           
           // 通知父组件刷新数据
@@ -170,7 +184,8 @@ export default {
             message: error.response?.data?.error?.message || '更新资料失败',
             horizontalAlign: 'right',
             verticalAlign: 'top',
-            type: 'danger'
+            type: 'danger',
+            timeout: 5000  // 错误信息显示5秒
           });
         }
       } finally {
