@@ -166,15 +166,6 @@
         <text class="loading-text">{{ loadingText }}</text>
       </view>
     </view>
-    
-    <!-- 人脸识别组件 -->
-    <FaceRecognition 
-      :visible="showFaceRecognition"
-      :type="faceRecognitionType"
-      :userId="selectedUserId"
-      @success="handleFaceRecognitionSuccess"
-      @close="closeFaceRecognition"
-    />
   </view>
 </template>
 
@@ -183,13 +174,8 @@
 import BiometricAuth from '@/utils/biometricAuth.js'
 import WechatAuth from '@/utils/wechatAuth.js'
 import api from '@/utils/api.js'
-import FaceRecognition from '@/components/FaceRecognition/FaceRecognition.vue'
 
 export default {
-  components: {
-    FaceRecognition
-  },
-  
   data() {
     return {
       // 登录类型：phone(手机) / email(邮箱)
@@ -216,13 +202,7 @@ export default {
         password: '',
         email: '',
         emailPassword: ''
-      },
-      
-      // 人脸识别相关
-      showFaceRecognition: false,
-      faceRecognitionType: 'login',
-      selectedUserId: '',
-      lastLoginUsers: [] // 保存最近登录过的用户，用于人脸识别选择
+      }
     };
   },
   
@@ -247,8 +227,6 @@ export default {
   async mounted() {
     // 检查生物识别支持
     await this.checkBiometricSupport();
-    // 加载最近登录的用户
-    this.loadLastLoginUsers();
   },
   
   methods: {
@@ -366,24 +344,53 @@ export default {
         }
         
         if (response.success) {
-          // 保存登录信息
+          // 保存登录信息 - 与"我的"页面保持一致
           uni.setStorageSync('token', response.data.token);
-          uni.setStorageSync('userInfo', response.data.user);
+          uni.setStorageSync('user', response.data.user); // 改为'user'以保持一致
           
-          // 更新最近登录用户记录
-          this.updateLastLoginUser(response.data.user);
+          console.log('✅ 登录成功，用户数据已保存:', response.data.user);
+          
+          // 触发全局用户状态更新事件
+          uni.$emit('userStatusChange', {
+            isLoggedIn: true,
+            user: response.data.user
+          });
           
           uni.showToast({
             title: '登录成功',
             icon: 'success'
           });
           
-          // 登录成功直接跳转到首页
-          setTimeout(() => {
-            uni.switchTab({
-              url: '/pages/home/home'
-            });
-          }, 1500);
+          // 检查是否需要完善个人信息
+          const user = response.data.user;
+          const needProfile = !user.address || !user.address.receiverName || !user.address.province;
+          
+          console.log('🔍 用户信息检查:', {
+            user: user,
+            hasAddress: !!user.address,
+            hasReceiverName: !!(user.address && user.address.receiverName),
+            hasProvince: !!(user.address && user.address.province),
+            needProfile: needProfile
+          });
+          
+          // 跳转逻辑：如果用户信息不完整，跳转到完善信息页面，否则跳转到首页
+           setTimeout(() => {
+             if (needProfile) {
+               console.log('🔄 用户信息不完整，但强制跳转到首页 (调试模式)')
+               // 临时跳过个人信息检查，直接跳转首页
+               this.navigateToHomeForMobile();
+               
+               // 如果需要跳转到个人资料页面，请取消上面的注释并启用下面的代码
+               // uni.navigateTo({
+               //   url: '/pages/UserProfile/UserProfile'
+               // });
+             } else {
+               console.log('🏠 登录成功，准备跳转到首页...')
+               console.log('🔍 用户信息完整，开始执行跳转逻辑')
+               // 调用真机调试专用跳转方法
+               this.navigateToHomeForMobile();
+             }
+           }, 1500);
         } else {
           throw new Error(response.error?.message || '登录失败');
         }
@@ -415,23 +422,51 @@ export default {
           );
           
           if (wechatResponse.success) {
-            // 保存登录信息
+            // 保存登录信息 - 与"我的"页面保持一致
             uni.setStorageSync('token', wechatResponse.data.token);
-            uni.setStorageSync('userInfo', wechatResponse.data.user);
+            uni.setStorageSync('user', wechatResponse.data.user); // 改为'user'以保持一致
             
-            // 更新最近登录用户记录
-            this.updateLastLoginUser(wechatResponse.data.user);
-          
+            console.log('✅ 微信登录成功，用户数据已保存:', wechatResponse.data.user);
+            
+            // 触发全局用户状态更新事件
+            uni.$emit('userStatusChange', {
+              isLoggedIn: true,
+              user: wechatResponse.data.user
+            });
+            
             uni.showToast({
               title: '登录成功',
               icon: 'success'
             });
           
-            // 登录成功直接跳转到首页
+            // 检查是否需要完善个人信息
+            const user = wechatResponse.data.user || {};
+            const needProfile = !user.address || !user.address.receiverName || !user.address.province;
+            
+            console.log('🔍 微信用户信息检查:', {
+              user: user,
+              hasAddress: !!user.address,
+              hasReceiverName: !!(user.address && user.address.receiverName),
+              hasProvince: !!(user.address && user.address.province),
+              needProfile: needProfile
+            });
+          
             setTimeout(() => {
-              uni.switchTab({
-                url: '/pages/home/home'
-              });
+              if (needProfile) {
+                console.log('🔄 微信用户信息不完整，但强制跳转到首页 (调试模式)')
+                // 临时跳过个人信息检查，直接跳转首页
+                this.navigateToHomeForMobile();
+                
+                // 如果需要跳转到个人资料页面，请取消上面的注释并启用下面的代码
+                // uni.navigateTo({
+                //   url: '/pages/UserProfile/UserProfile'
+                // });
+                              } else {
+                  // 跳转到首页，让用户看到登录后的状态
+                  console.log('🏠 微信登录成功，准备跳转到首页...')
+                  console.log('🔍 微信用户信息完整，开始执行跳转逻辑')
+                  this.navigateToHomeForMobile();
+                }
             }, 1500);
           }
         }
@@ -492,130 +527,70 @@ export default {
      */
     async faceLogin() {
       try {
-        // 检查是否有最近登录的用户
-        if (this.lastLoginUsers.length === 0) {
-          uni.showModal({
-            title: '提示',
-            content: '暂无可用的人脸登录账户，请先使用其他方式登录并注册人脸信息',
-            showCancel: false
+        this.loading = true;
+        this.loadingText = '人脸识别中...';
+        
+        console.log('🎭 开始人脸识别登录...');
+        console.log('BiometricAuth类型:', typeof BiometricAuth);
+        console.log('BiometricAuth对象:', BiometricAuth);
+        
+        // 检查是否有生物识别工具类
+        if (typeof BiometricAuth === 'undefined') {
+          console.log('⚠️ BiometricAuth 未定义，进入演示模式');
+          // 演示模式：模拟人脸识别过程
+          setTimeout(async () => {
+            uni.showToast({
+              title: '人脸识别成功（演示模式）',
+              icon: 'success'
+            });
+            this.loading = false;
+            // 可以在这里添加演示登录逻辑
+          }, 3000);
+          return;
+        }
+        
+        console.log('✅ BiometricAuth 已加载，调用 authenticateWithFace...');
+        
+        const result = await BiometricAuth.authenticateWithFace();
+        
+        console.log('🔍 人脸识别结果:', result);
+        
+        if (result.success) {
+          console.log('✅ 人脸识别成功，执行登录成功逻辑');
+          await this.biometricLoginSuccess();
+        } else {
+          console.log('❌ 人脸识别失败:', result.message);
+          uni.showToast({
+            title: result.message || '人脸识别失败',
+            icon: 'none',
+            duration: 3000
           });
-          return;
-        }
-        
-        // 如果只有一个用户，直接使用
-        if (this.lastLoginUsers.length === 1) {
-          this.selectedUserId = this.lastLoginUsers[0].userId;
-          this.startFaceRecognition();
-          return;
-        }
-        
-        // 多个用户时，让用户选择
-        const itemList = this.lastLoginUsers.map(user => user.username || user.phone);
-        
-        uni.showActionSheet({
-          itemList: itemList,
-          success: (res) => {
-            const selectedUser = this.lastLoginUsers[res.tapIndex];
-            this.selectedUserId = selectedUser.userId;
-            this.startFaceRecognition();
+          
+          // 如果是未注册人脸的错误，提供注册选项
+          if (result.message && result.message.includes('未找到匹配的人脸')) {
+            setTimeout(() => {
+              uni.showModal({
+                title: '人脸未注册',
+                content: '您还没有注册人脸信息，是否前往注册？',
+                success: (res) => {
+                  if (res.confirm) {
+                    // 这里可以跳转到人脸注册页面
+                    console.log('用户选择前往注册人脸');
+                  }
+                }
+              });
+            }, 3500);
           }
-        });
-        
-      } catch (error) {
-        console.error('人脸登录启动失败:', error);
-        uni.showToast({
-          title: '启动人脸识别失败',
-          icon: 'none'
-        });
-      }
-    },
-    
-    /**
-     * 启动人脸识别组件
-     */
-    startFaceRecognition() {
-      this.faceRecognitionType = 'login';
-      this.showFaceRecognition = true;
-    },
-    
-    /**
-     * 人脸识别成功回调
-     */
-    handleFaceRecognitionSuccess(result) {
-      console.log('人脸识别登录成功:', result);
-      
-      // 保存登录信息
-      uni.setStorageSync('token', result.token);
-      uni.setStorageSync('userInfo', result.user);
-      
-      // 更新最近登录用户记录
-      this.updateLastLoginUser(result.user);
-      
-      uni.showToast({
-        title: '人脸登录成功',
-        icon: 'success'
-      });
-      
-      // 登录成功直接跳转到首页
-      setTimeout(() => {
-        uni.switchTab({
-          url: '/pages/home/home'
-        });
-      }, 1500);
-    },
-    
-    /**
-     * 关闭人脸识别组件
-     */
-    closeFaceRecognition() {
-      this.showFaceRecognition = false;
-      this.selectedUserId = '';
-    },
-    
-    /**
-     * 加载最近登录的用户
-     */
-    loadLastLoginUsers() {
-      try {
-        const savedUsers = uni.getStorageSync('lastLoginUsers') || [];
-        this.lastLoginUsers = savedUsers;
-        console.log('加载最近登录用户:', this.lastLoginUsers);
-      } catch (error) {
-        console.error('加载最近登录用户失败:', error);
-        this.lastLoginUsers = [];
-      }
-    },
-    
-    /**
-     * 更新最近登录用户记录
-     */
-    updateLastLoginUser(user) {
-      try {
-        let savedUsers = uni.getStorageSync('lastLoginUsers') || [];
-        
-        // 移除已存在的用户记录
-        savedUsers = savedUsers.filter(u => u.userId !== user.id);
-        
-        // 添加到最前面
-        savedUsers.unshift({
-          userId: user.id,
-          username: user.username,
-          phone: user.phone,
-          avatar: user.avatar,
-          lastLoginTime: new Date().getTime()
-        });
-        
-        // 最多保存5个用户
-        if (savedUsers.length > 5) {
-          savedUsers = savedUsers.slice(0, 5);
         }
-        
-        uni.setStorageSync('lastLoginUsers', savedUsers);
-        this.lastLoginUsers = savedUsers;
-        
-        console.log('更新最近登录用户记录:', savedUsers);
       } catch (error) {
-        console.error('更新最近登录用户记录失败:', error);
+        console.error('❌ 人脸识别异常:', error);
+        uni.showToast({
+          title: error.message || '人脸识别失败',
+          icon: 'none',
+          duration: 3000
+        });
+      } finally {
+        this.loading = false;
       }
     },
     
@@ -637,19 +612,50 @@ export default {
         });
         
         if (res.data.code === 200) {
+          // 保存登录信息 - 与"我的"页面保持一致
           uni.setStorageSync('token', res.data.data.token);
-          uni.setStorageSync('userInfo', res.data.data.userInfo);
+          uni.setStorageSync('user', res.data.data.userInfo); // 改为'user'以保持一致
+          
+          // 触发全局用户状态更新事件
+          uni.$emit('userStatusChange', {
+            isLoggedIn: true,
+            user: res.data.data.userInfo
+          });
+          
+          console.log('✅ 生物识别登录成功，用户数据已保存:', res.data.data.userInfo);
           
           uni.showToast({
             title: '登录成功',
             icon: 'success'
           });
           
-          // 登录成功直接跳转到首页
+          // 检查是否需要完善个人信息
+          const user = res.data.data.userInfo || {};
+          const needProfile = !user.address || !user.address.receiverName || !user.address.province;
+          
+          console.log('🔍 生物识别用户信息检查:', {
+            user: user,
+            hasAddress: !!user.address,
+            hasReceiverName: !!(user.address && user.address.receiverName),
+            hasProvince: !!(user.address && user.address.province),
+            needProfile: needProfile
+          });
+          
           setTimeout(() => {
-            uni.switchTab({
-              url: '/pages/home/home'
-            });
+            if (needProfile) {
+              console.log('🔄 生物识别用户信息不完整，但强制跳转到首页 (调试模式)')
+              // 临时跳过个人信息检查，直接跳转首页
+              this.navigateToHomeForMobile();
+              
+              // 如果需要跳转到个人资料页面，请取消上面的注释并启用下面的代码
+              // uni.navigateTo({
+              //   url: '/pages/UserProfile/UserProfile'
+              // });
+                          } else {
+                console.log('🏠 生物识别登录成功，准备跳转到首页...')
+                console.log('🔍 生物识别用户信息完整，开始执行跳转逻辑')
+                this.navigateToHomeForMobile();
+              }
           }, 1500);
         }
       }
@@ -690,6 +696,60 @@ export default {
         this.supportFaceID = true;
         this.supportBiometric = true;
       }
+    },
+    
+    // 优化的跳转方法 - 专为自定义tabBar设计
+    navigateToHomeForMobile() {
+      console.log('🏠 登录成功，准备跳转到首页...')
+      console.log('📱 当前环境:', process.env.NODE_ENV)
+      
+      // 延迟跳转，确保登录状态完全保存
+      setTimeout(() => {
+        console.log('🚀 开始执行跳转逻辑')
+        
+        // 获取系统信息
+        const systemInfo = uni.getSystemInfoSync()
+        console.log('📱 系统信息:', {
+          platform: systemInfo.platform,
+          system: systemInfo.system,
+          version: systemInfo.version
+        })
+        
+        // 对于自定义tabBar页面，优先使用 switchTab
+        console.log('🔄 策略1: 使用 switchTab 跳转到首页 (适用于自定义tabBar)')
+        uni.switchTab({
+          url: '/pages/home/home',
+          success: (res) => {
+            console.log('✅ switchTab 跳转首页成功:', res)
+          },
+          fail: (err) => {
+            console.error('❌ switchTab 失败:', err)
+            
+            // 备选策略: 使用 reLaunch 重新启动应用
+            console.log('🔄 策略2: 使用 reLaunch 重新启动应用')
+            setTimeout(() => {
+              uni.reLaunch({
+                url: '/pages/home/home',
+                success: (res) => {
+                  console.log('✅ reLaunch 成功:', res)
+                },
+                fail: (err) => {
+                  console.error('❌ reLaunch 也失败:', err)
+                  
+                  // 最后提示用户手动操作
+                  console.log('🔄 显示手动提示')
+                  uni.showModal({
+                    title: '跳转提示',
+                    content: '登录成功！请手动点击底部"首页"按钮查看',
+                    showCancel: false,
+                    confirmText: '知道了'
+                  })
+                }
+              })
+            }, 800)
+          }
+        })
+      }, 1500) // 适当减少延迟时间
     },
     
     /**

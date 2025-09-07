@@ -1,5 +1,5 @@
 // API工具函数
-const BASE_URL = 'http://192.168.160.128:3000/api'
+const BASE_URL = 'http://192.168.107.128:3000/api'
 
 // 构建查询字符串的兼容性函数
 function buildQuery(params = {}) {
@@ -175,21 +175,6 @@ const api = {
     // 获取用户信息
     getUserInfo(token) {
       return request('/auth/me', {
-        token
-      });
-    },
-    
-    // 获取用户人脸注册状态
-    getFaceStatus(token) {
-      return request('/auth/face-status', {
-        token
-      });
-    },
-    
-    // 删除用户人脸信息
-    deleteFaceData(token) {
-      return request('/auth/face-data', {
-        method: 'DELETE',
         token
       });
     }

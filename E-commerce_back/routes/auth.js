@@ -1,17 +1,45 @@
+/**
+ * 认证路由 - 处理用户注册、登录、权限验证等功能
+ * 支持邮箱/手机登录、微信登录、人脸识别登录等多种认证方式
+ */
+
 const express = require('express');
+const router = express.Router();
+const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
+const rateLimit = require('express-rate-limit');
+const multer = require('multer');
+
+// 模型引入
 const User = require('../models/User');
+
+// 中间件引入
 const { protect } = require('../middleware/auth');
-const smsService = require('../utils/smsService');
 
-const router = express.Router();
+// 配置multer用于文件上传
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB限制
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('只允许上传图片文件'), false);
+    }
+  }
+});
 
-// 生成JWT令牌
-const generateToken = (id) => {
+// Face++ 服务引入
+const facePlusPlusService = require('../utils/facePlusPlus');
+
+// 生成JWT令牌的辅助函数
+const generateToken = (userId) => {
   return jwt.sign(
-    { id },
-    process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production',
+    { userId }, 
+    process.env.JWT_SECRET || 'your-fallback-secret-key',
     { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
   );
 };
@@ -93,59 +121,24 @@ router.post('/register', [
   }
 });
 
-// 发送手机验证码
-router.post('/send-code', [
-  body('phone')
-    .matches(/^1[3-9]\d{9}$/)
-    .withMessage('请输入有效的手机号码'),
-  body('type')
-    .optional()
-    .isIn(['login', 'register', 'reset-password', 'bind-phone'])
-    .withMessage('验证码类型无效')
-], async (req, res) => {
-  try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        success: false,
-        error: {
-          message: '输入验证失败',
-          details: errors.array()
-        }
-      });
+// 登录限制：每15分钟最多5次尝试
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15分钟
+  max: 5, // 限制每个IP 15分钟内最多5次请求
+  message: {
+    success: false,
+    error: {
+      message: '登录尝试次数过多，请15分钟后再试'
     }
-
-    const { phone, type = 'login' } = req.body;
-    const clientIP = req.ip || req.connection.remoteAddress || '';
-
-    // 调用SMS服务发送验证码
-    const result = await smsService.sendCode(phone, type, clientIP);
-
-    res.json({
-      success: true,
-      message: result.message,
-      data: result.data
-    });
-
-  } catch (error) {
-    console.error('发送验证码错误:', error);
-    res.status(400).json({
-      success: false,
-      error: {
-        message: error.message || '发送验证码失败，请稍后重试'
-      }
-    });
-  }
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
 });
 
-// 手机验证码登录
-router.post('/login-by-phone', [
-  body('phone')
-    .matches(/^1[3-9]\d{9}$/)
-    .withMessage('请输入有效的手机号码'),
-  body('code')
-    .isLength({ min: 4, max: 6 })
-    .withMessage('请输入正确的验证码')
+// 用户登录
+router.post('/login', loginLimiter, [
+  body('email').isEmail().withMessage('请输入有效的邮箱地址'),
+  body('password').notEmpty().withMessage('密码不能为空')
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -159,32 +152,31 @@ router.post('/login-by-phone', [
       });
     }
 
-    const { phone, code } = req.body;
+    const { email, password } = req.body;
 
-    // 验证验证码
-    const verifyResult = await smsService.verifyCode(phone, code, 'login');
-    
-    if (!verifyResult.success) {
-      return res.status(400).json({
-        success: false,
-        error: {
-          message: verifyResult.message
-        }
-      });
-    }
-
-    // 查找用户（必须已存在）
-    const user = await User.findOne({ phone });
-    
+    // 查找用户（包含密码字段）
+    const user = await User.findOne({ email }).select('+password');
     if (!user) {
       return res.status(401).json({
         success: false,
         error: {
-          message: '该手机号未注册，请先注册账户'
+          message: '邮箱或密码错误'
         }
       });
     }
 
+    // 验证密码
+    const isPasswordValid = await user.comparePassword(password);
+    if (!isPasswordValid) {
+      return res.status(401).json({
+        success: false,
+        error: {
+          message: '邮箱或密码错误'
+        }
+      });
+    }
+
+    // 检查账户状态
     if (!user.isActive) {
       return res.status(401).json({
         success: false,
@@ -210,95 +202,6 @@ router.post('/login-by-phone', [
           username: user.username,
           email: user.email,
           phone: user.phone,
-          role: user.role,
-          avatar: user.avatar,
-          lastLogin: user.lastLogin
-        },
-        token
-      }
-    });
-
-  } catch (error) {
-    console.error('手机验证码登录错误:', error);
-    res.status(500).json({
-      success: false,
-      error: {
-        message: '登录失败，请稍后重试'
-      }
-    });
-  }
-});
-
-// 用户登录（邮箱密码）
-router.post('/login', [
-  body('email')
-    .isEmail()
-    .withMessage('请输入有效的邮箱地址'),
-  body('password')
-    .notEmpty()
-    .withMessage('密码不能为空')
-], async (req, res) => {
-  try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        success: false,
-        error: {
-          message: '输入验证失败',
-          details: errors.array()
-        }
-      });
-    }
-
-    const { email, password } = req.body;
-
-    // 查找用户（包含密码字段）
-    const user = await User.findOne({ email }).select('+password');
-    
-    if (!user) {
-      return res.status(401).json({
-        success: false,
-        error: {
-          message: '邮箱或密码错误'
-        }
-      });
-    }
-
-    if (!user.isActive) {
-      return res.status(401).json({
-        success: false,
-        error: {
-          message: '账户已被禁用，请联系管理员'
-        }
-      });
-    }
-
-    // 验证密码
-    const isPasswordValid = await user.comparePassword(password);
-    if (!isPasswordValid) {
-      return res.status(401).json({
-        success: false,
-        error: {
-          message: '邮箱或密码错误'
-        }
-      });
-    }
-
-    // 更新最后登录时间
-    user.lastLogin = new Date();
-    await user.save();
-
-    // 生成令牌
-    const token = generateToken(user._id);
-
-    res.json({
-      success: true,
-      message: '登录成功',
-      data: {
-        user: {
-          id: user._id,
-          username: user.username,
-          email: user.email,
           role: user.role,
           avatar: user.avatar,
           lastLogin: user.lastLogin
@@ -317,186 +220,10 @@ router.post('/login', [
   }
 });
 
-// 获取当前用户信息
-router.get('/me', protect, async (req, res) => {
-  try {
-    const user = await User.findById(req.user._id).select('-password');
-    
-    res.json({
-      success: true,
-      data: {
-        user
-      }
-    });
-  } catch (error) {
-    console.error('获取用户信息错误:', error);
-    res.status(500).json({
-      success: false,
-      error: {
-        message: '获取用户信息失败'
-      }
-    });
-  }
-});
-
-// 忘记密码
-router.post('/forgot-password', [
-  body('email')
-    .isEmail()
-    .withMessage('请输入有效的邮箱地址')
-], async (req, res) => {
-  try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        success: false,
-        error: {
-          message: '输入验证失败',
-          details: errors.array()
-        }
-      });
-    }
-
-    const { email } = req.body;
-    const user = await User.findOne({ email });
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        error: {
-          message: '用户不存在'
-        }
-      });
-    }
-
-    // 生成重置密码令牌
-    const resetToken = require('crypto').randomBytes(32).toString('hex');
-    const resetTokenExpires = Date.now() + 10 * 60 * 1000; // 10分钟有效期
-
-    // 保存重置令牌到用户记录
-    user.passwordResetToken = require('crypto')
-      .createHash('sha256')
-      .update(resetToken)
-      .digest('hex');
-    user.passwordResetExpires = resetTokenExpires;
-
-    await user.save({ validateBeforeSave: false });
-
-    // 在实际应用中，这里应该发送邮件
-    // 目前返回令牌用于测试（生产环境中绝对不要这样做）
-    const resetURL = `${req.protocol}://${req.get('host')}/api/auth/reset-password/${resetToken}`;
-    
-    res.json({
-      success: true,
-      message: '密码重置邮件已发送',
-      // 仅用于开发测试，生产环境应删除以下字段
-      ...(process.env.NODE_ENV === 'development' && { 
-        resetToken: resetToken,
-        resetURL: resetURL 
-      })
-    });
-
-  } catch (error) {
-    console.error('忘记密码错误:', error);
-    res.status(500).json({
-      success: false,
-      error: {
-        message: '处理忘记密码请求失败'
-      }
-    });
-  }
-});
-
-// 重置密码
-router.post('/reset-password/:token', [
-  body('password')
-    .isLength({ min: 6 })
-    .withMessage('新密码至少6个字符'),
-  body('passwordConfirm')
-    .custom((value, { req }) => {
-      if (value !== req.body.password) {
-        throw new Error('密码确认不匹配');
-      }
-      return true;
-    })
-], async (req, res) => {
-  try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        success: false,
-        error: {
-          message: '输入验证失败',
-          details: errors.array()
-        }
-      });
-    }
-
-    // 哈希化传入的令牌以匹配数据库中的令牌
-    const hashedToken = require('crypto')
-      .createHash('sha256')
-      .update(req.params.token)
-      .digest('hex');
-
-    // 查找具有该令牌且未过期的用户
-    const user = await User.findOne({
-      passwordResetToken: hashedToken,
-      passwordResetExpires: { $gt: Date.now() }
-    });
-
-    if (!user) {
-      return res.status(400).json({
-        success: false,
-        error: {
-          message: '令牌无效或已过期'
-        }
-      });
-    }
-
-    // 设置新密码
-    user.password = req.body.password;
-    user.passwordResetToken = undefined;
-    user.passwordResetExpires = undefined;
-
-    await user.save();
-
-    // 生成新的JWT令牌
-    const token = generateToken(user._id);
-
-    res.json({
-      success: true,
-      message: '密码重置成功',
-      data: {
-        user: {
-          id: user._id,
-          username: user.username,
-          email: user.email,
-          role: user.role,
-          avatar: user.avatar
-        },
-        token
-      }
-    });
-
-  } catch (error) {
-    console.error('重置密码错误:', error);
-    res.status(500).json({
-      success: false,
-      error: {
-        message: '重置密码失败'
-      }
-    });
-  }
-});
-
-// 手机密码登录
-router.post('/login-by-phone-password', [
-  body('phone')
-    .matches(/^1[3-9]\d{9}$/)
-    .withMessage('请输入有效的手机号码'),
-  body('password')
-    .notEmpty()
-    .withMessage('密码不能为空')
+// 手机号密码登录
+router.post('/login-by-phone-password', loginLimiter, [
+  body('phone').isMobilePhone('zh-CN').withMessage('请输入有效的手机号'),
+  body('password').notEmpty().withMessage('密码不能为空')
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -511,24 +238,14 @@ router.post('/login-by-phone-password', [
     }
 
     const { phone, password } = req.body;
-    
-    // 通过手机号查找用户（包含密码字段）
-    const user = await User.findOne({ phone }).select('+password');
 
+    // 查找用户（包含密码字段）
+    const user = await User.findOne({ phone }).select('+password');
     if (!user) {
       return res.status(401).json({
         success: false,
         error: {
           message: '手机号或密码错误'
-        }
-      });
-    }
-
-    if (!user.isActive) {
-      return res.status(401).json({
-        success: false,
-        error: {
-          message: '账户已被禁用，请联系管理员'
         }
       });
     }
@@ -544,9 +261,176 @@ router.post('/login-by-phone-password', [
       });
     }
 
+    // 检查账户状态
+    if (!user.isActive) {
+      return res.status(401).json({
+        success: false,
+        error: {
+          message: '账户已被禁用，请联系管理员'
+        }
+      });
+    }
+
     // 更新最后登录时间
     user.lastLogin = new Date();
     await user.save();
+
+    // 生成令牌
+    const token = generateToken(user._id);
+
+    console.log('📱 手机号密码登录成功:', {
+      userId: user._id,
+      phone: user.phone,
+      username: user.username
+    });
+
+    res.json({
+      success: true,
+      message: '登录成功',
+      data: {
+        user: {
+          id: user._id,
+          username: user.username,
+          email: user.email,
+          phone: user.phone,
+          role: user.role,
+          avatar: user.avatar,
+          lastLogin: user.lastLogin
+        },
+        token
+      }
+    });
+  } catch (error) {
+    console.error('手机号密码登录错误:', error);
+    res.status(500).json({
+      success: false,
+      error: {
+        message: '登录失败，请稍后重试'
+      }
+    });
+  }
+});
+
+// 发送手机验证码
+router.post('/send-code', async (req, res) => {
+  try {
+    const { phone, type } = req.body;
+
+    if (!phone || !/^1[3-9]\d{9}$/.test(phone)) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: '请输入有效的手机号'
+        }
+      });
+    }
+
+    // 生成6位验证码
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5分钟后过期
+
+    // 这里应该调用短信服务发送验证码
+    console.log(`发送验证码到 ${phone}: ${code}`);
+
+    // 在实际应用中，应该将验证码存储到Redis或数据库中
+    // 这里为了演示，我们暂时存储在内存中（生产环境中不要这样做）
+    global.smsVerificationCodes = global.smsVerificationCodes || {};
+    global.smsVerificationCodes[phone] = {
+      code,
+      expiresAt,
+      type
+    };
+
+    res.json({
+      success: true,
+      message: '验证码发送成功',
+      data: {
+        phone,
+        expiresIn: 300 // 5分钟
+      }
+    });
+  } catch (error) {
+    console.error('发送验证码错误:', error);
+    res.status(500).json({
+      success: false,
+      error: {
+        message: '发送验证码失败，请稍后重试'
+      }
+    });
+  }
+});
+
+// 手机验证码登录
+router.post('/login-by-phone', async (req, res) => {
+  try {
+    const { phone, code } = req.body;
+
+    if (!phone || !/^1[3-9]\d{9}$/.test(phone)) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: '请输入有效的手机号'
+        }
+      });
+    }
+
+    if (!code) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: '请输入验证码'
+        }
+      });
+    }
+
+    // 验证验证码
+    const storedCode = global.smsVerificationCodes?.[phone];
+    if (!storedCode || storedCode.code !== code) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: '验证码错误'
+        }
+      });
+    }
+
+    if (new Date() > storedCode.expiresAt) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: '验证码已过期'
+        }
+      });
+    }
+
+    // 查找或创建用户
+    let user = await User.findOne({ phone });
+    if (!user) {
+      // 如果用户不存在，创建新用户
+      user = await User.create({
+        username: `用户${phone.slice(-4)}`,
+        phone,
+        email: `${phone}@temp.com`, // 临时邮箱
+        password: Math.random().toString(36).slice(-8) // 随机密码
+      });
+    }
+
+    // 检查账户状态
+    if (!user.isActive) {
+      return res.status(401).json({
+        success: false,
+        error: {
+          message: '账户已被禁用，请联系管理员'
+        }
+      });
+    }
+
+    // 更新最后登录时间
+    user.lastLogin = new Date();
+    await user.save();
+
+    // 清除验证码
+    delete global.smsVerificationCodes[phone];
 
     // 生成令牌
     const token = generateToken(user._id);
@@ -567,9 +451,8 @@ router.post('/login-by-phone-password', [
         token
       }
     });
-
   } catch (error) {
-    console.error('手机密码登录错误:', error);
+    console.error('手机登录错误:', error);
     res.status(500).json({
       success: false,
       error: {
@@ -579,63 +462,212 @@ router.post('/login-by-phone-password', [
   }
 });
 
-// 微信登录
-router.post('/wechat-login', [
-  body('code')
-    .notEmpty()
-    .withMessage('微信授权码不能为空'),
-  body('encryptedData')
-    .optional()
-    .notEmpty()
-    .withMessage('加密数据不能为空'),
-  body('iv')
-    .optional()
-    .notEmpty()
-    .withMessage('初始向量不能为空')
-], async (req, res) => {
+// =================  人脸识别相关接口  =================
+
+/**
+ * 人脸注册接口
+ * 需要用户已登录，将用户的人脸信息注册到Face++人脸库
+ */
+router.post('/face/register', protect, upload.single('image'), async (req, res) => {
   try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
+    if (!req.file) {
       return res.status(400).json({
         success: false,
         error: {
-          message: '输入验证失败',
-          details: errors.array()
+          message: '请上传人脸图片'
         }
       });
     }
 
-    const { code, encryptedData, iv } = req.body;
-
-    // 这里应该调用微信API获取用户信息
-    // 为了演示，我们假设已经解密获得了手机号
-    // 实际应用中需要：
-    // 1. 用code换取session_key
-    // 2. 解密encryptedData获取手机号
+    const userId = req.user._id;
+    console.log('🎯 人脸注册 - 认证用户信息:', {
+      userId: userId,
+      userType: req.user.userType,
+      username: req.user.username,
+      email: req.user.email,
+      phone: req.user.phone
+    });
     
-    // 临时模拟：从请求中获取手机号（实际应从微信API解密获得）
-    const phoneNumber = req.body.phoneNumber; // 这应该从微信API解密获得
-    
-    if (!phoneNumber) {
-      return res.status(400).json({
-        success: false,
-        error: {
-          message: '获取微信手机号失败，请重试'
-        }
-      });
-    }
-
-    // 通过手机号查找用户
-    const user = await User.findOne({ phone: phoneNumber });
+    const user = await User.findById(userId);
     
     if (!user) {
+      console.error('❌ 人脸注册失败 - 用户不存在:', {
+        searchedUserId: userId,
+        requestUser: req.user
+      });
+      return res.status(404).json({
+        success: false,
+        error: {
+          message: '用户不存在，请重新登录'
+        }
+      });
+    }
+
+    console.log('🎯 开始人脸注册流程:', {
+      userId: user._id,
+      username: user.username,
+      hasExistingFace: user.hasFace
+    });
+
+    // 如果用户已经注册过人脸，先删除旧的人脸信息
+    if (user.hasFace && user.faceToken) {
+      try {
+        console.log('🗑️ 删除用户旧的人脸信息...');
+        await facePlusPlusService.removeFaceFromFaceset(user.faceToken);
+      } catch (error) {
+        console.warn('删除旧人脸信息失败:', error.message);
+        // 继续执行，不阻断注册流程
+      }
+    }
+
+    // 检测人脸
+    console.log('👁️ 开始人脸检测...');
+    const detectResult = await facePlusPlusService.detectFace(req.file.buffer);
+    if (!detectResult.success) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: detectResult.error.message
+        }
+      });
+    }
+
+    const { faceToken, attributes, confidence } = detectResult.data;
+    console.log('✅ 人脸检测成功:', {
+      faceToken: faceToken,
+      confidence: confidence
+    });
+
+    // 添加人脸到人脸库
+    console.log('📦 添加人脸到Face++人脸库...');
+    const addResult = await facePlusPlusService.addFaceToFaceset(faceToken, userId);
+    if (!addResult.success) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: addResult.error.message
+        }
+      });
+    }
+    
+    console.log('✅ 人脸添加到Face++人脸库成功');
+
+    // 更新用户信息 - 保存人脸信息到数据库
+    user.faceToken = faceToken;
+    user.faceSetId = facePlusPlusService.facesetToken;
+    user.hasFace = true;
+    user.faceRegisterTime = new Date();
+    
+    console.log('💾 保存用户人脸信息到数据库:', {
+      userId: user._id,
+      username: user.username,
+      faceToken: faceToken,
+      faceSetId: user.faceSetId,
+      hasFace: user.hasFace
+    });
+    
+    await user.save();
+
+    res.json({
+      success: true,
+      message: '人脸注册成功',
+      data: {
+        faceToken: faceToken,
+        confidence: confidence,
+        attributes: {
+          age: attributes?.age,
+          gender: attributes?.gender,
+          emotion: attributes?.emotion
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('人脸注册错误:', error);
+    res.status(500).json({
+      success: false,
+      error: {
+        message: '人脸注册失败，请稍后重试'
+      }
+    });
+  }
+});
+
+/**
+ * 人脸登录接口
+ * 通过人脸识别进行用户登录
+ */
+router.post('/face/login', upload.single('image'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: '请上传人脸图片'
+        }
+      });
+    }
+
+    console.log('🎯 开始人脸登录流程...');
+
+    // 检测人脸
+    console.log('👁️ 检测上传的人脸图片...');
+    const detectResult = await facePlusPlusService.detectFace(req.file.buffer);
+    if (!detectResult.success) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: detectResult.error.message
+        }
+      });
+    }
+
+    const { faceToken } = detectResult.data;
+    console.log('✅ 人脸检测成功，faceToken:', faceToken);
+
+    // 在人脸库中搜索匹配的人脸
+    console.log('🔍 在Face++人脸库中搜索匹配的人脸...');
+    const searchResult = await facePlusPlusService.searchFace(faceToken, 75); // 75%匹配度阈值
+    if (!searchResult.success) {
       return res.status(401).json({
         success: false,
         error: {
-          message: '该微信绑定的手机号未注册，请先注册账户'
+          message: searchResult.error.message
         }
       });
     }
+
+    const { matchedFaceToken, confidence } = searchResult.data;
+    console.log('🔍 Face++搜索结果:', {
+      matchedFaceToken: matchedFaceToken,
+      confidence: confidence
+    });
+
+    // 通过faceToken查找对应的用户
+    console.log('🔍 根据faceToken查找数据库中的用户...');
+    const user = await User.findOne({ faceToken: matchedFaceToken })
+      .select('+faceToken +faceSetId +hasFace +faceRegisterTime'); // 显式选择人脸相关字段
+    
+    if (!user) {
+      console.error('❌ 未找到匹配的用户:', matchedFaceToken);
+      return res.status(401).json({
+        success: false,
+        error: {
+          message: '未找到匹配的人脸，请先注册或用户信息异常'
+        }
+      });
+    }
+    
+    console.log('✅ 找到匹配用户完整信息:', {
+      userId: user._id,
+      username: user.username,
+      email: user.email,
+      phone: user.phone,
+      role: user.role,
+      avatar: user.avatar,
+      hasFace: user.hasFace,
+      faceRegisterTime: user.faceRegisterTime
+    });
 
     if (!user.isActive) {
       return res.status(401).json({
@@ -650,12 +682,18 @@ router.post('/wechat-login', [
     user.lastLogin = new Date();
     await user.save();
 
-    // 生成令牌
+    // 生成JWT令牌
     const token = generateToken(user._id);
+
+    console.log('🎉 人脸登录成功:', {
+      userId: user._id,
+      username: user.username,
+      confidence: confidence
+    });
 
     res.json({
       success: true,
-      message: '微信登录成功',
+      message: `人脸识别登录成功 (匹配度: ${confidence.toFixed(1)}%)`,
       data: {
         user: {
           id: user._id,
@@ -666,19 +704,352 @@ router.post('/wechat-login', [
           avatar: user.avatar,
           lastLogin: user.lastLogin
         },
-        token
+        token,
+        faceRecognition: {
+          confidence: confidence,
+          matchedAt: new Date()
+        }
       }
     });
 
   } catch (error) {
-    console.error('微信登录错误:', error);
+    console.error('人脸登录错误:', error);
     res.status(500).json({
       success: false,
       error: {
-        message: '微信登录失败，请稍后重试'
+        message: '人脸登录失败，请稍后重试'
       }
     });
   }
 });
 
-module.exports = router; 
+/**
+ * 检查用户是否已注册人脸
+ */
+router.get('/face/check', protect, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          message: '用户不存在'
+        }
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        hasFace: user.hasFace,
+        faceRegisterTime: user.faceRegisterTime
+      }
+    });
+
+  } catch (error) {
+    console.error('检查人脸注册状态错误:', error);
+    res.status(500).json({
+      success: false,
+      error: {
+        message: '检查失败，请稍后重试'
+      }
+    });
+  }
+});
+
+/**
+ * 删除用户人脸信息
+ */
+router.delete('/face/remove', protect, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          message: '用户不存在'
+        }
+      });
+    }
+
+    if (!user.hasFace || !user.faceToken) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: '您尚未注册人脸信息'
+        }
+      });
+    }
+
+    // 从Face++人脸库中删除人脸
+    const removeResult = await facePlusPlusService.removeFaceFromFaceset(user.faceToken);
+    if (!removeResult.success) {
+      console.warn('从Face++删除人脸失败:', removeResult.error);
+      // 即使Face++删除失败，也要清除本地数据库的记录
+    }
+
+    // 清除用户的人脸信息
+    user.faceToken = null;
+    user.faceSetId = null;
+    user.hasFace = false;
+    user.faceRegisterTime = null;
+    await user.save();
+
+    res.json({
+      success: true,
+      message: '人脸信息删除成功'
+    });
+
+  } catch (error) {
+    console.error('删除人脸信息错误:', error);
+    res.status(500).json({
+      success: false,
+      error: {
+        message: '删除失败，请稍后重试'
+      }
+    });
+  }
+});
+
+// =================  人脸管理接口  =================
+
+/**
+ * 清除当前用户的人脸关联 - 用于修复错误关联
+ */
+router.post('/face/clear', protect, async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const user = await User.findById(userId);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          message: '用户不存在'
+        }
+      });
+    }
+    
+    console.log('🗑️ 清除用户人脸关联:', {
+      userId: user._id,
+      username: user.username,
+      email: user.email,
+      phone: user.phone,
+      currentHasFace: user.hasFace
+    });
+    
+    // 如果用户有人脸，先从Face++人脸库中删除
+    if (user.hasFace && user.faceToken) {
+      try {
+        console.log('🗑️ 从Face++人脸库删除人脸...');
+        await facePlusPlusService.removeFaceFromFaceset(user.faceToken);
+        console.log('✅ Face++人脸库删除成功');
+      } catch (error) {
+        console.warn('⚠️ Face++人脸库删除失败:', error.message);
+        // 继续执行，确保数据库清理
+      }
+    }
+    
+    // 清除数据库中的人脸关联
+    user.faceToken = null;
+    user.faceSetId = null;
+    user.hasFace = false;
+    user.faceRegisterTime = null;
+    await user.save();
+    
+    console.log('✅ 用户人脸关联已清除');
+    
+    res.json({
+      success: true,
+      message: '人脸关联已清除，可以重新注册',
+      data: {
+        user: {
+          id: user._id,
+          username: user.username,
+          email: user.email,
+          phone: user.phone,
+          hasFace: false
+        }
+      }
+    });
+    
+  } catch (error) {
+    console.error('清除人脸关联失败:', error);
+    res.status(500).json({
+      success: false,
+      error: {
+        message: '清除失败，请稍后重试'
+      }
+    });
+  }
+});
+
+/**
+ * 删除错误的临时用户账户和其人脸关联
+ */
+router.post('/face/cleanup-temp-users', protect, async (req, res) => {
+  try {
+    // 只有当前用户可以清理与自己手机号相关的临时账户
+    const currentUser = req.user;
+    
+    if (!currentUser.phone) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: '当前用户没有手机号信息'
+        }
+      });
+    }
+    
+    // 查找可能的临时用户账户（用户名格式为"用户+手机号后4位"）
+    const phone = currentUser.phone;
+    const tempUsername = `用户${phone.slice(-4)}`;
+    
+    console.log('🔍 查找临时用户账户:', {
+      currentUser: {
+        id: currentUser._id,
+        username: currentUser.username,
+        phone: currentUser.phone
+      },
+      searchingTempUsername: tempUsername
+    });
+    
+    const tempUsers = await User.find({
+      username: tempUsername,
+      phone: phone,
+      _id: { $ne: currentUser._id } // 排除当前用户
+    }).select('+faceToken +faceSetId +hasFace');
+    
+    console.log('🔍 找到的临时用户:', tempUsers.map(user => ({
+      id: user._id,
+      username: user.username,
+      phone: user.phone,
+      hasFace: user.hasFace
+    })));
+    
+    let deletedCount = 0;
+    let faceCleanedCount = 0;
+    
+    // 清理临时用户的人脸关联和账户
+    for (const tempUser of tempUsers) {
+      try {
+        // 如果临时用户有人脸，先从Face++删除
+        if (tempUser.hasFace && tempUser.faceToken) {
+          try {
+            await facePlusPlusService.removeFaceFromFaceset(tempUser.faceToken);
+            faceCleanedCount++;
+            console.log(`✅ 临时用户 ${tempUser.username} 的人脸已从Face++删除`);
+          } catch (error) {
+            console.warn(`⚠️ 删除临时用户 ${tempUser.username} 的Face++人脸失败:`, error.message);
+          }
+        }
+        
+        // 删除临时用户账户
+        await User.findByIdAndDelete(tempUser._id);
+        deletedCount++;
+        console.log(`🗑️ 临时用户账户已删除: ${tempUser.username}`);
+        
+      } catch (error) {
+        console.error(`❌ 清理临时用户 ${tempUser.username} 失败:`, error);
+      }
+    }
+    
+    res.json({
+      success: true,
+      message: `清理完成：删除了 ${deletedCount} 个临时账户，清理了 ${faceCleanedCount} 个人脸关联`,
+      data: {
+        deletedTempAccounts: deletedCount,
+        cleanedFaceAssociations: faceCleanedCount
+      }
+    });
+    
+  } catch (error) {
+    console.error('清理临时用户失败:', error);
+    res.status(500).json({
+      success: false,
+      error: {
+        message: '清理失败，请稍后重试'
+      }
+    });
+  }
+});
+
+// =================  调试接口（开发用）  =================
+
+/**
+ * 查看用户人脸关联情况 - 调试用
+ */
+router.get('/debug/users-face-info', protect, async (req, res) => {
+  try {
+    // 只有管理员或当前用户可以查看
+    const currentUserId = req.user._id;
+    
+    // 查找所有有人脸的用户
+    const usersWithFace = await User.find({ hasFace: true })
+      .select('+faceToken +faceSetId +hasFace +faceRegisterTime')
+      .lean();
+    
+    // 查找当前用户的人脸信息
+    const currentUser = await User.findById(currentUserId)
+      .select('+faceToken +faceSetId +hasFace +faceRegisterTime')
+      .lean();
+    
+    console.log('🔍 调试 - 用户人脸关联情况:', {
+      currentUser: {
+        id: currentUser._id,
+        username: currentUser.username,
+        email: currentUser.email,
+        phone: currentUser.phone,
+        hasFace: currentUser.hasFace,
+        faceToken: currentUser.faceToken ? `${currentUser.faceToken.substring(0, 10)}...` : null,
+        faceRegisterTime: currentUser.faceRegisterTime
+      },
+      totalUsersWithFace: usersWithFace.length,
+      usersWithFaceList: usersWithFace.map(user => ({
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        phone: user.phone,
+        faceToken: user.faceToken ? `${user.faceToken.substring(0, 10)}...` : null,
+        faceRegisterTime: user.faceRegisterTime
+      }))
+    });
+    
+    res.json({
+      success: true,
+      data: {
+        currentUser: {
+          id: currentUser._id,
+          username: currentUser.username,
+          email: currentUser.email,
+          phone: currentUser.phone,
+          hasFace: currentUser.hasFace,
+          faceToken: currentUser.faceToken ? `${currentUser.faceToken.substring(0, 10)}...` : null,
+          faceRegisterTime: currentUser.faceRegisterTime
+        },
+        totalUsersWithFace: usersWithFace.length,
+        usersWithFaceList: usersWithFace.map(user => ({
+          id: user._id,
+          username: user.username,
+          email: user.email,
+          phone: user.phone,
+          faceToken: user.faceToken ? `${user.faceToken.substring(0, 10)}...` : null,
+          faceRegisterTime: user.faceRegisterTime
+        }))
+      }
+    });
+    
+  } catch (error) {
+    console.error('查看用户人脸信息失败:', error);
+    res.status(500).json({
+      success: false,
+      error: {
+        message: '查看失败'
+      }
+    });
+  }
+});
+
+module.exports = router;

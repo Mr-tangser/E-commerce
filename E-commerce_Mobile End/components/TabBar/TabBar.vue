@@ -93,27 +93,27 @@
 				// this.tabBarShow = index;
 				switch (index){
 					case 0:
-						wx.switchTab({
+						uni.reLaunch({
 							url:'/pages/home/home'
 						})
 						break;
 					case 1:
-						wx.switchTab({
+						uni.reLaunch({
 							url:'/pages/classify/classify'
 						})
 						break;
 					case 2:
-						wx.switchTab({
+						uni.reLaunch({
 							url:'/pages/discover/discover'
 						})
 						break;
 					case 3:
-						wx.switchTab({
+						uni.reLaunch({
 							url:'/pages/cart/cart'
 						})
 						break;
 					case 4:
-						wx.switchTab({
+						uni.reLaunch({
 							url:'/pages/my/my'
 						})
 						break;

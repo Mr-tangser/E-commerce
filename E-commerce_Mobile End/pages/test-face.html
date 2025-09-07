@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>人脸识别功能测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-btn {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .test-btn.primary {
+            background: #007aff;
+            color: white;
+        }
+        .test-btn.primary:hover {
+            background: #0056cc;
+        }
+        .test-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .log {
+            background: #f8f8f8;
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 14px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .success { color: #28a745; }
+        .error { color: #dc3545; }
+        .warning { color: #ffc107; }
+        .info { color: #17a2b8; }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🔍 人脸识别功能测试</h1>
+        
+        <button class="test-btn primary" onclick="testCheckFaceSupport()">
+            1. 检查人脸识别支持
+        </button>
+        
+        <button class="test-btn primary" onclick="testFaceLogin()">
+            2. 测试人脸识别登录
+        </button>
+        
+        <button class="test-btn primary" onclick="testDirectAPI()">
+            3. 直接测试Face++ API
+        </button>
+        
+        <button class="test-btn" onclick="clearLog()">
+            清空日志
+        </button>
+        
+        <div class="log" id="log">
+            <div class="info">📋 测试日志将显示在这里...</div>
+        </div>
+    </div>
+
+    <script>
+        // 模拟 BiometricAuth 类（简化版）
+        class BiometricAuth {
+            static async checkFaceSupport() {
+                log('info', '🔍 检查人脸识别支持...');
+                
+                if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                    log('success', '✅ 浏览器支持摄像头API');
+                    return true;
+                } else {
+                    log('error', '❌ 浏览器不支持摄像头API');
+                    return false;
+                }
+            }
+            
+            static async authenticateWithFace() {
+                log('info', '🎭 启动人脸识别...');
+                
+                try {
+                    // 检查摄像头权限
+                    const stream = await navigator.mediaDevices.getUserMedia({ 
+                        video: { 
+                            width: { ideal: 640 },
+                            height: { ideal: 480 },
+                            facingMode: 'user'
+                        } 
+                    });
+                    
+                    log('success', '✅ 摄像头权限获取成功');
+                    
+                    // 停止摄像头（我们只是测试权限）
+                    stream.getTracks().forEach(track => track.stop());
+                    
+                    // 模拟人脸识别过程
+                    log('warning', '⏳ 模拟人脸识别过程（3秒）...');
+                    
+                    await new Promise(resolve => setTimeout(resolve, 3000));
+                    
+                    // 模拟识别结果
+                    const success = Math.random() > 0.3; // 70%成功率
+                    
+                    if (success) {
+                        log('success', '🎉 人脸识别成功（模拟）');
+                        return {
+                            success: true,
+                            message: '人脸识别成功'
+                        };
+                    } else {
+                        log('error', '❌ 人脸识别失败（模拟）');
+                        return {
+                            success: false,
+                            message: '人脸识别失败，请重试'
+                        };
+                    }
+                    
+                } catch (error) {
+                    log('error', `❌ 摄像头访问失败: ${error.message}`);
+                    return {
+                        success: false,
+                        message: '无法访问摄像头: ' + error.message
+                    };
+                }
+            }
+        }
+        
+        // 测试函数
+        async function testCheckFaceSupport() {
+            log('info', '=== 开始测试人脸识别支持检查 ===');
+            
+            try {
+                const supported = await BiometricAuth.checkFaceSupport();
+                
+                if (supported) {
+                    log('success', '✅ 测试结果: 支持人脸识别');
+                } else {
+                    log('error', '❌ 测试结果: 不支持人脸识别');
+                }
+                
+            } catch (error) {
+                log('error', `❌ 测试失败: ${error.message}`);
+            }
+            
+            log('info', '=== 测试完成 ===\n');
+        }
+        
+        async function testFaceLogin() {
+            log('info', '=== 开始测试人脸识别登录 ===');
+            
+            try {
+                const result = await BiometricAuth.authenticateWithFace();
+                
+                if (result.success) {
+                    log('success', `✅ 登录成功: ${result.message}`);
+                } else {
+                    log('error', `❌ 登录失败: ${result.message}`);
+                }
+                
+            } catch (error) {
+                log('error', `❌ 测试失败: ${error.message}`);
+            }
+            
+            log('info', '=== 测试完成 ===\n');
+        }
+        
+        async function testDirectAPI() {
+            log('info', '=== 开始测试Face++ API直连 ===');
+            
+            try {
+                // 创建一个测试用的canvas图像
+                const canvas = document.createElement('canvas');
+                canvas.width = 200;
+                canvas.height = 200;
+                const ctx = canvas.getContext('2d');
+                
+                // 绘制一个简单的测试图像
+                ctx.fillStyle = '#f0f0f0';
+                ctx.fillRect(0, 0, 200, 200);
+                ctx.fillStyle = '#333';
+                ctx.fillText('TEST IMAGE', 50, 100);
+                
+                // 转换为blob
+                const blob = await new Promise(resolve => {
+                    canvas.toBlob(resolve, 'image/jpeg', 0.8);
+                });
+                
+                log('info', '📷 创建测试图像成功');
+                
+                // 尝试调用后端API
+                const formData = new FormData();
+                formData.append('image', blob, 'test.jpg');
+                
+                log('info', '🚀 正在调用Face++登录API...');
+                
+                const response = await fetch('/api/auth/face/login', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    log('success', `✅ API调用成功: ${result.message}`);
+                } else {
+                    log('warning', `⚠️ API返回失败: ${result.error?.message || '未知错误'}`);
+                    log('info', `🔧 这是正常的，因为我们发送的是测试图像，不是真实人脸`);
+                }
+                
+            } catch (error) {
+                if (error.message.includes('fetch')) {
+                    log('error', `❌ API调用失败: ${error.message}`);
+                    log('warning', '⚠️ 请确保后端服务器正在运行');
+                } else {
+                    log('error', `❌ 测试失败: ${error.message}`);
+                }
+            }
+            
+            log('info', '=== 测试完成 ===\n');
+        }
+        
+        function clearLog() {
+            document.getElementById('log').innerHTML = '<div class="info">📋 日志已清空</div>';
+        }
+        
+        function log(type, message) {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = type;
+            logEntry.innerHTML = `[${timestamp}] ${message}`;
+            logDiv.appendChild(logEntry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+        
+        // 页面加载完成后的初始化
+        window.onload = function() {
+            log('info', '🚀 人脸识别测试页面已加载');
+            log('info', '💡 点击上方按钮开始测试各项功能');
+        };
+    </script>
+</body>
+</html>
+
+

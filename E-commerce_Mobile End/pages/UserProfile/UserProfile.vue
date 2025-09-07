@@ -173,53 +173,6 @@
           >
         </view>
       </view>
-      
-      <!-- 安全设置标题 -->
-      <view class="section-title">
-        <text class="title-text">安全设置</text>
-        <text class="title-tip">设置生物识别，提升账户安全性</text>
-      </view>
-      
-      <!-- 人脸识别设置 -->
-      <view class="form-item">
-        <view class="form-label">
-          <text class="label-text">人脸识别</text>
-        </view>
-        <view class="form-input-wrapper">
-          <view class="security-item">
-            <view class="security-info">
-              <text class="security-title">人脸登录</text>
-              <text class="security-desc">{{ faceRegistered ? '已注册，可使用人脸登录' : '未注册，注册后可快速登录' }}</text>
-            </view>
-            <view class="security-action">
-              <button 
-                v-if="!faceRegistered"
-                class="register-face-btn"
-                @click="registerFace"
-                :disabled="loading"
-              >
-                立即注册
-              </button>
-              <view v-else class="face-actions">
-                <button 
-                  class="update-face-btn"
-                  @click="registerFace"
-                  :disabled="loading"
-                >
-                  更新
-                </button>
-                <button 
-                  class="delete-face-btn"
-                  @click="deleteFace"
-                  :disabled="loading"
-                >
-                  删除
-                </button>
-              </view>
-            </view>
-          </view>
-        </view>
-      </view>
     </view>
 
     <!-- 保存按钮 -->
@@ -244,25 +197,13 @@
         <text class="loading-text">{{ loadingText }}</text>
       </view>
     </view>
-    
-    <!-- 人脸识别组件 -->
-    <FaceRecognition 
-      :visible="showFaceRecognition"
-      type="register"
-      @success="handleFaceRegisterSuccess"
-      @close="closeFaceRecognition"
-    />
   </view>
 </template>
 
 <script>
 import api from '@/utils/api.js'
-import FaceRecognition from '@/components/FaceRecognition/FaceRecognition.vue'
 
 export default {
-  components: {
-    FaceRecognition
-  },
   data() {
     return {
       loading: false,
@@ -270,10 +211,6 @@ export default {
       
       // 区域选择数组
       regionArray: [],
-      
-      // 人脸识别相关
-      showFaceRecognition: false,
-      faceRegistered: false,
       
       // 表单数据
       form: {
@@ -325,8 +262,6 @@ export default {
   onLoad(options) {
     // 获取用户基本信息（如果有）
     this.loadUserInfo();
-    // 检查人脸注册状态
-    this.checkFaceStatus();
   },
   
   methods: {
@@ -481,91 +416,6 @@ export default {
     validatePhone(phone) {
       const phoneRegex = /^1[3-9]\d{9}$/;
       return phoneRegex.test(phone);
-    },
-    
-    /**
-     * 检查人脸注册状态
-     */
-    async checkFaceStatus() {
-      try {
-        const token = uni.getStorageSync('token');
-        if (token) {
-          const response = await api.user.getFaceStatus(token);
-          if (response.success) {
-            this.faceRegistered = response.data.faceRegistered || false;
-          }
-        }
-      } catch (error) {
-        console.error('检查人脸状态失败:', error);
-      }
-    },
-    
-    /**
-     * 注册人脸
-     */
-    registerFace() {
-      this.showFaceRecognition = true;
-    },
-    
-    /**
-     * 人脸注册成功回调
-     */
-    handleFaceRegisterSuccess(result) {
-      console.log('人脸注册成功:', result);
-      this.faceRegistered = true;
-      
-      uni.showToast({
-        title: '人脸注册成功',
-        icon: 'success'
-      });
-      
-      this.closeFaceRecognition();
-    },
-    
-    /**
-     * 关闭人脸识别组件
-     */
-    closeFaceRecognition() {
-      this.showFaceRecognition = false;
-    },
-    
-    /**
-     * 删除人脸信息
-     */
-    async deleteFace() {
-      try {
-        const result = await uni.showModal({
-          title: '确认删除',
-          content: '删除后将无法使用人脸登录，确定要删除吗？',
-          confirmText: '确定删除',
-          cancelText: '取消'
-        });
-        
-        if (!result.confirm) return;
-        
-        this.loading = true;
-        this.loadingText = '删除中...';
-        
-        const token = uni.getStorageSync('token');
-        const response = await api.user.deleteFaceData(token);
-        
-        if (response.success) {
-          this.faceRegistered = false;
-          
-          uni.showToast({
-            title: '删除成功',
-            icon: 'success'
-          });
-        } else {
-          throw new Error(response.error?.message || '删除失败');
-        }
-        
-      } catch (error) {
-        console.error('删除人脸信息失败:', error);
-        api.handleError(error, '删除失败');
-      } finally {
-        this.loading = false;
-      }
     }
   }
 }

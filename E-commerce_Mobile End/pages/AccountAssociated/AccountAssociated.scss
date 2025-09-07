@@ -39,6 +39,16 @@
 				color: #C0C0C0;
 			}
 		}
+		
+		// 人脸图标样式
+		.face-icon {
+			width: 40rpx;
+			height: 40rpx;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			font-size: 30rpx;
+		}
 	}
 }
 .hint{
@@ -47,5 +57,195 @@
 	text{
 		font-size: 24rpx;
 		color: #959595;
+	}
+}
+
+/* 人脸注册弹窗样式 */
+.face-modal-overlay {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background-color: rgba(0, 0, 0, 0.7);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 9999;
+	
+	.face-modal {
+		width: 90%;
+		max-width: 500rpx;
+		background-color: #ffffff;
+		border-radius: 20rpx;
+		overflow: hidden;
+		
+		.face-modal-header {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			padding: 20rpx 30rpx;
+			background-color: #f8f8f8;
+			border-bottom: 1rpx solid #e5e5e5;
+			
+			.modal-title {
+				font-size: 32rpx;
+				font-weight: bold;
+				color: #333333;
+			}
+			
+			.close-btn {
+				font-size: 40rpx;
+				color: #666666;
+				cursor: pointer;
+				width: 60rpx;
+				height: 60rpx;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+			}
+		}
+		
+		.face-modal-content {
+			padding: 30rpx;
+			
+			.face-camera-container {
+				position: relative;
+				width: 100%;
+				height: 400rpx;
+				background-color: #000000;
+				border-radius: 10rpx;
+				overflow: hidden;
+				margin-bottom: 20rpx;
+				
+				.face-video {
+					width: 100%;
+					height: 100%;
+					object-fit: cover;
+				}
+				
+				.face-detection-frame {
+					position: absolute;
+					top: 50%;
+					left: 50%;
+					transform: translate(-50%, -50%);
+					width: 200rpx;
+					height: 260rpx;
+					border: 3rpx solid #00ff00;
+					border-radius: 20rpx;
+					pointer-events: none;
+					
+					.detection-text {
+						position: absolute;
+						top: -50rpx;
+						left: 50%;
+						transform: translateX(-50%);
+						font-size: 24rpx;
+						color: #00ff00;
+						background-color: rgba(0, 0, 0, 0.6);
+						padding: 10rpx 20rpx;
+						border-radius: 10rpx;
+						white-space: nowrap;
+					}
+				}
+			}
+			
+			.face-fallback-container {
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				justify-content: center;
+				width: 100%;
+				height: 400rpx;
+				background-color: #f8f8f8;
+				border-radius: 10rpx;
+				margin-bottom: 20rpx;
+				border: 2rpx dashed #cccccc;
+				
+				.fallback-icon {
+					font-size: 80rpx;
+					margin-bottom: 20rpx;
+				}
+				
+				.fallback-text {
+					font-size: 24rpx;
+					color: #666666;
+					text-align: center;
+					line-height: 1.4;
+					padding: 0 20rpx;
+				}
+			}
+			
+			.face-status {
+				text-align: center;
+				margin-bottom: 30rpx;
+				
+				.status-text {
+					font-size: 28rpx;
+					font-weight: 500;
+					
+					&.normal {
+						color: #666666;
+					}
+					
+					&.success {
+						color: #00aa00;
+					}
+					
+					&.error {
+						color: #ff4444;
+					}
+					
+					&.processing {
+						color: #2979ff;
+					}
+				}
+			}
+			
+			.face-controls {
+				display: flex;
+				justify-content: space-between;
+				gap: 20rpx;
+				
+				button {
+					flex: 1;
+					height: 80rpx;
+					border-radius: 40rpx;
+					font-size: 28rpx;
+					font-weight: 500;
+					border: none;
+					cursor: pointer;
+					transition: all 0.3s ease;
+				}
+				
+				.cancel-btn {
+					background-color: #f0f0f0;
+					color: #666666;
+					
+					&:active {
+						background-color: #e0e0e0;
+					}
+				}
+				
+				.capture-btn {
+					background-color: #2979ff;
+					color: #ffffff;
+					
+					&:active {
+						background-color: #1976d2;
+					}
+					
+					&.disabled {
+						background-color: #cccccc;
+						color: #999999;
+						cursor: not-allowed;
+						
+						&:active {
+							background-color: #cccccc;
+						}
+					}
+				}
+			}
+		}
 	}
 }
