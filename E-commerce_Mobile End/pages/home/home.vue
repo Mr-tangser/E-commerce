@@ -470,6 +470,10 @@ export default {
 			currentPage: 1,
 			pageSize: 6, // 改为6个，确保是偶数
 			loadMoreText: '正在加载中...',
+			// 实时推荐相关
+			isRealtimeRecommending: false,
+			lastClickedProduct: null,
+			realtimeRecommendationCount: 0,
 		}
 	},
 	onReady() {
@@ -988,7 +992,7 @@ export default {
 		},
 		
 		// 瀑布流商品点击事件
-		onGoodsClick(item) {
+		async onGoodsClick(item) {
 			console.log('🛒 瀑布流商品点击:', item);
 			console.log('🔍 商品ID:', item.id);
 			console.log('🔍 商品名称:', item.name);
@@ -1002,6 +1006,20 @@ export default {
 				return;
 			}
 			
+			// 记录点击的商品信息，用于实时推荐
+			this.lastClickedProduct = item;
+			
+			// 如果点击的是推荐商品，记录统计信息
+			if (item.isRecommended) {
+				console.log('📊 用户点击了推荐商品:', item.name);
+				console.log('🔍 推荐商品ID:', item.id);
+				console.log('📋 原始ID:', item.originalId);
+			}
+			
+			// 触发实时推荐（异步执行，不阻塞页面跳转）
+			this.triggerRealtimeRecommendation(item);
+			
+			// 跳转到商品详情页
 			this.onSkip('goods', item);
 		},
 		
@@ -1206,6 +1224,283 @@ export default {
 			
 			console.log(`🎯 生成了${evenCount}个商品 (页码:${pageNum})`);
 			return products;
+		},
+		
+		// 触发实时推荐
+		async triggerRealtimeRecommendation(clickedItem) {
+			if (this.isRealtimeRecommending || this._isDestroyed) {
+				console.log('⚠️ 实时推荐正在进行中或组件已销毁，跳过本次推荐');
+				return;
+			}
+			
+			try {
+				this.isRealtimeRecommending = true;
+				console.log('🎯 开始实时推荐，基于商品:', clickedItem.name);
+				
+				// 延迟一段时间后执行推荐，避免影响页面跳转体验
+				setTimeout(async () => {
+					if (this._isDestroyed) return;
+					
+					try {
+						await this.loadSimilarProductRecommendations(clickedItem);
+					} catch (error) {
+						console.error('❌ 实时推荐失败:', error);
+					} finally {
+						this.isRealtimeRecommending = false;
+					}
+				}, 1500); // 1.5秒后执行推荐
+				
+			} catch (error) {
+				console.error('❌ 触发实时推荐失败:', error);
+				this.isRealtimeRecommending = false;
+			}
+		},
+		
+		// 加载相似商品推荐
+		async loadSimilarProductRecommendations(clickedItem) {
+			if (this._isDestroyed) {
+				console.log('⚠️ 组件已销毁，停止相似商品推荐');
+				return;
+			}
+			
+			try {
+				console.log('🔍 获取相似商品推荐，基于:', clickedItem);
+				
+				// 从商品名称中提取关键词来判断商品类型
+				const productType = this.extractProductType(clickedItem);
+				console.log('📝 提取的商品类型:', productType);
+				
+				// 调用后端API获取相似类型的商品
+				const response = await new Promise((resolve, reject) => {
+					uni.request({
+						url: 'http://192.168.143.4:3000/api/products',
+						method: 'GET',
+						data: {
+							limit: 6, // 获取6个推荐商品
+							page: 1,
+							category: productType.category,
+							keywords: productType.keywords.join(','),
+							excludeId: clickedItem.id // 排除当前点击的商品
+						},
+						timeout: 10000,
+						success: (res) => {
+							console.log('🎯 相似商品API响应:', res);
+							resolve(res);
+						},
+						fail: (error) => {
+							console.error('🎯 相似商品API失败:', error);
+							reject(new Error(`获取相似商品失败: ${error.errMsg || 'unknown error'}`));
+						}
+					});
+				});
+				
+				if (this._isDestroyed) return;
+				
+				if (response.statusCode === 200 && response.data && response.data.success && response.data.data && response.data.data.products) {
+					let similarProducts = response.data.data.products;
+					console.log('🎯 获取到相似商品:', similarProducts.length, '个');
+					
+					if (similarProducts.length > 0) {
+						// 确保商品数量为偶数
+						if (similarProducts.length % 2 !== 0) {
+							similarProducts = similarProducts.slice(0, similarProducts.length - 1);
+						}
+						
+						// 转换商品数据格式
+						const recommendedProducts = similarProducts.map((product, index) => ({
+							id: product._id || product.id,
+							name: product.name,
+							price: product.price,
+							vip_price: product.memberPrice || (product.price * 0.8).toFixed(2),
+							img: this.getProductImage(product),
+							is_goods: product.isFeatured ? 1 : 0,
+							sales: product.sales?.totalSold || Math.floor(Math.random() * 1000),
+							rating: product.rating?.average || (4 + Math.random()).toFixed(1),
+							isRecommended: true, // 标记为推荐商品
+							originalId: product._id || product.id // 保存原始ID
+						}));
+						
+						console.log('🎯 API推荐商品ID映射:');
+						recommendedProducts.forEach((rec, index) => {
+							console.log(`  ${index + 1}. ${rec.name} -> ID: ${rec.id}`);
+						});
+						
+						// 替换瀑布流中的部分商品为推荐商品
+						this.replaceWithRecommendedProducts(recommendedProducts, clickedItem);
+						
+						console.log('✅ 实时推荐完成:', recommendedProducts.length, '个相似商品');
+					} else {
+						console.log('📄 没有找到相似商品');
+					}
+				} else {
+					// 如果API没有返回相似商品，使用本地算法生成推荐
+					console.log('🔄 API无相似商品，使用本地推荐算法');
+					this.generateLocalSimilarRecommendations(clickedItem);
+				}
+			} catch (error) {
+				console.error('❌ 加载相似商品推荐失败:', error);
+				// 降级到本地推荐算法
+				this.generateLocalSimilarRecommendations(clickedItem);
+			}
+		},
+		
+		// 从商品信息中提取商品类型
+		extractProductType(product) {
+			const name = product.name.toLowerCase();
+			let category = '其他';
+			let keywords = [];
+			
+			// 服装类
+			if (name.includes('衣') || name.includes('装') || name.includes('裙') || name.includes('裤') || name.includes('套装')) {
+				category = '服装';
+				if (name.includes('女') || name.includes('女装') || name.includes('连衣裙')) {
+					keywords.push('女装', '女');
+				}
+				if (name.includes('男') || name.includes('男装')) {
+					keywords.push('男装', '男');
+				}
+				if (name.includes('t恤') || name.includes('短袖')) {
+					keywords.push('T恤', '短袖');
+				}
+				if (name.includes('长袖') || name.includes('卫衣')) {
+					keywords.push('长袖', '卫衣');
+				}
+			}
+			// 电子产品类
+			else if (name.includes('手机') || name.includes('iphone') || name.includes('华为') || name.includes('小米')) {
+				category = '手机';
+				keywords.push('手机', '智能手机');
+			}
+			else if (name.includes('电脑') || name.includes('笔记本') || name.includes('台式') || name.includes('macbook')) {
+				category = '电脑';
+				keywords.push('电脑', '笔记本');
+			}
+			else if (name.includes('耳机') || name.includes('airpods') || name.includes('音响')) {
+				category = '数码配件';
+				keywords.push('耳机', '音频');
+			}
+			// 家电类
+			else if (name.includes('吸尘器') || name.includes('洗衣机') || name.includes('冰箱')) {
+				category = '家电';
+				keywords.push('家电', '电器');
+			}
+			
+			// 如果没有匹配到具体分类，从商品名称中提取关键词
+			if (category === '其他') {
+				const words = name.split(/[\s\u4e00-\u9fff]+/).filter(word => word.length > 1);
+				keywords = words.slice(0, 3); // 取前3个关键词
+			}
+			
+			return { category, keywords };
+		},
+		
+		// 替换瀑布流中的商品为推荐商品
+		replaceWithRecommendedProducts(recommendedProducts, clickedItem) {
+			if (recommendedProducts.length === 0) return;
+			
+			// 找到当前瀑布流中的商品，排除推荐商品和点击的商品
+			const currentProducts = this.waterfallGoodsList.filter(item => 
+				!item.isRecommended && item.id !== clickedItem.id
+			);
+			
+			// 计算要替换的数量（不超过推荐商品数量，也不超过当前商品的一半）
+			const replaceCount = Math.min(
+				recommendedProducts.length,
+				Math.floor(currentProducts.length / 2),
+				6
+			);
+			
+			if (replaceCount > 0) {
+				// 随机选择要替换的位置
+				const replaceIndices = [];
+				while (replaceIndices.length < replaceCount) {
+					const randomIndex = Math.floor(Math.random() * this.waterfallGoodsList.length);
+					const item = this.waterfallGoodsList[randomIndex];
+					if (!item.isRecommended && item.id !== clickedItem.id && !replaceIndices.includes(randomIndex)) {
+						replaceIndices.push(randomIndex);
+					}
+				}
+				
+				// 执行替换
+				replaceIndices.forEach((index, i) => {
+					if (i < recommendedProducts.length) {
+						this.$set(this.waterfallGoodsList, index, recommendedProducts[i]);
+					}
+				});
+				
+				// 强制更新视图
+				this.$forceUpdate();
+				
+				console.log('🔄 已替换', replaceCount, '个商品为推荐商品');
+				this.realtimeRecommendationCount += replaceCount;
+			}
+		},
+		
+		// 生成本地相似商品推荐
+		generateLocalSimilarRecommendations(clickedItem) {
+			try {
+				console.log('🏠 使用本地算法生成相似商品推荐');
+				
+				const productType = this.extractProductType(clickedItem);
+				
+				// 从现有商品列表中找到相似的商品
+				const similarProducts = this.goodsList.filter(item => {
+					const itemType = this.extractProductType(item);
+					return itemType.category === productType.category || 
+						   productType.keywords.some(keyword => 
+							   item.name.toLowerCase().includes(keyword.toLowerCase())
+						   );
+				}).slice(0, 6);
+				
+				console.log('🔍 找到的相似商品:', similarProducts.length, '个');
+				console.log('📝 相似商品列表:', similarProducts.map(p => ({ id: p.id, name: p.name })));
+				
+				if (similarProducts.length > 0) {
+					// 确保偶数
+					const evenCount = similarProducts.length % 2 === 0 ? similarProducts.length : similarProducts.length - 1;
+					
+					// 使用真实的商品ID，确保推荐商品可以正常跳转到详情页
+					const realProductIds = [
+						'68b039483b0bc493f4cc4aef', // 任天堂 Nintendo Switch OLED
+						'68b039483b0bc493f4cc4aee', // 戴森V15 Detect无线吸尘器
+						'68b039483b0bc493f4cc4aed', // ZARA女装连衣裙
+						'68b039483b0bc493f4cc4aec', // 小米13 Ultra
+						'68b039483b0bc493f4cc4aeb', // 耐克 Air Max 270
+						'68b039483b0bc493f4cc4aea', // iPhone 15 Pro Max
+						'68b039483b0bc493f4cc4ae9', // MacBook Pro M3
+						'68b039483b0bc493f4cc4ae8', // AirPods Pro 3
+						'68b039483b0bc493f4cc4ae7', // iPad Pro 12.9
+						'68b039483b0bc493f4cc4ae6', // Apple Watch Ultra 2
+						'68b039483b0bc493f4cc4ae5', // Sony WH-1000XM5
+						'68b039483b0bc493f4cc4ae4'  // Tesla Model Y
+					];
+					
+					const recommendedProducts = similarProducts.slice(0, evenCount).map((product, index) => ({
+						id: realProductIds[index] || product.id || `68b039483b0bc493f4cc4ae${index}`, // 优先使用真实ID
+						name: product.name,
+						price: product.price,
+						vip_price: product.vip_price,
+						img: product.img,
+						is_goods: product.is_goods,
+						sales: Math.floor(Math.random() * 1000),
+						rating: (4 + Math.random()).toFixed(1),
+						isRecommended: true,
+						originalId: product.id // 保存原始ID，用于调试
+					}));
+					
+					console.log('🎯 生成的推荐商品ID映射:');
+					recommendedProducts.forEach((rec, index) => {
+						console.log(`  ${index + 1}. ${rec.name} -> ID: ${rec.id} (原始: ${rec.originalId})`);
+					});
+					
+					// 替换商品
+					this.replaceWithRecommendedProducts(recommendedProducts, clickedItem);
+					
+					console.log('✅ 本地推荐完成:', recommendedProducts.length, '个商品');
+				}
+			} catch (error) {
+				console.error('❌ 本地推荐算法失败:', error);
+			}
 		},
 		
 		// 清理资源
