@@ -1,0 +1,349 @@
+// 瀑布流组件样式
+.waterfall-container {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 30rpx;
+  background-color: #f2f2f2;
+  min-height: 200rpx;
+  position: relative;
+}
+
+.waterfall-column {
+  width: calc(50% - 10rpx);
+  
+  &.left-column {
+    margin-right: 20rpx;
+  }
+  
+  &.right-column {
+    margin-left: 20rpx;
+  }
+}
+
+.waterfall-item {
+  background-color: #ffffff;
+  border-radius: 16rpx;
+  margin-bottom: 24rpx;
+  overflow: hidden;
+  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+  position: relative;
+  
+  &:hover {
+    transform: translateY(-4rpx);
+    box-shadow: 0 12rpx 32rpx rgba(0, 0, 0, 0.12);
+  }
+  
+  &:active {
+    transform: scale(0.98);
+  }
+  
+  // 卡片加载动画
+  &.loading {
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.6),
+        transparent
+      );
+      animation: shimmer 1.5s infinite;
+      z-index: 1;
+    }
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    left: -100%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+.item-image {
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+  background-color: #f8f8f8;
+  
+  image {
+    width: 100%;
+    display: block;
+    transition: transform 0.3s ease;
+  }
+  
+  // 图片悬停效果
+  &:hover image {
+    transform: scale(1.05);
+  }
+  
+  // 图片加载占位
+  &::before {
+    content: '';
+    display: block;
+    width: 100%;
+    height: 200rpx;
+    background: linear-gradient(
+      45deg,
+      #f0f0f0 25%,
+      transparent 25%,
+      transparent 50%,
+      #f0f0f0 50%,
+      #f0f0f0 75%,
+      transparent 75%
+    );
+    background-size: 20rpx 20rpx;
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: -1;
+  }
+}
+
+.item-content {
+  padding: 24rpx 20rpx 20rpx;
+}
+
+.item-title {
+  margin-bottom: 16rpx;
+  min-height: 76rpx;
+  position: relative;
+  
+  .tag {
+    display: inline-block;
+    margin-bottom: 10rpx;
+    
+    text {
+      font-size: 20rpx;
+      color: #ffffff;
+      background: linear-gradient(135deg, #ff6b6b, #ff8e53);
+      padding: 6rpx 12rpx;
+      border-radius: 12rpx;
+      font-weight: 500;
+      letter-spacing: 1rpx;
+      box-shadow: 0 4rpx 8rpx rgba(255, 107, 107, 0.3);
+    }
+  }
+  
+  .title-text {
+    font-size: 26rpx;
+    color: #333333;
+    line-height: 1.5;
+    font-weight: 400;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    word-break: break-word;
+    letter-spacing: 0.5rpx;
+  }
+}
+
+.item-price {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12rpx;
+  
+  .user-price {
+    display: flex;
+    align-items: baseline;
+    flex: 1;
+    
+    .currency {
+      font-size: 22rpx;
+      color: #ff4757;
+      font-weight: 600;
+      margin-right: 2rpx;
+    }
+    
+    .price {
+      font-size: 30rpx;
+      color: #ff4757;
+      font-weight: 700;
+      font-family: 'PingFang SC', 'Helvetica Neue', sans-serif;
+    }
+  }
+  
+  .vip-price {
+    display: flex;
+    align-items: center;
+    background-color: #fff8f0;
+    padding: 4rpx 8rpx;
+    border-radius: 8rpx;
+    border: 1rpx solid #ffe4b3;
+    
+    image {
+      width: 20rpx;
+      height: 20rpx;
+      margin-right: 4rpx;
+    }
+    
+    text {
+      font-size: 20rpx;
+      color: #ff8c00;
+      font-weight: 500;
+    }
+  }
+}
+
+.item-stats {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 20rpx;
+  color: #999999;
+  padding-top: 8rpx;
+  border-top: 1rpx solid #f5f5f5;
+  
+  .sales {
+    flex: 1;
+    color: #666;
+    
+    &::before {
+      content: '🔥';
+      margin-right: 4rpx;
+    }
+  }
+  
+  .rating {
+    color: #ffa502;
+    font-weight: 500;
+    
+    &::before {
+      content: '⭐';
+      margin-right: 2rpx;
+    }
+  }
+}
+
+.load-more {
+  position: absolute;
+  left: 50%;
+  bottom: 20rpx;
+  transform: translateX(-50%);
+  width: 240rpx;
+  height: 64rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 32rpx;
+  box-shadow: 0 8rpx 16rpx rgba(102, 126, 234, 0.3);
+  
+  text {
+    font-size: 24rpx;
+    color: #ffffff;
+    font-weight: 500;
+  }
+  
+  &:active {
+    transform: translateX(-50%) scale(0.95);
+  }
+}
+
+// 空状态样式
+.waterfall-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 400rpx;
+  color: #cccccc;
+  
+  .empty-icon {
+    font-size: 80rpx;
+    margin-bottom: 20rpx;
+    opacity: 0.6;
+  }
+  
+  .empty-text {
+    font-size: 28rpx;
+    opacity: 0.8;
+  }
+}
+
+// 加载状态样式
+.waterfall-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 200rpx;
+  
+  .loading-spinner {
+    width: 60rpx;
+    height: 60rpx;
+    border: 4rpx solid #f3f3f3;
+    border-top: 4rpx solid #3498db;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+  
+  .loading-text {
+    margin-left: 20rpx;
+    font-size: 28rpx;
+    color: #999999;
+  }
+}
+
+@keyframes spin {
+  0% { 
+    transform: rotate(0deg); 
+  }
+  100% { 
+    transform: rotate(360deg); 
+  }
+}
+
+// 响应式设计
+@media screen and (max-width: 750rpx) {
+  .waterfall-container {
+    padding: 0 20rpx;
+  }
+  
+  .waterfall-column {
+    &.left-column {
+      margin-right: 15rpx;
+    }
+    
+    &.right-column {
+      margin-left: 15rpx;
+    }
+  }
+  
+  .waterfall-item {
+    margin-bottom: 20rpx;
+    border-radius: 12rpx;
+  }
+  
+  .item-content {
+    padding: 20rpx 16rpx 16rpx;
+  }
+  
+  .item-title {
+    min-height: 68rpx;
+    
+    .title-text {
+      font-size: 24rpx;
+    }
+  }
+  
+  .item-price {
+    .user-price {
+      .price {
+        font-size: 28rpx;
+      }
+    }
+  }
+}
