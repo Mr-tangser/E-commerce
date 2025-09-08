@@ -6,39 +6,75 @@
           <md-icon>perm_identity</md-icon>
         </div>
         <h4 class="title">
-          Edit Profile
+          编辑资料
         </h4>
       </md-card-header>
 
       <md-card-content>
         <div class="md-layout">
           <label class="md-layout-item md-size-15 md-form-label">
-            Name
+            用户名
           </label>
           <div class="md-layout-item">
-            <md-field class="md-invalid">
-              <md-input v-model="user.name" />
-              <validation-error :errors="apiValidationErrors.name" />
+            <md-field>
+              <md-input v-model="user.username" :readonly="true" placeholder="用户名不可修改" />
             </md-field>
           </div>
         </div>
 
         <div class="md-layout">
           <label class="md-layout-item md-size-15 md-form-label">
-            Email
+            姓名
           </label>
           <div class="md-layout-item">
-            <md-field class="md-invalid">
-              <md-input v-model="user.email" />
+            <md-field :class="{'md-invalid': apiValidationErrors.firstName}">
+              <md-input v-model="editForm.firstName" placeholder="请输入姓名" />
+              <validation-error :errors="apiValidationErrors.firstName" />
+            </md-field>
+          </div>
+        </div>
+
+        <div class="md-layout">
+          <label class="md-layout-item md-size-15 md-form-label">
+            姓氏
+          </label>
+          <div class="md-layout-item">
+            <md-field :class="{'md-invalid': apiValidationErrors.lastName}">
+              <md-input v-model="editForm.lastName" placeholder="请输入姓氏" />
+              <validation-error :errors="apiValidationErrors.lastName" />
+            </md-field>
+          </div>
+        </div>
+
+        <div class="md-layout">
+          <label class="md-layout-item md-size-15 md-form-label">
+            邮箱
+          </label>
+          <div class="md-layout-item">
+            <md-field :class="{'md-invalid': apiValidationErrors.email}">
+              <md-input v-model="editForm.email" type="email" placeholder="请输入邮箱" />
               <validation-error :errors="apiValidationErrors.email" />
+            </md-field>
+            <small class="text-muted">修改邮箱可能影响登录，请谨慎操作</small>
+          </div>
+        </div>
+
+        <div class="md-layout">
+          <label class="md-layout-item md-size-15 md-form-label">
+            手机号
+          </label>
+          <div class="md-layout-item">
+            <md-field :class="{'md-invalid': apiValidationErrors.phone}">
+              <md-input v-model="editForm.phone" placeholder="请输入手机号" />
+              <validation-error :errors="apiValidationErrors.phone" />
             </md-field>
           </div>
         </div>
       </md-card-content>
 
       <md-card-actions>
-        <md-button type="submit">
-          Update Profile
+        <md-button type="submit" class="md-primary" :disabled="updating">
+          {{ updating ? '更新中...' : '更新资料' }}
         </md-button>
       </md-card-actions>
     </md-card>
@@ -52,7 +88,10 @@ export default {
   name: "edit-profile-card",
 
   props: {
-    user: Object,
+    user: {
+      type: Object,
+      default: () => ({})
+    }
   },
 
   components: { ValidationError },
@@ -61,36 +100,99 @@ export default {
 
   data() {
     return {
-      default_img: process.env.VUE_APP_BASE_URL + "/img/placeholder.jpg",
+      updating: false,
+      apiValidationErrors: {},
+      editForm: {
+        firstName: '',
+        lastName: '',
+        email: '',
+        phone: ''
+      }
     };
   },
 
+  watch: {
+    user: {
+      handler(newUser) {
+        if (newUser) {
+          this.editForm = {
+            firstName: newUser.firstName || '',
+            lastName: newUser.lastName || '',
+            email: newUser.email || '',
+            phone: newUser.phone || ''
+          };
+        }
+      },
+      immediate: true,
+      deep: true
+    }
+  },
+
   methods: {
+    clearApiValidation() {
+      this.apiValidationErrors = {};
+    },
+
+    setApiValidation(errors) {
+      this.apiValidationErrors = errors;
+    },
+
     async updateProfile() {
-      if (["1", "2", "3"].includes(this.user.id)) {
-        await this.$store.dispatch(
-          "alerts/error",
-          "You are not allowed not change data of default users."
-        );
-        return;
-      }
+      this.updating = true;
+      this.clearApiValidation();
 
       try {
-        await this.$store.dispatch("profile/update", this.user);
-        await this.$store.dispatch(
-          "alerts/success",
-          "Profile updated successfully."
-        );
-        await this.$store.getters["profile/me"];
-      } catch (e) {
-        await this.$store.dispatch(
-          "alerts/error",
-          "Oops, something went wrong!"
-        );
-        this.setApiValidation(e.response.data.errors);
+        console.log('📝 提交个人资料更新:', this.editForm);
+        
+        const response = await this.$http.put('http://localhost:3000/api/admin/profile', this.editForm);
+        
+        if (response.data.success) {
+          console.log('✅ 个人资料更新成功:', response.data);
+          
+          this.$notify({
+            message: '资料更新成功',
+            horizontalAlign: 'right',
+            verticalAlign: 'top',
+            type: 'success',
+            timeout: 3000  // 成功信息显示3秒
+          });
+          
+          // 通知父组件刷新数据
+          this.$emit('profile-updated', response.data.data.admin);
+          
+          // 更新store中的用户信息
+          this.$store.dispatch('auth/updateUserInfo', response.data.data.admin);
+          
+          this.$parent.getProfile();
+        }
+      } catch (error) {
+        console.error('更新资料失败:', error);
+        
+        if (error.response?.data?.error?.details) {
+          // 处理验证错误
+          const validationErrors = {};
+          error.response.data.error.details.forEach(detail => {
+            const field = detail.param;
+            if (!validationErrors[field]) {
+              validationErrors[field] = [];
+            }
+            validationErrors[field].push(detail.msg);
+          });
+          this.setApiValidation(validationErrors);
+        } else {
+          this.$notify({
+            message: error.response?.data?.error?.message || '更新资料失败',
+            horizontalAlign: 'right',
+            verticalAlign: 'top',
+            type: 'danger',
+            timeout: 5000  // 错误信息显示5秒
+          });
+        }
+      } finally {
+        this.updating = false;
       }
-    },
-  },
+    }
+  }
 };
 </script>
 
