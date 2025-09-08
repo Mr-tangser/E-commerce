@@ -792,4 +792,214 @@ router.put('/change-password', protect, [
   }
 });
 
+// 获取所有管理员用户（用于用户管理页面）
+router.get('/users', protect, authorize('super_admin', 'admin'), async (req, res) => {
+  try {
+    // 权限检查：超级管理员可以直接访问，其他用户需要users.view权限
+    if (req.user.role !== 'super_admin' && !req.user.hasPermission('users', 'view')) {
+      return res.status(403).json({
+        success: false,
+        message: '没有权限查看用户列表'
+      });
+    }
+
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const query = {};
+    
+    // 角色筛选
+    if (req.query.role) {
+      query.role = req.query.role;
+    }
+    
+    // 部门筛选
+    if (req.query.department) {
+      query.department = req.query.department;
+    }
+    
+    // 状态筛选
+    if (req.query.isActive !== undefined) {
+      query.isActive = req.query.isActive === 'true';
+    }
+
+    const [users, total] = await Promise.all([
+      Admin.find(query)
+        .select('-password')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Admin.countDocuments(query)
+    ]);
+
+    // 添加fullName字段
+    const usersWithFullName = users.map(user => ({
+      ...user,
+      fullName: user.firstName && user.lastName 
+        ? `${user.firstName} ${user.lastName}` 
+        : user.username
+    }));
+
+    res.json({
+      success: true,
+      data: {
+        users: usersWithFullName,
+        pagination: {
+          total,
+          page,
+          pages: Math.ceil(total / limit),
+          limit
+        }
+      }
+    });
+  } catch (error) {
+    console.error('获取用户列表错误:', error);
+    res.status(500).json({
+      success: false,
+      message: '获取用户列表失败'
+    });
+  }
+});
+
+// 更新用户权限
+router.put('/users/:id/permissions', protect, authorize('super_admin', 'admin'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { permissions } = req.body;
+
+    // 权限检查：超级管理员可以直接访问，其他用户需要users.edit权限
+    if (req.user.role !== 'super_admin' && !req.user.hasPermission('users', 'edit')) {
+      return res.status(403).json({
+        success: false,
+        message: '没有权限修改用户权限'
+      });
+    }
+
+    // 查找目标用户
+    const targetUser = await Admin.findById(id);
+    if (!targetUser) {
+      return res.status(404).json({
+        success: false,
+        message: '用户不存在'
+      });
+    }
+
+    // 防止修改超级管理员权限
+    if (targetUser.role === 'super_admin') {
+      return res.status(403).json({
+        success: false,
+        message: '无法修改超级管理员的权限'
+      });
+    }
+
+    // 防止非超级管理员修改其他管理员权限（可选的安全机制）
+    if (req.user.role !== 'super_admin' && targetUser.role === 'admin' && req.user._id.toString() !== id) {
+      return res.status(403).json({
+        success: false,
+        message: '只有超级管理员可以修改其他管理员的权限'
+      });
+    }
+
+    // 验证权限结构
+    const validResources = ['users', 'products', 'orders', 'analytics', 'settings'];
+    const validActions = ['view', 'create', 'edit', 'delete', 'export'];
+    
+    for (const [resource, actions] of Object.entries(permissions)) {
+      if (!validResources.includes(resource)) {
+        return res.status(400).json({
+          success: false,
+          message: `无效的资源类型: ${resource}`
+        });
+      }
+      
+      for (const [action, allowed] of Object.entries(actions)) {
+        if (!validActions.includes(action)) {
+          return res.status(400).json({
+            success: false,
+            message: `无效的操作类型: ${action}`
+          });
+        }
+        
+        if (typeof allowed !== 'boolean') {
+          return res.status(400).json({
+            success: false,
+            message: '权限值必须是布尔类型'
+          });
+        }
+      }
+    }
+
+    // 更新权限
+    targetUser.permissions = permissions;
+    targetUser.updatedAt = new Date();
+    await targetUser.save();
+
+    // 记录操作日志（如果需要）
+    console.log(`用户 ${req.user.username} 修改了用户 ${targetUser.username} 的权限`);
+
+    res.json({
+      success: true,
+      message: '用户权限更新成功',
+      data: {
+        user: {
+          ...targetUser.toJSON(),
+          permissions: targetUser.permissions
+        }
+      }
+    });
+  } catch (error) {
+    console.error('更新用户权限错误:', error);
+    res.status(500).json({
+      success: false,
+      message: '更新用户权限失败'
+    });
+  }
+});
+
+// 获取单个用户详情（包含权限）
+router.get('/users/:id', protect, authorize('super_admin', 'admin'), async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // 权限检查：超级管理员可以直接访问，其他用户需要users.view权限
+    if (req.user.role !== 'super_admin' && !req.user.hasPermission('users', 'view')) {
+      return res.status(403).json({
+        success: false,
+        message: '没有权限查看用户详情'
+      });
+    }
+
+    const user = await Admin.findById(id).select('-password').lean();
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: '用户不存在'
+      });
+    }
+
+    // 添加fullName字段
+    const userWithFullName = {
+      ...user,
+      fullName: user.firstName && user.lastName 
+        ? `${user.firstName} ${user.lastName}` 
+        : user.username
+    };
+
+    res.json({
+      success: true,
+      data: {
+        user: userWithFullName
+      }
+    });
+  } catch (error) {
+    console.error('获取用户详情错误:', error);
+    res.status(500).json({
+      success: false,
+      message: '获取用户详情失败'
+    });
+  }
+});
+
 module.exports = router; 

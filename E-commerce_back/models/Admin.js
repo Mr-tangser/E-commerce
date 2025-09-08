@@ -162,7 +162,15 @@ adminSchema.methods.hasRole = function(role) {
 
 // 检查具体权限
 adminSchema.methods.hasPermission = function(resource, action) {
-  return this.permissions[resource] && this.permissions[resource][action];
+  // 超级管理员拥有所有权限
+  if (this.role === 'super_admin') {
+    return true;
+  }
+  
+  // 检查具体权限
+  return this.permissions && 
+         this.permissions[resource] && 
+         this.permissions[resource][action] === true;
 };
 
 // 获取允许的资源列表

@@ -112,7 +112,7 @@
                 <div 
                   class="permissions-summary" 
                   :title="getPermissionTooltip(item.permissions)"
-                  @click="showPermissionDetails(item)"
+                  @click="editUserPermissions(item)"
                 >
                   <md-chip :class="getPermissionLevelClass(item.permissions)" class="permission-level">
                     {{ getPermissionLevel(item.permissions) }}
@@ -181,16 +181,84 @@
         </md-card-actions>
       </md-card>
     </div>
+
+    <!-- 权限编辑对话框 -->
+    <md-dialog :md-active.sync="showPermissionDialog" :md-fullscreen="false" :md-backdrop="true">
+      <md-dialog-title>
+        <span style="color: #2196f3; font-size: 18px;">
+          🔐 编辑权限 - {{ selectedUser.username }}
+        </span>
+        <md-chip 
+          :class="getRoleClass(selectedUser.role)" 
+          style="margin-left: 10px; font-weight: 500;"
+        >
+          {{ getRoleText(selectedUser.role) }}
+        </md-chip>
+      </md-dialog-title>
+      
+      <md-dialog-content style="padding: 24px; max-height: 500px; overflow-y: auto;">
+        <div v-if="selectedUser.role === 'super_admin'" class="super-admin-notice">
+          <md-icon style="color: #ff5722; margin-right: 8px;">security</md-icon>
+          <span style="color: #ff5722; font-weight: 500;">
+            超级管理员权限不可修改，拥有系统全部权限
+          </span>
+        </div>
+        
+        <div v-else class="permissions-editor">
+          <div v-for="(resourceActions, resource) in editablePermissions" :key="resource" class="permission-group">
+            <h4 class="permission-resource-title">
+              <md-icon class="resource-icon">{{ getResourceIcon(resource) }}</md-icon>
+              {{ getResourceText(resource) }}
+            </h4>
+            
+            <div class="permission-actions">
+              <md-checkbox 
+                v-for="(value, action) in resourceActions" 
+                :key="`${resource}-${action}`"
+                v-model="editablePermissions[resource][action]"
+                :class="getActionClass(action)"
+                class="permission-checkbox"
+              >
+                <span class="action-text">{{ getActionText(action) }}</span>
+                <span class="action-desc">({{ getActionDescription(action) }})</span>
+              </md-checkbox>
+            </div>
+          </div>
+        </div>
+      </md-dialog-content>
+      
+      <md-dialog-actions>
+        <md-button class="md-primary" @click="closePermissionDialog">取消</md-button>
+        <md-button 
+          v-if="selectedUser.role !== 'super_admin'"
+          class="md-primary md-raised" 
+          @click="savePermissions"
+          :disabled="savingPermissions"
+        >
+          <md-icon v-if="savingPermissions">hourglass_empty</md-icon>
+          {{ savingPermissions ? '保存中...' : '保存权限' }}
+        </md-button>
+        <md-button 
+          v-else
+          class="md-accent md-raised" 
+          @click="closePermissionDialog"
+        >
+          知道了
+        </md-button>
+      </md-dialog-actions>
+    </md-dialog>
   </div>
 </template>
 
 <script>
 import Pagination from "@/components/Pagination";
+import permissionsMixin from "@/mixins/permissions";
 
 export default {
   components: {
     pagination: Pagination,
   },
+  mixins: [permissionsMixin],
 
   data: () => ({
     table: [],
@@ -213,6 +281,12 @@ export default {
       currentPage: 1,
       perPageOptions: [5, 10, 25, 50],
     },
+
+    // 权限编辑相关数据
+    showPermissionDialog: false,
+    selectedUser: {},
+    editablePermissions: {},
+    savingPermissions: false,
   }),
 
   computed: {
@@ -268,63 +342,63 @@ export default {
     this.getList();
   },
 
-  methods: {
-    getList() {
-      // 基于提供的数据样本创建模拟数据
-      this.table = [
-        {
-          _id: "68aee066d310e9a9a6a8b174",
-          username: "superadmin",
-          email: "admin@jsonapi.com",
-          role: "super_admin",
-          avatar: "/img/avatars/admin_68aee066d310e9a9a6a8b174_1757149686512-981827745.png",
-          firstName: "Super",
-          lastName: "Admin",
-          fullName: "Super Admin",
-          department: "technical",
-          permissions: {
-            users: { view: true, create: true, edit: true, delete: true },
-            products: { view: true, create: true, edit: true, delete: true },
-            orders: { view: true, create: true, edit: true, delete: true },
-            analytics: { view: true, export: true },
-            settings: { view: true, edit: true }
-          },
-          isActive: true,
-          loginCount: 36,
-          twoFactorEnabled: false,
-          sessionTimeout: 8,
-          createdAt: "2025-08-27T10:39:34.311Z",
-          updatedAt: "2025-09-07T12:35:30.668Z",
-          lastLogin: "2025-09-07T11:42:29.939Z",
-          phone: "16682296593"
-        },
-        {
-          _id: "68aee067d310e9a9a6a8b176",
-          username: "admin",
-          email: "admin@ecommerce.com",
-          role: "admin",
-          avatar: "/img/default.jpg",
-          firstName: "Admin",
-          lastName: "User",
-          fullName: "Admin User",
-          department: "sales",
-          permissions: {
-            users: { view: true, create: false, edit: true, delete: false },
-            products: { view: true, create: true, edit: true, delete: false },
-            orders: { view: true, create: false, edit: true, delete: false },
-            analytics: { view: true, export: false },
-            settings: { view: false, edit: false }
-          },
-          isActive: true,
-          loginCount: 0,
-          twoFactorEnabled: false,
-          sessionTimeout: 8,
-          createdAt: "2025-08-27T10:39:35.129Z",
-          updatedAt: "2025-08-27T10:39:35.129Z",
-          lastLogin: null
-        }
-      ];
+  watch: {
+    // 监听筛选条件变化，重新获取数据
+    filters: {
+      handler() {
+        this.pagination.currentPage = 1; // 重置到第一页
+        this.getList();
+      },
+      deep: true
     },
+    
+    // 监听分页变化
+    'pagination.currentPage'() {
+      this.getList();
+    },
+    
+    'pagination.perPage'() {
+      this.pagination.currentPage = 1; // 重置到第一页
+      this.getList();
+    }
+  },
+
+  methods: {
+    async getList() {
+      try {
+        // 从后端API获取用户列表
+        const response = await this.$http.get('admin/users', {
+          params: {
+            page: this.pagination.currentPage,
+            limit: this.pagination.perPage,
+            role: this.filters.role || undefined,
+            department: this.filters.department || undefined,
+            isActive: this.filters.isActive || undefined
+          }
+        });
+
+        if (response.data.success) {
+          this.table = response.data.data.users;
+          // 可以在这里处理分页信息
+          // this.pagination.total = response.data.data.pagination.total;
+        } else {
+          throw new Error(response.data.message || '获取用户列表失败');
+        }
+      } catch (error) {
+        console.error('获取用户列表失败:', error);
+        
+        // 如果API调用失败，显示错误信息
+        this.$store.dispatch("alerts/error", 
+          `获取用户列表失败: ${error.response?.data?.message || error.message}`
+        );
+        
+        // 根据用户要求：不要使用模拟数据，所有数据必须从后端拿到进行修改
+        console.error('不要使用模拟数据，所有数据必须从后端拿到进行修改');
+        this.table = [];
+        this.pagination.total = 0;
+      }
+    },
+
 
     onProFeature() {
       this.$store.dispatch("alerts/error", "这是PRO功能，暂未开放。");
@@ -509,6 +583,123 @@ export default {
       this.$store.dispatch("alerts/success", 
         `用户 ${user.username} 已${user.isActive ? '激活' : '停用'}`
       );
+    },
+
+    // 编辑用户权限
+    editUserPermissions(user) {
+      this.selectedUser = { ...user };
+      
+      // 如果是超级管理员，显示提示信息
+      if (user.role === 'super_admin') {
+        this.editablePermissions = {};
+      } else {
+        // 深拷贝权限对象以避免直接修改原数据
+        this.editablePermissions = JSON.parse(JSON.stringify(user.permissions));
+      }
+      
+      this.showPermissionDialog = true;
+    },
+
+    // 关闭权限编辑对话框
+    closePermissionDialog() {
+      this.showPermissionDialog = false;
+      this.selectedUser = {};
+      this.editablePermissions = {};
+      this.savingPermissions = false;
+    },
+
+    // 保存权限
+    async savePermissions() {
+      if (this.selectedUser.role === 'super_admin') {
+        this.$store.dispatch("alerts/error", "超级管理员权限不可修改");
+        return;
+      }
+
+      this.savingPermissions = true;
+
+      try {
+        // 调用后端API保存权限
+        const response = await this.$http.put(`admin/users/${this.selectedUser._id}/permissions`, {
+          permissions: this.editablePermissions
+        });
+
+        if (response.data.success) {
+          // 更新本地数据
+          const userIndex = this.table.findIndex(u => u._id === this.selectedUser._id);
+          if (userIndex !== -1) {
+            this.table[userIndex].permissions = { ...this.editablePermissions };
+            // 如果后端返回了更新后的用户数据，使用它
+            if (response.data.data && response.data.data.user) {
+              Object.assign(this.table[userIndex], response.data.data.user);
+            }
+          }
+
+          this.$store.dispatch("alerts/success", 
+            response.data.message || `用户 ${this.selectedUser.username} 的权限已更新`
+          );
+
+          this.closePermissionDialog();
+        } else {
+          throw new Error(response.data.message || '保存权限失败');
+        }
+      } catch (error) {
+        console.error('保存权限失败:', error);
+        
+        let errorMessage = '保存权限失败，请重试';
+        
+        if (error.response) {
+          const { status, data } = error.response;
+          if (status === 403) {
+            errorMessage = data.message || '没有权限修改该用户的权限';
+          } else if (status === 404) {
+            errorMessage = '用户不存在';
+          } else if (status === 400) {
+            errorMessage = data.message || '权限数据格式错误';
+          } else if (data && data.message) {
+            errorMessage = data.message;
+          }
+        }
+        
+        this.$store.dispatch("alerts/error", errorMessage);
+      } finally {
+        this.savingPermissions = false;
+      }
+    },
+
+    // 获取资源图标
+    getResourceIcon(resource) {
+      const resourceIcons = {
+        'users': 'people',
+        'products': 'store',
+        'orders': 'receipt',
+        'analytics': 'bar_chart',
+        'settings': 'settings'
+      };
+      return resourceIcons[resource] || 'folder';
+    },
+
+    // 获取操作样式类
+    getActionClass(action) {
+      const actionClasses = {
+        'view': 'action-view',
+        'create': 'action-create', 
+        'edit': 'action-edit',
+        'delete': 'action-delete',
+        'export': 'action-export'
+      };
+      return actionClasses[action] || '';
+    },
+
+    // 获取操作描述
+    getActionDescription(action) {
+      const actionDescriptions = {
+        'view': '可以查看和浏览',
+        'create': '可以创建新项目',
+        'edit': '可以修改现有项目',
+        'delete': '可以删除项目',
+        'export': '可以导出数据'
+      };
+      return actionDescriptions[action] || '';
     },
 
     showPermissionDetails(user) {
@@ -811,6 +1002,153 @@ export default {
   overflow-y: auto;
 }
 
+/* 权限编辑对话框样式 */
+.super-admin-notice {
+  display: flex;
+  align-items: center;
+  padding: 16px;
+  background-color: #fff3e0;
+  border: 1px solid #ffcc80;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.permissions-editor {
+  padding: 8px 0;
+}
+
+.permission-group {
+  margin-bottom: 24px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.permission-resource-title {
+  display: flex;
+  align-items: center;
+  margin: 0;
+  padding: 12px 16px;
+  background-color: #f5f5f5;
+  border-bottom: 1px solid #e0e0e0;
+  font-size: 16px;
+  font-weight: 500;
+  color: #333;
+}
+
+.resource-icon {
+  margin-right: 8px;
+  color: #2196f3;
+  font-size: 20px !important;
+}
+
+.permission-actions {
+  padding: 16px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.permission-checkbox {
+  margin-bottom: 8px !important;
+}
+
+.permission-checkbox .md-checkbox {
+  margin-right: 8px;
+}
+
+.action-text {
+  font-weight: 500;
+  color: #333;
+}
+
+.action-desc {
+  font-size: 12px;
+  color: #666;
+  margin-left: 4px;
+}
+
+/* 不同操作类型的颜色 */
+.action-view .md-checkbox-container::after {
+  border-color: #4caf50 !important;
+}
+
+.action-create .md-checkbox-container::after {
+  border-color: #2196f3 !important;
+}
+
+.action-edit .md-checkbox-container::after {
+  border-color: #ff9800 !important;
+}
+
+.action-delete .md-checkbox-container::after {
+  border-color: #f44336 !important;
+}
+
+.action-export .md-checkbox-container::after {
+  border-color: #9c27b0 !important;
+}
+
+.permission-checkbox.md-checked .action-view .action-text {
+  color: #4caf50;
+}
+
+.permission-checkbox.md-checked .action-create .action-text {
+  color: #2196f3;
+}
+
+.permission-checkbox.md-checked .action-edit .action-text {
+  color: #ff9800;
+}
+
+.permission-checkbox.md-checked .action-delete .action-text {
+  color: #f44336;
+}
+
+.permission-checkbox.md-checked .action-export .action-text {
+  color: #9c27b0;
+}
+
+/* 权限对话框容器样式 */
+::v-deep .md-dialog {
+  max-width: 600px;
+  width: 90%;
+}
+
+::v-deep .md-dialog-title {
+  display: flex;
+  align-items: center;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+::v-deep .md-dialog-content {
+  padding: 0 !important;
+}
+
+::v-deep .md-dialog-actions {
+  padding: 16px 24px;
+  border-top: 1px solid #e0e0e0;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* 权限提示悬浮提示更新 */
+.permissions-summary:hover::after {
+  content: "点击编辑权限";
+  position: absolute;
+  top: -30px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #333;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  white-space: nowrap;
+  z-index: 1000;
+}
+
 /* 响应式设计 */
 @media (max-width: 768px) {
   .permissions-container {
@@ -834,12 +1172,50 @@ export default {
   ::v-deep .permission-details-popup {
     width: 90% !important;
   }
+
+  ::v-deep .md-dialog {
+    width: 95%;
+    max-width: none;
+  }
+
+  .permission-actions {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .permission-resource-title {
+    font-size: 14px;
+    padding: 10px 12px;
+  }
+
+  .resource-icon {
+    font-size: 18px !important;
+  }
 }
 
 @media (max-width: 480px) {
   .email-cell {
     max-width: 100px;
     font-size: 11px;
+  }
+
+  ::v-deep .md-dialog-title {
+    padding: 16px 20px 12px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .permissions-editor {
+    padding: 4px 0;
+  }
+
+  .permission-group {
+    margin-bottom: 16px;
+  }
+
+  .permission-actions {
+    padding: 12px;
   }
 }
 </style>
