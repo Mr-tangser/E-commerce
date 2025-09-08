@@ -180,7 +180,8 @@ router.post('/login', [
           role: admin.role,
           avatar: admin.avatar,
           department: admin.department,
-          permissions: admin.getAllowedResources(),
+          // 直接返回原始权限对象，保持前后端数据一致性
+          permissions: admin.permissions,
           lastLogin: admin.lastLogin
         },
         access_token: token // 前端期望的token字段名
@@ -357,7 +358,8 @@ router.get('/me', protect, async (req, res) => {
       data: {
         admin: {
           ...admin.toJSON(),
-          permissions: admin.getAllowedResources()
+          // 直接返回原始权限对象，而不是getAllowedResources()
+          permissions: admin.permissions
         }
       }
     });

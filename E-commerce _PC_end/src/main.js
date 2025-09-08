@@ -64,12 +64,10 @@ if (process.env.NODE_ENV === 'development') {
     console.warn('API测试工具加载失败:', err);
   });
   
-  // 加载用户切换工具
-  import('./utils/userSwitcher.js').then(() => {
-    console.log('🔄 开发模式：用户切换工具已加载');
-  }).catch(err => {
-    console.warn('用户切换工具加载失败:', err);
-  });
+  // 注意：已禁用前端用户切换和权限测试工具
+  // 所有用户数据和权限验证必须通过后端API获取，不使用前端模拟数据
+  console.log('🔒 生产模式：所有用户数据来源于后端API');
+  console.log('💡 请使用真实的登录流程进行用户切换和权限测试');
 }
 
 /* eslint-disable no-new */

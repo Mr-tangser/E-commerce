@@ -11,14 +11,9 @@ export default {
     
     // 获取动态侧边栏菜单
     dynamicSidebarLinks() {
-      console.log('🔍 计算动态侧边栏链接');
-      
       if (!this.currentUser) {
-        console.log('❌ 没有当前用户，返回空数组');
         return [];
       }
-      
-      console.log(`👤 当前用户: ${this.currentUser.username} (${this.currentUser.role})`);
       
       const links = [];
       
@@ -164,7 +159,6 @@ export default {
         });
       }
       
-      console.log(`🎯 生成了 ${links.length} 个侧边栏菜单项`);
       return links;
     }
   },
@@ -172,26 +166,23 @@ export default {
   methods: {
     // 检查是否有特定权限
     hasPermission(resource, action) {
+      // 如果没有当前用户，直接返回false
+      if (!this.currentUser) {
+        return false;
+      }
+      
       // 超级管理员直接拥有所有权限
-      if (this.currentUser?.role === 'super_admin') {
-        console.log(`✅ ${resource}:${action} - 超级管理员拥有所有权限`);
+      if (this.currentUser.role === 'super_admin') {
         return true;
       }
       
-      console.log(`🔐 检查权限: ${resource}:${action}`);
-      console.log('🔍 当前用户权限对象:', this.userPermissions);
-      
+      // 检查普通用户权限
       if (!this.userPermissions || !this.userPermissions[resource]) {
-        console.log(`❌ 没有 ${resource} 权限模块`);
-        console.log('可用权限模块:', Object.keys(this.userPermissions || {}));
         return false;
       }
       
       const resourcePermissions = this.userPermissions[resource];
-      console.log(`🔑 ${resource} 模块权限:`, resourcePermissions);
-      const hasAccess = resourcePermissions[action] === true;
-      console.log(`${hasAccess ? '✅' : '❌'} ${resource}:${action} = ${hasAccess} (类型: ${typeof resourcePermissions[action]})`);
-      return hasAccess;
+      return resourcePermissions[action] === true;
     },
     
     // 检查是否有任何权限

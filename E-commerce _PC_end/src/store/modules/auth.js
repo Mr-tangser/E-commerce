@@ -2,62 +2,13 @@ import Vue from "vue";
 import router from "@/router";
 import axios from "axios";
 
-// 临时测试用户数据 - 用于开发调试
-// 注意：生产环境中应该移除此数据，使用 user: null
-const testSuperAdmin = {
-  _id: "68aee066d310e9a9a6a8b174",
-  username: "superadmin",
-  email: "admin@jsonapi.com",
-  role: "super_admin",
-  avatar: "/img/avatars/admin_68aee066d310e9a9a6a8b174_1757149686512-981827745.png",
-  firstName: "Super",
-  lastName: "Admin",
-  department: "technical",
-  permissions: {
-    users: { view: true, create: true, edit: true, delete: true },
-    products: { view: true, create: true, edit: true, delete: true },
-    orders: { view: true, create: true, edit: true, delete: true },
-    analytics: { view: true, export: true },
-    settings: { view: true, edit: true }
-  },
-  isActive: true,
-  loginCount: 36,
-  twoFactorEnabled: false,
-  sessionTimeout: 8,
-  lastLogin: new Date(),
-  phone: "16682296593"
-};
-
-// 临时admin用户数据 - 基于您提供的后端数据
-const testAdminUser = {
-  _id: "68aee067d310e9a9a6a8b176",
-  username: "admin",
-  email: "admin@ecommerce.com",
-  role: "admin",
-  avatar: "/img/default.jpg",
-  firstName: "Admin",
-  lastName: "User", 
-  department: "sales",
-  permissions: {
-    users: { view: true, create: false, edit: true, delete: false },
-    products: { view: true, create: true, edit: true, delete: false },
-    orders: { view: true, create: false, edit: true, delete: false },
-    analytics: { view: true, export: false },
-    settings: { view: false, edit: false }
-  },
-  isActive: true,
-  loginCount: 0,
-  twoFactorEnabled: false,
-  sessionTimeout: 8,
-  createdAt: "2025-08-27T10:39:35.129Z",
-  updatedAt: "2025-08-27T10:39:35.129Z"
-};
+// 所有用户数据必须来自后端API，不在前端存储任何模拟数据
 
 export default {
   namespaced: true,
   state: {
     isAuthenticated: localStorage.getItem("vue-authenticate.vueauth_access_token") !== null,
-    user: testAdminUser, // 临时使用admin测试数据来验证权限系统
+    user: null, // 用户数据必须来自后端API，不使用任何模拟数据
     loading: false
   },
 

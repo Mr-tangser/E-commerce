@@ -13,26 +13,20 @@ export default function permission({ next, router, to }) {
       return router.push({ name: 'Login' });
     }
     
-    // 检查用户是否有所需权限
+    // 超级管理员直接拥有所有权限，无需进一步检查
+    if (user.role === 'super_admin') {
+      return next();
+    }
+    
+    // 检查普通用户权限
     const userPermissions = user.permissions || {};
-    const hasPermission = userPermissions[resource] && userPermissions[resource][action];
+    const hasPermission = userPermissions[resource] && userPermissions[resource][action] === true;
     
     if (!hasPermission) {
       // 没有权限，显示错误信息并跳转到首页
-      console.warn(`用户没有权限访问 ${resource}:${action}`);
+      console.warn(`权限不足: 用户 ${user.username} 无法访问 ${resource}:${action}`);
       
-      // 使用Vue的全局通知系统显示错误
-      try {
-        if (store._vm && store._vm.$store) {
-          store._vm.$store.dispatch('alerts/error', `您没有权限访问此页面`);
-        } else {
-          // 备用方案：直接使用store
-          store.dispatch('alerts/error', `您没有权限访问此页面`);
-        }
-      } catch (error) {
-        console.error('显示权限错误提示失败:', error);
-      }
-      
+      // 跳转到仪表板
       return router.push('/dashboard');
     }
   }

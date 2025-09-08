@@ -133,8 +133,7 @@ export default {
     
     // 从mixin继承dynamicSidebarLinks，这里确保它能正确工作
     sidebarLinks() {
-      const links = this.dynamicSidebarLinks || [];
-      return links;
+      return this.dynamicSidebarLinks || [];
     }
   },
 
@@ -154,7 +153,60 @@ export default {
       if (this.$sidebar && this.$sidebar.isMinimized) {
         this.$sidebar.toggleMinimize();
       }
-    }
+    },
+
+    // 确保store中有用户数据（用于权限系统）
+    async ensureStoreUserData() {
+      try {
+        // 如果store中已经有用户数据，则直接返回
+        if (this.currentUser) {
+          return;
+        }
+        
+        // 检查token
+        const token = localStorage.getItem('vue-authenticate.vueauth_access_token');
+        if (!token) {
+          this.$router.push('/login');
+          return;
+        }
+
+        // 从后端获取用户数据
+        const response = await this.$http.get('admin/me');
+        
+        if (response.data.success && response.data.data && response.data.data.admin) {
+          const userData = response.data.data.admin;
+          
+          // 存储到store中
+          this.$store.commit('auth/SET_USER', userData);
+          this.$store.commit('auth/SET_AUTHENTICATED', true);
+          
+          return userData;
+        } else {
+          throw new Error('用户数据格式错误');
+        }
+        
+      } catch (error) {
+        console.error('❌ 获取用户数据失败:', error);
+        
+        // 如果是401错误，清除认证并跳转登录页
+        if (error.response?.status === 401) {
+          localStorage.removeItem('vue-authenticate.vueauth_access_token');
+          this.$store.commit('auth/CLEAR_AUTH');
+          this.$router.push('/login');
+          return;
+        }
+        
+        // 对于其他错误，显示提示但不跳转
+        this.$notify({
+          message: `获取用户数据失败: ${error.message}`,
+          horizontalAlign: 'right',
+          verticalAlign: 'top',
+          type: 'danger',
+          timeout: 4000
+        });
+      }
+    },
+
   },
   updated() {
     reinitScrollbar();
@@ -162,38 +214,8 @@ export default {
   async mounted() {
     reinitScrollbar();
     
-    // 如果已认证但没有用户信息，则获取用户信息
-    if (this.isAuthenticated && !this.currentUser) {
-      try {
-        await this.$store.dispatch('auth/fetchCurrentUser');
-// console.log('✅ 用户信息获取成功:', this.currentUser);
-      } catch (error) {
-        console.error('❌ 获取用户信息失败:', error);
-        // 如果获取失败，临时使用测试数据（仅开发环境）
-        if (process.env.NODE_ENV === 'development') {
-          // console.log('🔧 开发环境：使用测试数据');
-          this.$store.commit('auth/SET_USER', {
-            _id: "68aee066d310e9a9a6a8b174",
-            username: "superadmin",
-            email: "admin@jsonapi.com",
-            role: "super_admin",
-            avatar: "/img/avatars/admin_68aee066d310e9a9a6a8b174_1757149686512-981827745.png",
-            firstName: "Super",
-            lastName: "Admin",
-            department: "technical",
-            permissions: {
-              users: { view: true, create: true, edit: true, delete: true },
-              products: { view: true, create: true, edit: true, delete: true },
-              orders: { view: true, create: true, edit: true, delete: true },
-              analytics: { view: true, export: true },
-              settings: { view: true, edit: true }
-            },
-            isActive: true
-          });
-          this.$store.commit('auth/SET_AUTHENTICATED', true);
-        }
-      }
-    }
+    // 确保store中有用户数据（用于权限系统和侧边栏生成）
+    await this.ensureStoreUserData();
     
     // 更新image为用户头像
     this.image = this.userAvatar;
@@ -202,6 +224,20 @@ export default {
     sidebarMini() {
       this.minimizeSidebar();
     },
+    
+    // 监听用户数据变化，重新计算侧边栏
+    currentUser: {
+      handler(newUser) {
+        if (newUser) {
+          // 强制重新计算侧边栏链接
+          this.$nextTick(() => {
+            this.$forceUpdate();
+          });
+        }
+      },
+      immediate: false
+    },
+    
     userAvatar: {
       handler(newAvatar) {
         // 当用户头像更新时，同步更新侧边栏头像
