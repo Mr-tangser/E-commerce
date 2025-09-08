@@ -14,6 +14,9 @@ const multer = require('multer');
 // 模型引入
 const User = require('../models/User');
 
+// 服务引入
+const smsService = require('../utils/smsService');
+
 // 中间件引入
 const { protect } = require('../middleware/auth');
 
@@ -314,7 +317,7 @@ router.post('/login-by-phone-password', loginLimiter, [
 // 发送手机验证码
 router.post('/send-code', async (req, res) => {
   try {
-    const { phone, type } = req.body;
+    const { phone, type = 'login' } = req.body;
 
     if (!phone || !/^1[3-9]\d{9}$/.test(phone)) {
       return res.status(400).json({
@@ -325,36 +328,40 @@ router.post('/send-code', async (req, res) => {
       });
     }
 
-    // 生成6位验证码
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5分钟后过期
+    // 获取客户端IP
+    const ip = req.ip || req.connection.remoteAddress || '127.0.0.1';
 
-    // 这里应该调用短信服务发送验证码
-    console.log(`发送验证码到 ${phone}: ${code}`);
+    console.log(`📱 准备发送验证码到 ${phone}, 类型: ${type}, IP: ${ip}`);
 
-    // 在实际应用中，应该将验证码存储到Redis或数据库中
-    // 这里为了演示，我们暂时存储在内存中（生产环境中不要这样做）
-    global.smsVerificationCodes = global.smsVerificationCodes || {};
-    global.smsVerificationCodes[phone] = {
-      code,
-      expiresAt,
-      type
-    };
+    // 调用短信服务发送验证码
+    const result = await smsService.sendCode(phone, type, ip);
 
-    res.json({
-      success: true,
-      message: '验证码发送成功',
-      data: {
-        phone,
-        expiresIn: 300 // 5分钟
-      }
-    });
+    if (result.success) {
+      console.log('✅ 验证码发送成功');
+      res.json({
+        success: true,
+        message: '验证码发送成功',
+        data: {
+          phone,
+          expiresIn: 300 // 5分钟
+        }
+      });
+    } else {
+      console.log('❌ 验证码发送失败:', result.message);
+      res.status(400).json({
+        success: false,
+        error: {
+          message: result.message || '验证码发送失败'
+        }
+      });
+    }
+
   } catch (error) {
-    console.error('发送验证码错误:', error);
+    console.error('❌ 发送验证码异常:', error);
     res.status(500).json({
       success: false,
       error: {
-        message: '发送验证码失败，请稍后重试'
+        message: error.message || '发送验证码失败，请稍后重试'
       }
     });
   }
@@ -384,21 +391,12 @@ router.post('/login-by-phone', async (req, res) => {
     }
 
     // 验证验证码
-    const storedCode = global.smsVerificationCodes?.[phone];
-    if (!storedCode || storedCode.code !== code) {
+    const verifyResult = await smsService.verifyCode(phone, code, 'login');
+    if (!verifyResult.success) {
       return res.status(400).json({
         success: false,
         error: {
-          message: '验证码错误'
-        }
-      });
-    }
-
-    if (new Date() > storedCode.expiresAt) {
-      return res.status(400).json({
-        success: false,
-        error: {
-          message: '验证码已过期'
+          message: verifyResult.message || '验证码验证失败'
         }
       });
     }
@@ -429,8 +427,7 @@ router.post('/login-by-phone', async (req, res) => {
     user.lastLogin = new Date();
     await user.save();
 
-    // 清除验证码
-    delete global.smsVerificationCodes[phone];
+    // 验证码已在smsService.verifyCode中自动标记为已使用
 
     // 生成令牌
     const token = generateToken(user._id);
