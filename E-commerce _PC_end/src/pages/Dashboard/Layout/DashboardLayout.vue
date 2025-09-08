@@ -11,29 +11,9 @@
       :active-color="sidebarBackground"
       :background-image="sidebarBackgroundImage"
       :data-background-color="sidebarBackgroundColor"
+      :sidebar-links="sidebarLinks"
     >
       <mobile-menu></mobile-menu>
-      <template slot="links">
-        <sidebar-item
-          :link="{ name: '仪表板', icon: 'dashboard', path: '/dashboard' }"
-        />
-
-        <sidebar-item opened :link="{ name: '用户管理', image: image }">
-          <sidebar-item
-            :link="{ name: '个人资料', path: '/examples/user-profile' }"
-          />
-          <sidebar-item
-            :link="{
-              name: '用户管理',
-              path: '/examples/user-management/list-users',
-            }"
-          />
-        </sidebar-item>
-
-
-      </template>
-
-
     </side-bar>
 
     <div 
@@ -115,6 +95,7 @@ function reinitScrollbar() {
 import TopNavbar from "./TopNavbar.vue";
 import MobileMenu from "./Extra/MobileMenu.vue";
 import FixedPlugin from "../../FixedPlugin.vue";
+import permissionsMixin from "@/mixins/permissions";
 
 export default {
   components: {
@@ -122,6 +103,7 @@ export default {
     FixedPlugin,
     MobileMenu,
   },
+  mixins: [permissionsMixin],
   data() {
     return {
       sidebarBackgroundColor: "black",
@@ -147,6 +129,12 @@ export default {
         return process.env.BASE_URL + this.currentUser.avatar.replace(/^\//, '');
       }
       return process.env.BASE_URL + "img/default.jpg";
+    },
+    
+    // 从mixin继承dynamicSidebarLinks，这里确保它能正确工作
+    sidebarLinks() {
+      const links = this.dynamicSidebarLinks || [];
+      return links;
     }
   },
 
@@ -161,16 +149,52 @@ export default {
         this.$sidebar.toggleMinimize();
       }
     },
+    // 手动展开侧边栏
+    expandSidebar() {
+      if (this.$sidebar && this.$sidebar.isMinimized) {
+        this.$sidebar.toggleMinimize();
+      }
+    }
   },
   updated() {
     reinitScrollbar();
   },
   async mounted() {
     reinitScrollbar();
+    
     // 如果已认证但没有用户信息，则获取用户信息
     if (this.isAuthenticated && !this.currentUser) {
-      await this.$store.dispatch('auth/fetchCurrentUser');
+      try {
+        await this.$store.dispatch('auth/fetchCurrentUser');
+// console.log('✅ 用户信息获取成功:', this.currentUser);
+      } catch (error) {
+        console.error('❌ 获取用户信息失败:', error);
+        // 如果获取失败，临时使用测试数据（仅开发环境）
+        if (process.env.NODE_ENV === 'development') {
+          // console.log('🔧 开发环境：使用测试数据');
+          this.$store.commit('auth/SET_USER', {
+            _id: "68aee066d310e9a9a6a8b174",
+            username: "superadmin",
+            email: "admin@jsonapi.com",
+            role: "super_admin",
+            avatar: "/img/avatars/admin_68aee066d310e9a9a6a8b174_1757149686512-981827745.png",
+            firstName: "Super",
+            lastName: "Admin",
+            department: "technical",
+            permissions: {
+              users: { view: true, create: true, edit: true, delete: true },
+              products: { view: true, create: true, edit: true, delete: true },
+              orders: { view: true, create: true, edit: true, delete: true },
+              analytics: { view: true, export: true },
+              settings: { view: true, edit: true }
+            },
+            isActive: true
+          });
+          this.$store.commit('auth/SET_AUTHENTICATED', true);
+        }
+      }
     }
+    
     // 更新image为用户头像
     this.image = this.userAvatar;
   },
@@ -181,8 +205,23 @@ export default {
     userAvatar: {
       handler(newAvatar) {
         // 当用户头像更新时，同步更新侧边栏头像
-        console.log('🖼️ 用户头像更新:', newAvatar);
+        // console.log('🖼️ 用户头像更新:', newAvatar);
         this.image = newAvatar;
+      },
+      immediate: true
+    },
+    // 监听用户数据变化，确保侧边栏响应更新
+    currentUser: {
+      handler(newUser) {
+        if (newUser) {
+          // console.log('👤 用户数据更新:', newUser.username);
+          // console.log('🔗 侧边栏链接数量:', this.sidebarLinks.length);
+          // 如果侧边栏是最小化状态且有用户数据，可以考虑展开
+          // 注释掉自动展开，让用户手动控制
+          // if (this.$sidebar.isMinimized) {
+          //   this.$sidebar.toggleMinimize();
+          // }
+        }
       },
       immediate: true
     },

@@ -20,16 +20,16 @@
         />
       </div>
       <md-card-content>
-        <h6 class="category text-gray">{{ user.role | roleText }}</h6>
-        <h4 class="card-title">{{ user.fullName || user.username }}</h4>
+        <h6 class="category text-gray">{{ safeUser.role | roleText }}</h6>
+        <h4 class="card-title">{{ safeUser.fullName }}</h4>
         <p class="card-description">
-          <strong>用户名:</strong> {{ user.username }}<br>
-          <strong>邮箱:</strong> {{ user.email }}<br>
-          <strong>部门:</strong> {{ user.department | departmentText }}<br>
-          <strong>手机号:</strong> {{ user.phone || '未设置' }}<br>
-          <strong>登录次数:</strong> {{ user.loginCount || 0 }} 次<br>
-          <strong>账户状态:</strong> {{ user.isActive ? '正常' : '已禁用' }}<br>
-          <strong>最后登录:</strong> {{ user.lastLogin | formatDate }}
+          <strong>用户名:</strong> {{ safeUser.username }}<br>
+          <strong>邮箱:</strong> {{ safeUser.email }}<br>
+          <strong>部门:</strong> {{ safeUser.department | departmentText }}<br>
+          <strong>手机号:</strong> {{ safeUser.phone }}<br>
+          <strong>登录次数:</strong> {{ safeUser.loginCount }} 次<br>
+          <strong>账户状态:</strong> {{ safeUser.isActive ? '正常' : '已禁用' }}<br>
+          <strong>最后登录:</strong> {{ safeUser.lastLogin | formatDate }}
         </p>
         <div class="action-buttons">
           <md-button 
@@ -76,7 +76,16 @@
     props: {
       user: {
         type: Object,
-        default: () => ({})
+        default: () => ({
+          username: '加载中...',
+          email: '',
+          role: 'staff',
+          department: 'technical',
+          phone: '',
+          loginCount: 0,
+          isActive: true,
+          lastLogin: null
+        })
       }
     },
     data() {
@@ -93,6 +102,8 @@
     },
     computed: {
       userAvatar() {
+        if (!this.user) return this.defaultAvatar;
+        
         if (this.user.avatar && this.user.avatar !== '/img/default.jpg') {
           // 如果头像路径已经是完整URL，直接使用
           if (this.user.avatar.startsWith('http')) {
@@ -103,6 +114,24 @@
           return process.env.BASE_URL + avatarPath.replace(/^\//, '');
         }
         return this.defaultAvatar;
+      },
+      
+      safeUser() {
+        // 确保用户对象的所有属性都有安全的默认值
+        return {
+          username: this.user?.username || '未知用户',
+          email: this.user?.email || '',
+          role: this.user?.role || 'staff',
+          department: this.user?.department || 'technical',
+          phone: this.user?.phone || '未设置',
+          loginCount: this.user?.loginCount || 0,
+          isActive: this.user?.isActive !== undefined ? this.user.isActive : true,
+          lastLogin: this.user?.lastLogin || null,
+          fullName: this.user?.fullName || (this.user?.firstName && this.user?.lastName 
+            ? `${this.user.firstName} ${this.user.lastName}` 
+            : this.user?.username || '未知用户'),
+          ...this.user
+        };
       }
     },
     filters: {
