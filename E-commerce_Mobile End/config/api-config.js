@@ -11,7 +11,7 @@ const getCurrentDeviceIP = () => {
   // Mac: 打开终端，输入 ifconfig，查看inet地址
   // 或者在HBuilderX控制台启动时会显示IP地址
   
-  return '192.168.157.4'; // 请替换为实际的电脑IP地址
+  return '192.168.107.128'; // 请替换为实际的电脑IP地址
 };
 
 // API配置
