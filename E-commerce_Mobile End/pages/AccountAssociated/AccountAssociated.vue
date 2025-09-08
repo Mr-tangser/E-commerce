@@ -125,6 +125,20 @@
 			console.log('📱 账号关联页面已加载');
 			console.log('🔧 API配置地址:', this.apiBaseUrl);
 			await this.checkFaceStatus();
+			
+			// 监听用户状态变化
+			uni.$on('userStatusChange', this.handleUserStatusChange);
+		},
+		
+		async onShow() {
+			// 页面显示时重新检查状态
+			console.log('📱 账号关联页面显示，重新检查人脸状态');
+			await this.checkFaceStatus();
+		},
+		
+		onUnload() {
+			// 移除事件监听
+			uni.$off('userStatusChange', this.handleUserStatusChange);
 		},
 		
 		methods:{
@@ -171,23 +185,53 @@
 			},
 			
 			/**
+			 * 处理用户状态变化
+			 */
+			async handleUserStatusChange(data) {
+				console.log('📡 收到用户状态变化:', data);
+				if (data.isLoggedIn) {
+					// 用户登录，重新检查人脸状态
+					await this.checkFaceStatus();
+				} else {
+					// 用户退出，重置状态
+					this.faceStatus = '未关联';
+				}
+			},
+			
+			/**
 			 * 检查人脸关联状态
 			 */
 			async checkFaceStatus() {
 				try {
 					const token = uni.getStorageSync('token');
-					if (!token) {
-						console.log('用户未登录');
+					const user = uni.getStorageSync('user');
+					
+					// 验证token格式
+					if (!token || typeof token !== 'string' || token.trim() === '') {
+						console.log('❌ Token无效或不存在');
+						this.faceStatus = '未关联';
+						this.handleInvalidToken();
+						return;
+					}
+					
+					// 检查token格式（JWT token应该有3个部分，用.分隔）
+					const tokenParts = token.split('.');
+					if (tokenParts.length !== 3) {
+						console.log('❌ Token格式错误，不是有效的JWT token');
+						this.faceStatus = '未关联';
+						this.handleInvalidToken();
 						return;
 					}
 					
 					console.log('🔍 检查人脸关联状态...');
 					console.log('📡 API地址:', `${this.apiBaseUrl}/auth/face/check`);
+					console.log('👤 当前用户:', user ? `${user.username || user.email}` : '未知');
+					console.log('🎫 Token格式验证通过，长度:', token.length);
 					
 					const response = await uni.request({
 						url: `${this.apiBaseUrl}/auth/face/check`,
 						method: 'GET',
-						timeout: 10000,
+						timeout: 15000, // 增加超时时间
 						header: {
 							'Authorization': `Bearer ${token}`,
 							'Accept': 'application/json'
@@ -197,24 +241,56 @@
 					console.log('📨 状态检查响应:', response);
 					
 					if (response.statusCode === 200 && response.data && response.data.success) {
-						this.faceStatus = response.data.data.hasFace ? '已关联' : '未关联';
-						console.log('✅ 人脸状态:', this.faceStatus);
+						const hasFace = response.data.data.hasFace;
+						this.faceStatus = hasFace ? '已关联' : '未关联';
+						console.log('✅ 人脸状态更新:', this.faceStatus, '| hasFace:', hasFace);
+						
+						// 额外验证：检查本地存储是否有生物识别用户数据
+						const biometricUser = uni.getStorageSync('biometric_user');
+						if (biometricUser && !hasFace) {
+							console.log('⚠️ 发现状态不一致：本地有生物识别数据但服务器显示未关联');
+							// 可以在这里添加额外的验证逻辑
+						}
 					} else {
-						console.log('⚠️ 状态检查失败，使用默认状态');
-						this.faceStatus = '未关联';
+						console.log('⚠️ 状态检查失败，服务器响应:', response);
+						// 检查是否是权限问题
+						if (response.statusCode === 401) {
+							console.log('🔑 Token验证失败或已过期');
+							this.faceStatus = '未关联';
+							this.handleInvalidToken();
+						} else {
+							console.log('⚠️ 其他错误，使用默认状态');
+							this.faceStatus = '未关联';
+						}
 					}
 				} catch (error) {
 					console.error('❌ 检查人脸状态失败:', error);
-					this.faceStatus = '未关联';
 					
-					// 如果是网络错误，给用户提示
-					if (error.errMsg && error.errMsg.includes('timeout')) {
-						uni.showToast({
-							title: '网络连接超时',
-							icon: 'none',
-							duration: 2000
-						});
+					// 更详细的错误处理
+					let errorMessage = '检查状态失败';
+					if (error.errMsg) {
+						if (error.errMsg.includes('timeout')) {
+							errorMessage = '网络连接超时';
+						} else if (error.errMsg.includes('fail')) {
+							errorMessage = '网络连接失败';
+						} else {
+							errorMessage = `连接错误: ${error.errMsg}`;
+						}
+						
+						console.log('🔧 错误详情:', errorMessage);
+						
+						// 只在超时情况下提示用户，避免过多干扰
+						if (error.errMsg.includes('timeout')) {
+							uni.showToast({
+								title: errorMessage,
+								icon: 'none',
+								duration: 2000
+							});
+						}
 					}
+					
+					// 设置默认状态
+					this.faceStatus = '未关联';
 				}
 			},
 			
@@ -318,9 +394,19 @@
 					console.log('👤 用户信息:', user ? `已获取(${user.username || user.phone})` : '❌ 未获取');
 					console.log('📄 文件路径:', imagePath);
 					
-					// 检查登录状态
-					if (!token) {
-						throw new Error('请先登录账户再注册人脸');
+					// 检查登录状态和token格式
+					if (!token || typeof token !== 'string' || token.trim() === '') {
+						console.log('❌ Token缺失或无效');
+						this.handleInvalidToken();
+						return;
+					}
+					
+					// 验证JWT token格式
+					const tokenParts = token.split('.');
+					if (tokenParts.length !== 3) {
+						console.log('❌ Token格式错误，不是有效的JWT');
+						this.handleInvalidToken();
+						return;
 					}
 					
 					if (!user) {
@@ -342,7 +428,13 @@
 							timeout: 30000, // 30秒超时
 							success: (res) => {
 								console.log('✅ 上传成功:', res);
-								resolve(res);
+								// 检查是否是401错误（token无效）
+								if (res.statusCode === 401) {
+									console.log('🔑 服务器返回401，Token可能无效');
+									reject(new Error('INVALID_TOKEN'));
+								} else {
+									resolve(res);
+								}
 							},
 							fail: (err) => {
 								console.error('❌ 上传失败详情:', err);
@@ -380,6 +472,28 @@
 						this.statusClass = 'success';
 						this.faceStatus = '已关联';
 						
+						// 更新本地存储，确保状态同步
+						const user = uni.getStorageSync('user');
+						if (user) {
+							user.hasFace = true;
+							user.faceRegisterTime = new Date().toISOString();
+							uni.setStorageSync('user', user);
+							
+							// 也更新生物识别用户数据
+							const biometricUser = uni.getStorageSync('biometric_user');
+							if (biometricUser) {
+								biometricUser.hasFace = true;
+								biometricUser.faceRegisterTime = new Date().toISOString();
+								uni.setStorageSync('biometric_user', biometricUser);
+							}
+						}
+						
+						// 触发全局状态更新
+						uni.$emit('faceStatusChange', {
+							hasFace: true,
+							faceRegisterTime: new Date()
+						});
+						
 						// 延迟关闭弹窗
 						setTimeout(() => {
 							this.closeFaceModal();
@@ -408,6 +522,12 @@
 					}
 				} catch (error) {
 					console.error('❌ 人脸注册失败:', error);
+					
+					// 特殊处理：Token无效
+					if (error.message === 'INVALID_TOKEN') {
+						this.handleInvalidToken();
+						return;
+					}
 					
 					// 根据错误类型提供不同的提示
 					let errorMessage = '注册失败，请重试';
@@ -538,6 +658,14 @@
 					
 					// 调用注册接口 - 使用uni.uploadFile
 					const token = uni.getStorageSync('token');
+					
+					// 验证token格式
+					if (!token || typeof token !== 'string' || token.trim() === '' || token.split('.').length !== 3) {
+						console.log('❌ Token无效，无法注册人脸');
+						this.handleInvalidToken();
+						return;
+					}
+					
 					const response = await new Promise((resolve, reject) => {
 						uni.uploadFile({
 							url: `${this.apiBaseUrl}/auth/face/register`,
@@ -604,11 +732,53 @@
 			},
 			
 			/**
+			 * 处理无效Token
+			 */
+			handleInvalidToken() {
+				console.log('🔄 处理无效Token，清除本地数据');
+				
+				// 清除本地存储的认证数据
+				uni.removeStorageSync('token');
+				uni.removeStorageSync('user');
+				uni.removeStorageSync('biometric_user');
+				
+				// 显示友好的提示
+				uni.showModal({
+					title: '登录已过期',
+					content: '您的登录状态已过期，请重新登录',
+					showCancel: false,
+					confirmText: '去登录',
+					success: (res) => {
+						if (res.confirm) {
+							// 跳转到登录页面
+							uni.reLaunch({
+								url: '/pages/login/login'
+							});
+						}
+					}
+				});
+				
+				// 触发全局用户状态更新
+				uni.$emit('userStatusChange', {
+					isLoggedIn: false,
+					user: null
+				});
+			},
+			
+			/**
 			 * 解除人脸关联
 			 */
 			async removeFaceAssociation() {
 				try {
 					const token = uni.getStorageSync('token');
+					
+					// 验证token
+					if (!token || typeof token !== 'string' || token.trim() === '' || token.split('.').length !== 3) {
+						console.log('❌ Token无效，无法解除关联');
+						this.handleInvalidToken();
+						return;
+					}
+					
 					const response = await uni.request({
 						url: `${this.apiBaseUrl}/auth/face/remove`,
 						method: 'DELETE',
@@ -617,8 +787,32 @@
 						}
 					});
 					
+					if (response.statusCode === 401) {
+						console.log('🔑 Token验证失败，无法解除关联');
+						this.handleInvalidToken();
+						return;
+					}
+					
 					if (response.data && response.data.success) {
 						this.faceStatus = '未关联';
+						
+						// 更新本地存储状态
+						const user = uni.getStorageSync('user');
+						if (user) {
+							user.hasFace = false;
+							user.faceRegisterTime = null;
+							uni.setStorageSync('user', user);
+						}
+						
+						// 清除生物识别用户数据
+						uni.removeStorageSync('biometric_user');
+						
+						// 触发全局状态更新
+						uni.$emit('faceStatusChange', {
+							hasFace: false,
+							faceRegisterTime: null
+						});
+						
 						uni.showToast({
 							title: '解除关联成功',
 							icon: 'success'

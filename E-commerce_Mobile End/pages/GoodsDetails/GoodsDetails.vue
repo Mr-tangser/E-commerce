@@ -548,7 +548,7 @@ export default {
 				// 直接使用uni.request获取商品详情
 				const response = await new Promise((resolve, reject) => {
 					uni.request({
-						url: `http://192.168.143.4:3000/api/products/${this.productId}`,
+						url: `http://192.168.107.128:3000/api/products/${this.productId}`,
 						method: 'GET',
 						timeout: 10000,
 						success: (res) => {
