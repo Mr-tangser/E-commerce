@@ -39,7 +39,7 @@ app.use(helmet());
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
     ? ['https://yourdomain.com'] 
-    : ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:8080', 'http://localhost:8081', 'http://192.168.92.58:3000','192.168.134.128','192.168.160.128','http://192.168.157.4:3000','192.168.143.4:3000'],
+    : ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:8080', 'http://localhost:8081', 'http://192.168.92.58:3000','192.168.134.128','192.168.160.128','http://192.168.157.4:3000','192.168.143.4:3000','192.168.43.16:3000','192.168.107.128:3000'],
   credentials: true
 }));
 

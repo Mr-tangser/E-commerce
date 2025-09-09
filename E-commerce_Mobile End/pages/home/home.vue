@@ -257,6 +257,8 @@ import WaterfallFlow from '../../components/WaterfallFlow/WaterfallFlow.vue';
 // 引入mescroll-mixins.js
 import MescrollMixin from "@/components/mescroll-uni/mescroll-mixins.js";
 import api from '@/utils/api.js';
+// 导入配置模块
+import ENV_CONFIG from '../../config/env.js';
 export default {
   mixins: [MescrollMixin], // 使用mixin
 	components:{
@@ -676,12 +678,14 @@ export default {
 			
 			try {
 				console.log('🔗 测试API连通性...');
-				console.log('📍 当前API地址:', 'http://192.168.143.4:3000/api');
+				// 从配置模块获取API地址
+				const apiBaseUrl = ENV_CONFIG.SERVER_URL
+				console.log('📍 当前API地址:', `${apiBaseUrl}/api`);
 				
 				// 使用Promise封装uni.request以获得更好的错误处理
 				const testResponse = await new Promise((resolve, reject) => {
 					uni.request({
-						url: 'http://192.168.143.4:3000/health',
+						url: `${apiBaseUrl}/health`,
 						method: 'GET',
 						timeout: 10000,
 						success: (res) => {
@@ -728,12 +732,14 @@ export default {
 			
 			try {
 				console.log('🔄 开始加载首页分类数据...');
-				console.log('🌐 API基础URL:', 'http://192.168.143.4:3000/api');
+				// 从配置模块获取API地址
+				const apiBaseUrl = ENV_CONFIG.BASE_URL
+				console.log('🌐 API基础URL:', apiBaseUrl);
 				
 				// 直接使用uni.request获取分类数据
 				const response = await new Promise((resolve, reject) => {
 					uni.request({
-						url: 'http://192.168.143.4:3000/api/categories/homepage',
+						url: `${apiBaseUrl}/categories/homepage`,
 						method: 'GET',
 						timeout: 10000,
 						success: (res) => {
@@ -835,9 +841,12 @@ export default {
 				console.log('🛒 开始加载推荐商品数据...');
 				
 				// 直接使用uni.request获取商品数据，初始加载6个商品（偶数）
+				// 从配置模块获取API地址
+				const apiBaseUrl = ENV_CONFIG.BASE_URL
+				
 				const response = await new Promise((resolve, reject) => {
 					uni.request({
-						url: 'http://192.168.143.4:3000/api/products',
+						url: `${apiBaseUrl}/products`,
 						method: 'GET',
 						data: {
 							limit: 6, // 初始加载6个商品，确保偶数
@@ -1040,10 +1049,13 @@ export default {
 				this.isLoadingMore = true;
 				console.log('🔄 开始加载第', page.num, '页商品数据...');
 				
+				// 从配置模块获取API地址
+				const apiBaseUrl = ENV_CONFIG.BASE_URL
+				
 				// 从后端API获取更多商品数据
 				const response = await new Promise((resolve, reject) => {
 					uni.request({
-						url: 'http://192.168.143.4:3000/api/products',
+						url: `${apiBaseUrl}/products`,
 						method: 'GET',
 						data: {
 							limit: 6, // 每次加载6个商品，确保偶数
@@ -1270,10 +1282,13 @@ export default {
 				const productType = this.extractProductType(clickedItem);
 				console.log('📝 提取的商品类型:', productType);
 				
+				// 从配置模块获取API地址
+				const apiBaseUrl = ENV_CONFIG.BASE_URL
+				
 				// 调用后端API获取相似类型的商品
 				const response = await new Promise((resolve, reject) => {
 					uni.request({
-						url: 'http://192.168.143.4:3000/api/products',
+						url: `${apiBaseUrl}/products`,
 						method: 'GET',
 						data: {
 							limit: 6, // 获取6个推荐商品

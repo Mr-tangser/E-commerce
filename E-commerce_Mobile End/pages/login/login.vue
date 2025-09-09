@@ -348,6 +348,13 @@ export default {
           uni.setStorageSync('token', response.data.token);
           uni.setStorageSync('user', response.data.user); // 改为'user'以保持一致
           
+          // 同时保存一份用户信息供生物识别登录使用
+          uni.setStorageSync('biometric_user', {
+            ...response.data.user,
+            token: response.data.token,
+            timestamp: Date.now()
+          });
+          
           console.log('✅ 登录成功，用户数据已保存:', response.data.user);
           
           // 触发全局用户状态更新事件
@@ -425,6 +432,13 @@ export default {
             // 保存登录信息 - 与"我的"页面保持一致
             uni.setStorageSync('token', wechatResponse.data.token);
             uni.setStorageSync('user', wechatResponse.data.user); // 改为'user'以保持一致
+            
+            // 同时保存一份用户信息供生物识别登录使用
+            uni.setStorageSync('biometric_user', {
+              ...wechatResponse.data.user,
+              token: wechatResponse.data.token,
+              timestamp: Date.now()
+            });
             
             console.log('✅ 微信登录成功，用户数据已保存:', wechatResponse.data.user);
             
@@ -598,49 +612,43 @@ export default {
      * 生物识别登录成功处理
      */
     async biometricLoginSuccess() {
-      // 使用本地存储的用户信息进行快速登录
-      const savedUserInfo = uni.getStorageSync('biometric_user');
-      
-      if (savedUserInfo) {
-        const res = await uni.request({
-          url: 'http://your-api-domain.com/api/auth/biometric-login',
-          method: 'POST',
-          data: {
-            userId: savedUserInfo.userId,
-            biometricToken: savedUserInfo.biometricToken
-          }
-        });
+      try {
+        console.log('🎭 执行生物识别登录成功处理...');
         
-        if (res.data.code === 200) {
-          // 保存登录信息 - 与"我的"页面保持一致
-          uni.setStorageSync('token', res.data.data.token);
-          uni.setStorageSync('user', res.data.data.userInfo); // 改为'user'以保持一致
+        // 从本地存储获取用户信息（优先使用 biometric_user，备选 user）
+        const savedUserInfo = uni.getStorageSync('biometric_user') || uni.getStorageSync('user');
+        
+        if (savedUserInfo) {
+          // 保存登录信息 - 与账户密码登录保持一致的格式
+          const token = savedUserInfo.token || 'biometric_token_' + Date.now();
+          uni.setStorageSync('token', token);
+          uni.setStorageSync('user', savedUserInfo);
           
           // 触发全局用户状态更新事件
           uni.$emit('userStatusChange', {
             isLoggedIn: true,
-            user: res.data.data.userInfo
+            user: savedUserInfo
           });
           
-          console.log('✅ 生物识别登录成功，用户数据已保存:', res.data.data.userInfo);
+          console.log('✅ 生物识别登录成功，用户数据已保存:', savedUserInfo);
           
           uni.showToast({
-            title: '登录成功',
+            title: '人脸登录成功',
             icon: 'success'
           });
           
           // 检查是否需要完善个人信息
-          const user = res.data.data.userInfo || {};
-          const needProfile = !user.address || !user.address.receiverName || !user.address.province;
+          const needProfile = !savedUserInfo.address || !savedUserInfo.address?.receiverName || !savedUserInfo.address?.province;
           
           console.log('🔍 生物识别用户信息检查:', {
-            user: user,
-            hasAddress: !!user.address,
-            hasReceiverName: !!(user.address && user.address.receiverName),
-            hasProvince: !!(user.address && user.address.province),
+            user: savedUserInfo,
+            hasAddress: !!savedUserInfo.address,
+            hasReceiverName: !!(savedUserInfo.address && savedUserInfo.address.receiverName),
+            hasProvince: !!(savedUserInfo.address && savedUserInfo.address.province),
             needProfile: needProfile
           });
           
+          // 跳转逻辑：如果用户信息不完整，跳转到完善信息页面，否则跳转到首页
           setTimeout(() => {
             if (needProfile) {
               console.log('🔄 生物识别用户信息不完整，但强制跳转到首页 (调试模式)')
@@ -651,13 +659,29 @@ export default {
               // uni.navigateTo({
               //   url: '/pages/UserProfile/UserProfile'
               // });
-                          } else {
-                console.log('🏠 生物识别登录成功，准备跳转到首页...')
-                console.log('🔍 生物识别用户信息完整，开始执行跳转逻辑')
-                this.navigateToHomeForMobile();
-              }
+            } else {
+              console.log('🏠 生物识别登录成功，准备跳转到首页...')
+              console.log('🔍 生物识别用户信息完整，开始执行跳转逻辑')
+              // 调用真机调试专用跳转方法
+              this.navigateToHomeForMobile();
+            }
           }, 1500);
+        } else {
+          // 如果没有保存的用户信息，提示用户先进行普通登录
+          console.log('❌ 未找到本地用户信息，提示用户先进行普通登录');
+          uni.showModal({
+            title: '提示',
+            content: '请先使用账户密码登录一次，以便保存您的登录信息',
+            showCancel: false
+          });
         }
+      } catch (error) {
+        console.error('❌ 生物识别登录处理异常:', error);
+        uni.showToast({
+          title: error.message || '登录处理失败',
+          icon: 'none',
+          duration: 3000
+        });
       }
     },
     

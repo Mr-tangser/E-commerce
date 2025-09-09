@@ -181,7 +181,7 @@
 <script>
 import axios from 'axios'
 import FaceRecognition from '@/components/FaceRecognition/FaceRecognition.vue'
-import { authenticateWithFace } from '@/utils/biometricAuth.js'
+import BiometricAuth from '@/utils/biometricAuth.js'
 
 export default {
   name: 'LoginPage',
@@ -321,16 +321,25 @@ export default {
       this.faceLoading = true;
       
       try {
-        // 使用biometricAuth工具进行人脸识别
-        const result = await authenticateWithFace();
+        // 使用BiometricAuth工具进行人脸识别
+        const result = await BiometricAuth.authenticateWithFace();
         console.log('👤 人脸识别结果:', result);
         
         if (result.success) {
-          // 人脸识别成功，直接登录
-          this.handleLoginSuccess({
-            message: result.message,
-            data: result.data
-          });
+          // 人脸识别成功，需要从本地存储获取用户数据并调用登录成功处理
+          const savedUserInfo = uni.getStorageSync('biometric_user') || uni.getStorageSync('user');
+          
+          if (savedUserInfo) {
+            this.handleLoginSuccess({
+              message: result.message || '人脸登录成功',
+              data: {
+                user: savedUserInfo,
+                token: savedUserInfo.token || 'biometric_token_' + Date.now()
+              }
+            });
+          } else {
+            this.showMessage('warning', '请先使用账户密码登录一次，以便保存您的登录信息');
+          }
         } else {
           // 特殊处理需要重新注册人脸的情况
           if (result.needRegister) {
@@ -433,6 +442,13 @@ export default {
       if (data.data.user) {
         uni.setStorageSync('user', data.data.user)
         console.log('✅ 用户信息已保存:', data.data.user)
+        
+        // 同时保存一份用户信息供生物识别登录使用
+        uni.setStorageSync('biometric_user', {
+          ...data.data.user,
+          token: data.data.token,
+          timestamp: Date.now()
+        });
         
         // 触发全局用户状态更新事件
         uni.$emit('userStatusChange', {

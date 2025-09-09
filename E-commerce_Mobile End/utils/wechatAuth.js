@@ -3,6 +3,9 @@
  * 支持微信小程序登录和App微信登录
  */
 
+// 导入环境配置
+import ENV_CONFIG from '../config/env.js';
+
 class WechatAuth {
   
   /**
@@ -221,7 +224,8 @@ class WechatAuth {
   static async sendToServer(data) {
     return new Promise((resolve, reject) => {
       uni.request({
-        url: 'http://your-api-domain.com/api/auth/wechat-login',
+        // 从配置模块获取API地址
+        url: `${ENV_CONFIG.BASE_URL}/auth/wechat-login`,
         method: 'POST',
         data: data,
         success: (res) => {
