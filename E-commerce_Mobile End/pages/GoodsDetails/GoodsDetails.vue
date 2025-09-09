@@ -359,6 +359,8 @@ import GoodsCoupon from '../../components/GoodsCoupon/GoodsCoupon.vue';
 import GoodsAttr from '../../components/GoodsAttr/GoodsAttr.vue';
 import api from '@/utils/api.js';
 import BrowsingHistory from '@/utils/browsing-history.js';
+// 导入环境配置
+import ENV_CONFIG from '../../config/env.js';
 
 export default {
   components: {
@@ -546,8 +548,9 @@ export default {
 				}, 10000); // 10秒超时
 				
 				// 直接使用uni.request获取商品详情
-				// 从配置模块获取API地址（临时方案）
-				const apiBaseUrl = 'http://192.168.107.128:3000/api'
+				// 从配置模块获取API地址
+				const apiBaseUrl = ENV_CONFIG.BASE_URL;
+				console.log('📦 商品详情API地址:', apiBaseUrl);
 				
 				const response = await new Promise((resolve, reject) => {
 					uni.request({
