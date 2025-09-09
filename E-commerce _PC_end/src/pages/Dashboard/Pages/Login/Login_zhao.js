@@ -1,6 +1,7 @@
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Lenis from "lenis";
+import { encryptAES, getCurrentTimestamp } from '@/utils/crypto';
 
 export default {
   data() {
@@ -12,36 +13,63 @@ export default {
       context: null,
       lenis: null,
       currentTheme: 'morning', // 当前主题
+      // 预加载组件控制
+      preloaderShow: true,
+      preloadProgress: 0,
       // 表单控制
       showLoginForm: false,
-      showRegister: false,
       loginLoading: false,
-      registerLoading: false,
       errorMessage: '',
+      showPassword: false, // 密码显示隐藏控制
+      // 验证码相关
+      captchaLoading: false,
+      captchaSvg: '',
+      captchaId: '',
       // 登录表单数据
       loginForm: {
         identifier: '', // 用户名或邮箱
-        password: ''
-      },
-      // 注册表单数据
-      registerForm: {
-        username: '',
         password: '',
-        confirmPassword: ''
-      }
+        captchaCode: '' // 验证码
+      },
+      // 事件处理器引用，用于清理
+      handleResize: null
     }
   },
 
   mounted() {
     this.applyTheme(); // 应用时间主题
     this.initializeApp();
+    this.loadCaptcha(); // 加载验证码
   },
 
   beforeUnmount() {
+    // 完全清理所有滚动相关的实例
     if (this.lenis) {
       this.lenis.destroy();
+      this.lenis = null;
     }
+    
+    // 清理所有ScrollTrigger实例
     ScrollTrigger.getAll().forEach(trigger => trigger.kill());
+    ScrollTrigger.refresh();
+    
+    // 移除所有GSAP动画
+    gsap.killTweensOf("*");
+    
+    // 清理window事件监听器
+    window.removeEventListener("resize", this.handleResize);
+    
+    // 重置body类名，清理可能的滚动干扰
+    document.body.classList.remove('no-scroll', 'login-page');
+    
+    // 确保恢复正常的滚动行为
+    document.documentElement.style.overflow = '';
+    document.body.style.overflow = '';
+  },
+
+  beforeDestroy() {
+    // Vue 2兼容性
+    this.beforeUnmount();
   },
 
   methods: {
@@ -67,7 +95,8 @@ export default {
         this.context = canvas.getContext("2d");
         this.setCanvasSize();
         
-        window.addEventListener("resize", () => {
+        // 定义resize处理器，以便后续清理
+        this.handleResize = () => {
           try {
             this.setCanvasSize();
             this.render();
@@ -75,7 +104,9 @@ export default {
           } catch (error) {
             console.warn('Canvas resize error suppressed:', error);
           }
-        });
+        };
+        
+        window.addEventListener("resize", this.handleResize);
       } catch (error) {
         console.warn('Canvas setup error suppressed:', error);
       }
@@ -169,9 +200,16 @@ export default {
     onLoad() {
       this.imagesToLoad--;
 
+      // 更新预加载进度（四舍五入为整数）
+      const loaded = this.frameCount - this.imagesToLoad;
+      this.preloadProgress = Math.max(0, Math.min(100, Math.round((loaded / this.frameCount) * 100)));
+
       if(!this.imagesToLoad) {
+        this.preloadProgress = 100;
         this.render();
         this.setupScrollTrigger();
+        // 让预加载组件完成100%后上浮离场
+        // 组件收到100%会自动触发退出动画
       }
     },
 
@@ -295,10 +333,25 @@ export default {
             // 动画完成后显示登录表单，添加延迟让动画完全结束
             setTimeout(() => {
               this.showLoginForm = true;
+              // 给Vue足够时间更新DOM，然后触发动画
+              this.$nextTick(() => {
+                setTimeout(() => {
+                  const loginContainer = document.querySelector('.login-container');
+                  if (loginContainer) {
+                    loginContainer.classList.add('show');
+                  }
+                }, 100);
+              });
             }, 500);
           }
         }
       })
+    },
+
+    // 预加载完成回调
+    handlePreloaderFinished() {
+      // 隐藏预加载组件的占位
+      this.preloaderShow = false;
     },
 
     // 处理登录
@@ -311,10 +364,26 @@ export default {
       this.errorMessage = '';
 
       try {
+        // 重新启用加密功能
+        const timestamp = getCurrentTimestamp();
+        
+        // 加密密码
+        let encryptedPassword;
+        try {
+          encryptedPassword = encryptAES(this.loginForm.password, timestamp);
+        } catch (error) {
+          console.error('前端加密失败:', error);
+          this.errorMessage = '密码加密失败，请重试';
+          return;
+        }
+        
         // 调用后端admin登录接口
         const loginData = {
           identifier: this.loginForm.identifier,
-          password: this.loginForm.password
+          password: encryptedPassword,
+          captchaId: this.captchaId,
+          captchaCode: this.loginForm.captchaCode,
+          timestamp: timestamp
         };
         
         const response = await this.$http.post('http://localhost:3000/api/admin/login', loginData);
@@ -329,15 +398,16 @@ export default {
           localStorage.setItem('admin_info', JSON.stringify(adminInfo));
           
           // 更新Vuex状态
-          this.$store.commit('SET_AUTHENTICATED', true);
-          this.$store.commit('SET_USER', adminInfo);
+          this.$store.commit('auth/SET_AUTHENTICATED', true);
+          this.$store.commit('auth/SET_USER', adminInfo);
           
           // 登录成功提示
           this.$notify({
             message: `欢迎回来，${adminInfo.fullName || adminInfo.username}！`,
             horizontalAlign: 'right',
             verticalAlign: 'top',
-            type: 'success'
+            type: 'success',
+            timeout: 4000  // 欢迎信息显示4秒
           });
           
           // 延迟跳转到仪表板
@@ -353,58 +423,68 @@ export default {
         } else {
           this.errorMessage = '登录失败，请检查网络连接后重试';
         }
+        
+        // 登录失败时刷新验证码
+        this.refreshCaptcha();
       } finally {
         this.loginLoading = false;
       }
     },
 
-    // 处理注册
-    async handleRegister() {
-      if (!this.validateRegisterForm()) {
-        return;
-      }
-
-      this.registerLoading = true;
-      this.errorMessage = '';
-
+    // 加载验证码
+    async loadCaptcha() {
+      this.captchaLoading = true;
       try {
-        // 调用后端admin注册接口
-        const registerData = {
-          username: this.registerForm.username,
-          password: this.registerForm.password
-        };
-        
-        const response = await this.$http.post('http://localhost:3000/api/admin/register', registerData);
+        const response = await this.$http.get('http://localhost:3000/api/captcha/generate');
         
         if (response.data.success) {
-          // 注册成功提示
-          this.$notify({
-            message: '注册成功！请使用新账户登录。',
-            horizontalAlign: 'right',
-            verticalAlign: 'top',
-            type: 'success'
-          });
-          
-          this.switchToLogin();
-          this.resetRegisterForm();
-        }
-        
-      } catch (error) {
-        console.error('注册错误:', error);
-        if (error.response?.data?.error?.message) {
-          this.errorMessage = error.response.data.error.message;
+          this.captchaId = response.data.data.captchaId;
+          this.captchaSvg = response.data.data.captchaSvg;
+          console.log('验证码加载成功:', this.captchaId);
         } else {
-          this.errorMessage = '注册失败，请检查网络连接后重试';
+          this.errorMessage = '验证码加载失败，请刷新页面重试';
         }
+      } catch (error) {
+        console.error('加载验证码失败:', error);
+        this.errorMessage = '验证码服务暂时不可用';
       } finally {
-        this.registerLoading = false;
+        this.captchaLoading = false;
       }
     },
+
+    // 刷新验证码
+    async refreshCaptcha() {
+      // 清空当前验证码输入
+      this.loginForm.captchaCode = '';
+      await this.loadCaptcha();
+    },
+
+    // 切换密码显示隐藏
+    togglePassword() {
+      this.showPassword = !this.showPassword;
+    },
+
 
     // 验证登录表单
     validateLoginForm() {
       if (!this.loginForm.identifier || !this.loginForm.password) {
         this.errorMessage = '请填写用户名/邮箱和密码';
+        return false;
+      }
+      
+      if (!this.loginForm.captchaCode) {
+        this.errorMessage = '请输入验证码';
+        return false;
+      }
+      
+      if (this.loginForm.captchaCode.length !== 4) {
+        this.errorMessage = '验证码必须为4位';
+        return false;
+      }
+      
+      if (!this.captchaId) {
+        this.errorMessage = '验证码已失效，请刷新验证码';
+        this.refreshCaptcha();
         return false;
       }
       
@@ -429,67 +509,7 @@ export default {
       return true;
     },
 
-    // 验证注册表单
-    validateRegisterForm() {
-      const { username, password, confirmPassword } = this.registerForm;
-      
-      // 清空之前的错误信息
-      this.errorMessage = '';
-      
-      if (!username || !password || !confirmPassword) {
-        this.errorMessage = '请填写所有注册信息';
-        return false;
-      }
-      
-      if (username.length < 2) {
-        this.errorMessage = '用户名至少需要2个字符';
-        return false;
-      }
-      
-      if (username.length > 20) {
-        this.errorMessage = '用户名不能超过20个字符';
-        return false;
-      }
-      
-      // 用户名只能包含字母、数字、中文和下划线
-      const usernameRegex = /^[\u4e00-\u9fa5a-zA-Z0-9_]+$/;
-      if (!usernameRegex.test(username)) {
-        this.errorMessage = '用户名只能包含中文、字母、数字和下划线';
-        return false;
-      }
-      
-      if (password.length < 6) {
-        this.errorMessage = '密码至少需要6个字符';
-        return false;
-      }
-      
-      if (password.length > 50) {
-        this.errorMessage = '密码不能超过50个字符';
-        return false;
-      }
-      
-      if (password !== confirmPassword) {
-        this.errorMessage = '两次输入的密码不一致，请重新确认';
-        return false;
-      }
-      
-      // 密码强度检查（可选）
-      if (password.length >= 6 && password.length < 8) {
-        // 不阻止注册，但给出建议
-        console.warn('建议使用8位以上密码以提高安全性');
-      }
-      
-      return true;
-    },
 
-    // 重置注册表单
-    resetRegisterForm() {
-      this.registerForm = {
-        username: '',
-        password: '',
-        confirmPassword: ''
-      };
-    },
 
     // 判断是否为邮箱登录
     isEmailLogin(identifier) {
@@ -497,21 +517,6 @@ export default {
       return emailRegex.test(identifier);
     },
 
-    // 切换到注册表单
-    switchToRegister() {
-      this.showRegister = true;
-      this.errorMessage = '';
-      // 清空登录表单错误状态
-      this.loginLoading = false;
-    },
-
-    // 切换到登录表单
-    switchToLogin() {
-      this.showRegister = false;
-      this.errorMessage = '';
-      // 清空注册表单错误状态
-      this.registerLoading = false;
-    },
 
     // 显示登录表单并滚动到正确位置
     scrollToLogin() {
@@ -534,11 +539,26 @@ export default {
         setTimeout(() => {
           const loginContainer = document.querySelector('.login-container');
           if (loginContainer) {
-            loginContainer.style.display = 'flex';
-            loginContainer.style.opacity = '1';
+            loginContainer.classList.add('show');
           }
         }, 800); // 增加延迟确保滚动和动画完成
       });
+    },
+
+    // 隐藏登录表单
+    hideLoginForm() {
+      const loginContainer = document.querySelector('.login-container');
+      
+      // 先添加hide类，触发退出动画
+      if (loginContainer) {
+        loginContainer.classList.remove('show');
+        loginContainer.classList.add('hide');
+      }
+      
+      // 等待动画完成后隐藏元素
+      setTimeout(() => {
+        this.showLoginForm = false;
+      }, 600); // 与CSS transition时间一致
     }
   }
 }

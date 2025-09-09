@@ -107,7 +107,8 @@ export default {
     }
   },
   created() {
-    this.$sidebar.toggleMinimize();
+    // 移除自动最小化，让侧边栏默认保持展开状态
+    // this.$sidebar.toggleMinimize();
   },
   provide() {
     return {

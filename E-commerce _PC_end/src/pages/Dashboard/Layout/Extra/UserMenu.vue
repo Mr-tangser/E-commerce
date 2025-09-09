@@ -78,7 +78,7 @@ export default {
       this.isClosed = !this.isClosed;
     },
     goToProfile() {
-      this.$router.push({name: "用户资料"})
+      this.$router.push({name: "个人资料"})
     },
     logout() {
       this.$store.dispatch("logout");

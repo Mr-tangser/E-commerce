@@ -5,8 +5,6 @@ import axios from "axios";
 
 import {VueAuthenticate} from "vue-authenticate";
 
-Vue.use(VueAxios, axios);
-
 // 配置API基础URL
 const API_BASE_URL = process.env.VUE_APP_API_BASE_URL || 'http://localhost:3000/api';
 const ADMIN_BASE_URL = process.env.VUE_APP_ADMIN_BASE_URL || 'http://localhost:3000/api/admin';
@@ -16,17 +14,35 @@ axios.defaults.baseURL = API_BASE_URL;
 axios.defaults.timeout = 10000;
 axios.defaults.headers.common['Content-Type'] = 'application/json';
 
+// 初始化时设置Authorization头（如果token存在）
+const initialToken = localStorage.getItem('vue-authenticate.vueauth_access_token');
+if (initialToken) {
+  axios.defaults.headers.common['Authorization'] = `Bearer ${initialToken}`;
+}
+
+
+Vue.use(VueAxios, axios);
+
 // 请求拦截器
 axios.interceptors.request.use(
   config => {
     // 添加认证token
     const token = localStorage.getItem('vue-authenticate.vueauth_access_token');
+    
     if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+      const bearerToken = `Bearer ${token}`;
+      config.headers.Authorization = bearerToken;
+      // 同时更新默认headers
+      axios.defaults.headers.common['Authorization'] = bearerToken;
+    } else {
+      // 如果没有token，移除默认headers中的Authorization
+      delete axios.defaults.headers.common['Authorization'];
     }
+    
     return config;
   },
   error => {
+    console.error('请求拦截器错误:', error);
     return Promise.reject(error);
   }
 );

@@ -9,6 +9,18 @@ import UserProfile from "@/pages/Dashboard/Examples/UserProfile.vue";
 // User Management
 import ListUserPage from "@/pages/Dashboard/Examples/UserManagement/ListUserPage.vue";
 
+// Products Management
+import ProductList from "@/pages/Dashboard/Products/ProductList.vue";
+
+// Orders Management
+import OrderList from "@/pages/Dashboard/Orders/OrderList.vue";
+
+// Analytics
+import SalesAnalytics from "@/pages/Dashboard/Analytics/SalesAnalytics.vue";
+
+// Settings
+import SystemSettings from "@/pages/Dashboard/Settings/SystemSettings.vue";
+
 // Pages
 import RtlSupport from "@/pages/Dashboard/Pages/RtlSupport.vue";
 import Login from "@/pages/Dashboard/Pages/Login/Login_zhao.vue";
@@ -28,6 +40,7 @@ import FullScreenMap from "@/pages/Dashboard/Maps/FullScreenMap.vue";
 //import middleware
 import auth from "@/middleware/auth";
 import guest from "@/middleware/guest";
+import permission from "@/middleware/permission";
 
 let componentsMenu = {
   path: "/components",
@@ -89,7 +102,7 @@ let examplesMenu = {
   children: [
     {
       path: "user-profile",
-      name: "用户资料",
+      name: "个人资料",
       components: { default: UserProfile },
       meta: { middleware: auth }
     },
@@ -97,7 +110,82 @@ let examplesMenu = {
       path: "user-management/list-users",
       name: "用户列表",
       components: { default: ListUserPage },
-      meta: { middleware: auth }
+      meta: { 
+        middleware: [auth, permission],
+        requiredPermission: { resource: 'users', action: 'view' }
+      }
+    }
+  ]
+};
+
+// 商品管理路由
+let productsMenu = {
+  path: "/products",
+  component: DashboardLayout,
+  name: "Products",
+  children: [
+    {
+      path: "list",
+      name: "商品列表",
+      components: { default: ProductList },
+      meta: { 
+        middleware: [auth, permission],
+        requiredPermission: { resource: 'products', action: 'view' }
+      }
+    }
+  ]
+};
+
+// 订单管理路由
+let ordersMenu = {
+  path: "/orders",
+  component: DashboardLayout,
+  name: "Orders",
+  children: [
+    {
+      path: "list",
+      name: "订单列表",
+      components: { default: OrderList },
+      meta: { 
+        middleware: [auth, permission],
+        requiredPermission: { resource: 'orders', action: 'view' }
+      }
+    }
+  ]
+};
+
+// 数据分析路由
+let analyticsMenu = {
+  path: "/analytics",
+  component: DashboardLayout,
+  name: "Analytics",
+  children: [
+    {
+      path: "sales",
+      name: "销售统计",
+      components: { default: SalesAnalytics },
+      meta: { 
+        middleware: [auth, permission],
+        requiredPermission: { resource: 'analytics', action: 'view' }
+      }
+    }
+  ]
+};
+
+// 系统设置路由
+let settingsMenu = {
+  path: "/settings",
+  component: DashboardLayout,
+  name: "Settings",
+  children: [
+    {
+      path: "system",
+      name: "系统配置",
+      components: { default: SystemSettings },
+      meta: { 
+        middleware: [auth, permission],
+        requiredPermission: { resource: 'settings', action: 'view' }
+      }
     }
   ]
 };
@@ -145,6 +233,10 @@ const routes = [
   },
   componentsMenu,
   examplesMenu,
+  productsMenu,
+  ordersMenu,
+  analyticsMenu,
+  settingsMenu,
   loginPage,
   authPages
 ];

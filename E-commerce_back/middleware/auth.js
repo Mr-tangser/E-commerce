@@ -69,7 +69,7 @@ const protect = async (req, res, next) => {
       req.user = user;
       next();
     } catch (error) {
-      console.error('Token验证失败:', error);
+      console.error('Token验证失败:', error.message);
       return res.status(401).json({
         success: false,
         error: {

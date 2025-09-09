@@ -216,7 +216,7 @@
       <nav-tabs-card>
         <template slot="content">
           <span class="md-nav-tabs-title">Tasks</span>
-          <md-tabs md-sync-route class="md-rose" md-alignment="left">
+          <md-tabs class="md-rose" md-alignment="left">
             <md-tab id="tab-home" md-label="Bugs" md-icon="bug_report">
               <md-table v-model="firstTabs" @md-selected="onSelect">
                 <md-table-row
@@ -380,9 +380,7 @@ export default {
           series: [[12, 17, 7, 17, 23, 18, 38]]
         },
         options: {
-          lineSmooth: this.$Chartist.Interpolation.cardinal({
-            tension: 0
-          }),
+          lineSmooth: false, // 简化配置，避免插值错误
           low: 0,
           high: 50, // 建议设置为最大值加上一些额外值以获得更好的外观
           chartPadding: {
@@ -400,9 +398,7 @@ export default {
         },
 
         options: {
-          lineSmooth: this.$Chartist.Interpolation.cardinal({
-            tension: 0
-          }),
+          lineSmooth: false, // 简化配置，避免插值错误
           low: 0,
           high: 1000, // 建议设置为最大值加上一些额外值以获得更好的外观
           chartPadding: {
@@ -451,7 +447,7 @@ export default {
               seriesBarDistance: 5,
               axisX: {
                 labelInterpolationFnc: function(value) {
-                  return value[0];
+                  return value && value.length > 0 ? value[0] : value;
                 }
               }
             }
@@ -464,7 +460,75 @@ export default {
   methods: {
     onSelect: function(items) {
       this.selected = items;
+    },
+    
+    // 清理Dashboard页面的Vue Material组件
+    cleanupDashboardComponents() {
+      try {
+        // 清理md-tabs组件的MutationObserver
+        const mdTabs = this.$el.querySelector('.md-tabs');
+        if (mdTabs && mdTabs.__vue__) {
+          const tabsInstance = mdTabs.__vue__;
+          if (tabsInstance.$el && tabsInstance.$el.querySelectorAll) {
+            // 断开所有tabs相关的观察器
+            const tabElements = tabsInstance.$el.querySelectorAll('.md-tab');
+            tabElements.forEach(tab => {
+              if (tab._mutationObserver) {
+                tab._mutationObserver.disconnect();
+                tab._mutationObserver = null;
+              }
+              if (tab._resizeObserver) {
+                tab._resizeObserver.disconnect();
+                tab._resizeObserver = null;
+              }
+            });
+          }
+          
+          // 清理tabs实例的观察器
+          if (tabsInstance._mutationObserver) {
+            tabsInstance._mutationObserver.disconnect();
+            tabsInstance._mutationObserver = null;
+          }
+        }
+        
+        // 清理所有md-table组件
+        const mdTables = this.$el.querySelectorAll('.md-table');
+        mdTables.forEach(table => {
+          if (table._mutationObserver) {
+            table._mutationObserver.disconnect();
+            table._mutationObserver = null;
+          }
+          if (table.__vue__ && table.__vue__._mutationObserver) {
+            table.__vue__._mutationObserver.disconnect();
+            table.__vue__._mutationObserver = null;
+          }
+        });
+        
+        // 清理所有md-tooltip
+        const tooltips = this.$el.querySelectorAll('.md-tooltip');
+        tooltips.forEach(tooltip => {
+          if (tooltip._mutationObserver) {
+            tooltip._mutationObserver.disconnect();
+            tooltip._mutationObserver = null;
+          }
+        });
+        
+        console.log('✅ Dashboard组件清理完成');
+      } catch (error) {
+        console.warn('⚠️ Dashboard清理过程中出现警告:', error.message);
+      }
     }
+  },
+  
+  // 在组件销毁前清理所有Vue Material组件
+  beforeDestroy() {
+    console.log('🧹 Dashboard页面准备离开，开始清理...');
+    this.cleanupDashboardComponents();
+  },
+  
+  // 组件销毁时的最后清理
+  destroyed() {
+    console.log('🗑️ Dashboard页面已销毁');
   }
 };
 </script>
