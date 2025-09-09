@@ -221,7 +221,8 @@ class WechatAuth {
   static async sendToServer(data) {
     return new Promise((resolve, reject) => {
       uni.request({
-        url: 'http://your-api-domain.com/api/auth/wechat-login',
+        // 从配置地址获取API地址（需要时请修改config/env.js）
+        url: 'http://192.168.107.128:3000/api/auth/wechat-login',
         method: 'POST',
         data: data,
         success: (res) => {

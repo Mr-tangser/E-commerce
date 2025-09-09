@@ -666,7 +666,8 @@ class BiometricAuth {
         const formData = new FormData();
         formData.append('image', blob, 'face.jpg');
         
-        const apiBaseUrl = 'http://192.168.107.128:3000/api'; // 可以从配置中获取
+        // 从配置地址获取API地址（需要时请修改config/env.js）
+        const apiBaseUrl = 'http://192.168.107.128:3000/api';
         const response = await fetch(`${apiBaseUrl}/auth/face/login`, {
           method: 'POST',
           body: formData
@@ -806,7 +807,8 @@ class BiometricAuth {
     
     return new Promise((resolve, reject) => {
       uni.uploadFile({
-        url: 'http://192.168.107.128:3000/api/auth/face/login', // 后端API地址
+        // 从配置地址获取API地址（需要时请修改config/env.js）
+        url: 'http://192.168.107.128:3000/api/auth/face/login',
         filePath: imagePath,
         name: 'image',
         header: {

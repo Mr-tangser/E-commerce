@@ -546,9 +546,12 @@ export default {
 				}, 10000); // 10秒超时
 				
 				// 直接使用uni.request获取商品详情
+				// 从配置模块获取API地址（临时方案）
+				const apiBaseUrl = 'http://192.168.107.128:3000/api'
+				
 				const response = await new Promise((resolve, reject) => {
 					uni.request({
-						url: `http://192.168.107.128:3000/api/products/${this.productId}`,
+						url: `${apiBaseUrl}/products/${this.productId}`,
 						method: 'GET',
 						timeout: 10000,
 						success: (res) => {

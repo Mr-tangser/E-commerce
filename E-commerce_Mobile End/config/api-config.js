@@ -3,15 +3,16 @@
  * 根据不同环境和需求配置API地址
  */
 
-// 获取当前设备的IP地址（需要用户手动配置）
+import ENV_CONFIG from './env.js'
+
+// 从配置模块获取设备IP地址
 const getCurrentDeviceIP = () => {
-  // 这里用户需要根据实际情况填写电脑的IP地址
-  // 可以通过以下方式获取电脑IP：
-  // Windows: 打开cmd，输入 ipconfig，查看IPv4地址
-  // Mac: 打开终端，输入 ifconfig，查看inet地址
-  // 或者在HBuilderX控制台启动时会显示IP地址
-  
-  return '192.168.107.128'; // 请替换为实际的电脑IP地址
+  return ENV_CONFIG.SERVER_IP;
+};
+
+// 获取端口号
+const getCurrentDevicePort = () => {
+  return ENV_CONFIG.SERVER_PORT;
 };
 
 // API配置
@@ -19,13 +20,13 @@ const API_CONFIG = {
   // 开发环境配置
   development: {
     // 本地开发（HBuilderX内置浏览器）
-    local: `http://localhost:3000/api`,
+    local: `http://localhost:${getCurrentDevicePort()}/api`,
     
     // 真机调试（手机访问电脑）
-    mobile: `http://${getCurrentDeviceIP()}:3000/api`,
+    mobile: `http://${getCurrentDeviceIP()}:${getCurrentDevicePort()}/api`,
     
     // 局域网访问
-    lan: `http://${getCurrentDeviceIP()}:3000/api`
+    lan: `http://${getCurrentDeviceIP()}:${getCurrentDevicePort()}/api`
   },
   
   // 生产环境配置
@@ -104,9 +105,10 @@ const ERROR_MESSAGES = {
 4. IP地址是否正确: ${getCurrentDeviceIP()}
 5. 尝试重启HBuilderX和重新运行项目`,
   
-  CONFIG_TIPS: `如需修改API地址，请编辑：
-E-commerce_Mobile End/config/api-config.js
-在getCurrentDeviceIP()函数中填写正确的IP地址`
+  CONFIG_TIPS: `API地址配置说明：
+请在项目根目录创建.env文件并设置：
+API_Global=your_server_ip:port
+例如：API_Global=192.168.1.100:3000`
 };
 
 export {

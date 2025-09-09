@@ -118,7 +118,8 @@
 				// 摄像头和视频流
 				videoStream: null,
 				// API配置
-				apiBaseUrl: 'http://192.168.107.128:3000/api' // 根据您的后端地址配置
+				// 从配置模块获取API地址（需要先导入配置）
+				apiBaseUrl: 'http://192.168.107.128:3000/api' // 临时方案，建议使用配置模块
 			};
 		},
 		async mounted() {

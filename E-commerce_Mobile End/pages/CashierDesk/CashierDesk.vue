@@ -193,9 +193,12 @@
 				});
 				
 				try {
+				// 从配置模块获取API地址（临时方案）
+				const apiBaseUrl = 'http://192.168.107.128:3000/api'
+					
 					// 调用后端创建支付宝支付订单
 								const response = await uni.request({
-				url: 'http://192.168.107.128:3000/api/payment/alipay/create',
+				url: `${apiBaseUrl}/payment/alipay/create`,
 				method: 'POST',
 				header: {
 							'Authorization': `Bearer ${uni.getStorageSync('token')}`,
@@ -304,8 +307,11 @@
 						const queryOrderNumber = this.actualOrderNumber || this.orderInfo.orderId;
 						console.log('查询订单号:', queryOrderNumber);
 						
-									const response = await uni.request({
-				url: `http://192.168.107.128:3000/api/payment/alipay/query/${queryOrderNumber}`,
+					// 从配置地址获取API地址（需要时请修改config/env.js）
+					const apiBaseUrl = 'http://192.168.107.128:3000/api'
+									
+						const response = await uni.request({
+							url: `${apiBaseUrl}/payment/alipay/query/${queryOrderNumber}`,
 				method: 'GET',
 				header: {
 								'Authorization': `Bearer ${uni.getStorageSync('token')}`
