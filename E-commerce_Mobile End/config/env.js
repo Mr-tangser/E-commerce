@@ -15,7 +15,7 @@ if (typeof process !== 'undefined' && process.env) {
 if (!API_Global) {
   // 您可以在这里直接配置API地址
   // 这是一个备用方案，确保应用能够运行
-  API_Global = '192.168.107.128:3000'; // 请根据实际情况修改
+  API_Global = '192.168.92.58:3000'; // 请根据实际情况修改
   
   console.log('📝 使用配置文件中的API地址:', API_Global);
   console.log('💡 提示: 如需修改API地址，请编辑 config/env.js 文件');
