@@ -128,10 +128,6 @@
         <div class="third-party-login">
           <p>快速登录</p>
           <div class="third-party-buttons">
-            <button class="wechat-login" @click="wechatLogin">
-              <i class="fab fa-weixin"></i>
-              微信
-            </button>
             <button class="qq-login" @click="qqLogin">
               <i class="fab fa-qq"></i>
               QQ
@@ -392,10 +388,6 @@ export default {
       this.faceMode = mode
     },
     
-    // 微信登录
-    wechatLogin() {
-      this.showMessage('info', '微信登录功能开发中...')
-    },
     
     // QQ登录
     qqLogin() {
@@ -875,17 +867,11 @@ export default {
   gap: 8px;
 }
 
-.wechat-login {
-  background: #09bb07;
-  color: white;
-}
-
 .qq-login {
   background: #12b7f5;
   color: white;
 }
 
-.wechat-login:hover,
 .qq-login:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
