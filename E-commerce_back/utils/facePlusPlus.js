@@ -30,10 +30,12 @@ class FacePlusPlusService {
     console.log('📁 Faceset Token:', this.facesetToken);
 
     if (this.apiKey === 'your_api_key_here' || this.apiSecret === 'your_api_secret_here') {
-      console.error('❌ Face++ API密钥未正确配置！');
-      console.log('💡 请检查 .env 文件中的 FACE_PLUS_PLUS_API_KEY 和 FACE_PLUS_PLUS_API_SECRET');
+      console.warn('⚠️ Face++ API密钥未配置，人脸识别功能将不可用');
+      console.log('💡 如需启用人脸识别功能，请在 .env 文件中配置 FACE_PLUS_PLUS_API_KEY 和 FACE_PLUS_PLUS_API_SECRET');
+      this.isEnabled = false;
     } else {
       console.log('✅ Face++ API密钥已配置');
+      this.isEnabled = true;
     }
   }
 
@@ -126,6 +128,13 @@ class FacePlusPlusService {
    * @returns {Promise<Object>} 检测结果
    */
   async detectFace(imageBuffer) {
+    if (!this.isEnabled) {
+      return {
+        success: false,
+        error: { message: 'Face++ API未配置，人脸识别功能不可用' }
+      };
+    }
+
     try {
       const formData = this.createBaseFormData();
 
@@ -303,6 +312,13 @@ class FacePlusPlusService {
    * @param {string} userId - 用户ID（作为外部ID）
    */
   async addFaceToFaceset(faceToken, userId) {
+    if (!this.isEnabled) {
+      return {
+        success: false,
+        error: { message: 'Face++ API未配置，人脸注册功能不可用' }
+      };
+    }
+
     try {
       // 确保人脸库存在
       const facesetResult = await this.createFacesetIfNotExists();
@@ -350,6 +366,13 @@ class FacePlusPlusService {
    * @param {number} confidenceThreshold - 置信度阈值（默认80）
    */
   async searchFace(faceToken, confidenceThreshold = 80) {
+    if (!this.isEnabled) {
+      return {
+        success: false,
+        error: { message: 'Face++ API未配置，人脸识别功能不可用' }
+      };
+    }
+
     try {
       // 确保人脸库存在
       const facesetResult = await this.createFacesetIfNotExists();
