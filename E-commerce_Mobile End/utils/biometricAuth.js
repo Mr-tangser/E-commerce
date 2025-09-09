@@ -3,6 +3,9 @@
  * 支持指纹识别和人脸识别
  */
 
+// 导入环境配置
+import ENV_CONFIG from '../config/env.js';
+
 class BiometricAuth {
   
   /**
@@ -666,8 +669,9 @@ class BiometricAuth {
         const formData = new FormData();
         formData.append('image', blob, 'face.jpg');
         
-        // 从配置地址获取API地址（需要时请修改config/env.js）
-        const apiBaseUrl = 'http://192.168.107.128:3000/api';
+        // 从配置模块获取API地址
+        const apiBaseUrl = ENV_CONFIG.BASE_URL;
+        console.log('📱 人脸登录API地址:', apiBaseUrl);
         const response = await fetch(`${apiBaseUrl}/auth/face/login`, {
           method: 'POST',
           body: formData
@@ -807,8 +811,8 @@ class BiometricAuth {
     
     return new Promise((resolve, reject) => {
       uni.uploadFile({
-        // 从配置地址获取API地址（需要时请修改config/env.js）
-        url: 'http://192.168.107.128:3000/api/auth/face/login',
+        // 从配置模块获取API地址
+        url: `${ENV_CONFIG.BASE_URL}/auth/face/login`,
         filePath: imagePath,
         name: 'image',
         header: {

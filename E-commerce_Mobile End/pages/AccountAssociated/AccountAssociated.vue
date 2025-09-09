@@ -103,6 +103,9 @@
 </template>
 
 <script>
+	// 导入环境配置
+	import ENV_CONFIG from '../../config/env.js';
+	
 	export default {
 		data() {
 			return {
@@ -117,9 +120,8 @@
 				faceIconExists: false,
 				// 摄像头和视频流
 				videoStream: null,
-				// API配置
-				// 从配置模块获取API地址（需要先导入配置）
-				apiBaseUrl: 'http://192.168.107.128:3000/api' // 临时方案，建议使用配置模块
+			// API配置 - 使用配置模块
+			apiBaseUrl: ENV_CONFIG.BASE_URL
 			};
 		},
 		async mounted() {
