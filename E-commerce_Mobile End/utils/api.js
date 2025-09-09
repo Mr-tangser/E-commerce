@@ -1,5 +1,5 @@
 // API工具函数
-const BASE_URL = 'http://192.168.160.128:3000/api'
+const BASE_URL = 'http://192.168.107.128:3000/api'
 
 // 构建查询字符串的兼容性函数
 function buildQuery(params = {}) {
@@ -14,7 +14,7 @@ function buildQuery(params = {}) {
 function request(url, options = {}) {
   const fullUrl = `${BASE_URL}${url}`;
   console.log(`发起API请求: ${options.method || 'GET'} ${fullUrl}`);
-  
+
   return new Promise((resolve, reject) => {
     uni.request({
       url: fullUrl,
@@ -28,13 +28,13 @@ function request(url, options = {}) {
       timeout: 30000, // 30秒超时
       success: (res) => {
         console.log(`API请求成功 ${url}:`, res);
-        
+
         // 处理uni.request可能返回数组的情况
         let actualResponse = res;
         if (Array.isArray(res) && res.length > 1) {
           actualResponse = res[1];
         }
-        
+
         // 检查成功状态码范围（200-299）
         if (actualResponse.statusCode >= 200 && actualResponse.statusCode < 300) {
           console.log(`API响应数据:`, actualResponse.data);
@@ -66,12 +66,12 @@ const api = {
     getHomepageCategories() {
       return request('/categories/homepage');
     },
-    
+
     // 获取所有分类（树形结构）
     getAllCategories() {
       return request('/categories');
     },
-    
+
     // 获取分类商品
     getCategoryProducts(categoryId, params = {}) {
       const query = buildQuery({
@@ -97,12 +97,12 @@ const api = {
         throw error;
       }
     },
-    
+
     // 获取商品详情
     getProductById(id) {
       return request(`/products/${id}`);
     },
-    
+
     // 搜索商品
     searchProducts(keyword, params = {}) {
       const query = buildQuery({
@@ -122,7 +122,7 @@ const api = {
         data: { email, password }
       });
     },
-    
+
     // 手机验证码登录
     loginByPhone(phone, code) {
       return request('/auth/login-by-phone', {
@@ -130,7 +130,7 @@ const api = {
         data: { phone, code }
       });
     },
-    
+
     // 手机密码登录
     loginByPhonePassword(phone, password) {
       return request('/auth/login-by-phone-password', {
@@ -138,7 +138,7 @@ const api = {
         data: { phone, password }
       });
     },
-    
+
     // 微信登录
     wechatLogin(code, phoneNumber, encryptedData, iv) {
       return request('/auth/wechat-login', {
@@ -146,7 +146,7 @@ const api = {
         data: { code, phoneNumber, encryptedData, iv }
       });
     },
-    
+
     // 发送手机验证码
     sendCode(phone, type = 'login') {
       return request('/auth/send-code', {
@@ -154,7 +154,7 @@ const api = {
         data: { phone, type }
       });
     },
-    
+
     // 用户注册
     register(userData) {
       return request('/auth/register', {
@@ -162,7 +162,7 @@ const api = {
         data: userData
       });
     },
-    
+
     // 更新用户信息
     updateUserInfo(userInfo, token) {
       return request('/users/profile', {
@@ -171,21 +171,21 @@ const api = {
         token
       });
     },
-    
+
     // 获取用户信息
     getUserInfo(token) {
       return request('/auth/me', {
         token
       });
     },
-    
+
     // 获取用户人脸注册状态
     getFaceStatus(token) {
       return request('/auth/face-status', {
         token
       });
     },
-    
+
     // 删除用户人脸信息
     deleteFaceData(token) {
       return request('/auth/face-data', {
@@ -205,7 +205,7 @@ const api = {
         token
       });
     },
-    
+
     // 获取用户订单列表
     getUserOrders(token, params = {}) {
       const query = buildQuery(params);
@@ -213,7 +213,7 @@ const api = {
         token
       });
     },
-    
+
     // 获取订单详情
     getOrderById(id, token) {
       return request(`/orders/${id}`, {
@@ -232,17 +232,91 @@ const api = {
         token
       });
     },
-    
+
     // 查询支付状态
     queryPaymentStatus(orderNumber, token) {
       return request(`/payment/alipay/query/${orderNumber}`, {
         token
       });
     },
-    
+
     // 测试支付接口连通性
     testPayment() {
       return request('/payment/test');
+    }
+  },
+
+  // 系统相关
+  system: {
+    // 获取系统信息
+    getSystemInfo() {
+      return new Promise((resolve) => {
+        uni.getSystemInfo({
+          success: (res) => {
+            resolve(res);
+          },
+          fail: (err) => {
+            console.error('获取系统信息失败:', err);
+            resolve({
+              platform: 'unknown',
+              system: 'unknown',
+              networkType: 'unknown'
+            });
+          }
+        });
+      });
+    },
+
+    // 检查网络状态
+    checkNetworkStatus() {
+      return new Promise((resolve) => {
+        uni.getNetworkType({
+          success: (res) => {
+            resolve(res.networkType);
+          },
+          fail: (err) => {
+            console.error('获取网络状态失败:', err);
+            resolve('unknown');
+          }
+        });
+      });
+    },
+
+    // 测试API连接
+    async testAPIConnection() {
+      try {
+        // 注意：健康检查端点在根路径，不在/api下
+        const fullUrl = BASE_URL.replace('/api', '') + '/health';
+        console.log('🔗 测试API连接:', fullUrl);
+
+        return new Promise((resolve) => {
+          uni.request({
+            url: fullUrl,
+            method: 'GET',
+            timeout: 10000,
+            success: (res) => {
+              console.log('✅ API连接测试成功:', res);
+              if (res.statusCode === 200 && res.data && res.data.status === 'success') {
+                resolve(true);
+              } else {
+                resolve(false);
+              }
+            },
+            fail: (err) => {
+              console.error('❌ API连接测试失败:', err);
+              resolve(false);
+            }
+          });
+        });
+      } catch (error) {
+        console.error('API连接测试异常:', error);
+        return false;
+      }
+    },
+
+    // 获取API地址
+    getAPIUrl() {
+      return BASE_URL;
     }
   }
 };
@@ -250,14 +324,14 @@ const api = {
 // 错误处理
 api.handleError = (error, defaultMessage = '网络错误，请重试') => {
   console.error('API错误:', error);
-  
+
   let message = defaultMessage;
   if (error.response && error.response.data && error.response.data.error) {
     message = error.response.data.error.message;
   } else if (error.message) {
     message = error.message;
   }
-  
+
   uni.showToast({
     title: message,
     icon: 'none',
@@ -283,11 +357,11 @@ api.transformers = {
       description: product.description
     };
   },
-  
+
   // 转换后端分类数据为前端导航格式
   categoryToNavigation(categories) {
     console.log('🔄 转换分类数据为导航格式，输入:', categories.length, '个分类');
-    
+
     const navData = categories.map((category, index) => {
       const navItem = {
         id: category._id,
@@ -297,39 +371,39 @@ api.transformers = {
         subtitle: category.homeDisplay?.homeSubtitle,
         order: category.homeDisplay?.homeOrder || index
       };
-      
+
       console.log(`📍 导航项${index + 1}:`, navItem);
       return navItem;
     }).sort((a, b) => a.order - b.order); // 按order排序
-    
+
     console.log('✅ 导航数据转换完成:', navData.length, '个导航项');
     return navData;
   },
-  
+
   // 转换后端分类数据为分类标签格式
   categoryToClassList(categories) {
     console.log('🔄 转换分类数据为标签格式，输入:', categories.length, '个分类');
-    
+
     const classList = [{ id: 0, name: '首页' }];
-    
+
     // 按homeOrder排序并转换
-    const sortedCategories = categories.sort((a, b) => 
+    const sortedCategories = categories.sort((a, b) =>
       (a.homeDisplay?.homeOrder || 0) - (b.homeDisplay?.homeOrder || 0)
     );
-    
+
     sortedCategories.forEach((category, index) => {
       const displayName = category.homeDisplay?.homeTitle || category.name;
       const shortName = displayName.length > 4 ? displayName.substr(0, 4) : displayName;
-      
+
       const classItem = {
         id: category._id,
         name: shortName
       };
-      
+
       console.log(`🏷️ 标签项${index + 1}:`, classItem);
       classList.push(classItem);
     });
-    
+
     console.log('✅ 标签数据转换完成:', classList.length, '个标签');
     return classList;
   }

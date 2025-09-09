@@ -14,20 +14,36 @@ const protect = async (req, res, next) => {
       // 验证token
       const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production');
 
+      console.log('🔍 JWT解码结果:', {
+        userId: decoded.userId || decoded.id,
+        userType: decoded.userType,
+        iat: decoded.iat,
+        exp: decoded.exp
+      });
+
       let user;
+      const userId = decoded.userId || decoded.id; // 兼容不同的token格式
       
       // 根据userType选择对应的模型
       if (decoded.userType === 'admin') {
-        user = await Admin.findById(decoded.id).select('-password');
+        user = await Admin.findById(userId).select('-password');
         if (user) {
           user.userType = 'admin';
         }
       } else {
-        user = await User.findById(decoded.id).select('-password');
+        user = await User.findById(userId).select('-password');
         if (user) {
           user.userType = 'user';
         }
       }
+      
+      console.log('👤 数据库用户查找结果:', {
+        found: !!user,
+        userId: userId,
+        username: user?.username,
+        email: user?.email,
+        phone: user?.phone
+      });
       
       if (!user) {
         return res.status(401).json({

@@ -122,22 +122,28 @@ const userSchema = new mongoose.Schema({
   },
 
   // 人脸识别相关字段
-  faceData: {
-    faceToken: {
-      type: String,
-      select: false                  // 查询时不返回人脸token
-    },
-    faceImage: {
-      type: String,                  // 存储人脸图片路径
-      select: false
-    },
-    faceRegistered: {
-      type: Boolean,
-      default: false                 // 是否已注册人脸
-    },
-    registeredAt: {
-      type: Date                     // 人脸注册时间
-    }
+  faceId: {
+    type: String,                    // Face++返回的face_token
+    default: null,
+    select: false                    // 查询时不返回人脸ID
+  },
+  faceToken: {
+    type: String,                    // Face++的face_token
+    default: null,
+    select: false                    // 查询时不返回人脸令牌
+  },
+  faceSetId: {
+    type: String,                    // 用户所属的Face++人脸库ID
+    default: null,
+    select: false                    // 查询时不返回人脸库ID
+  },
+  hasFace: {
+    type: Boolean,                   // 是否已注册人脸
+    default: false
+  },
+  faceRegisterTime: {
+    type: Date,                      // 人脸注册时间
+    default: null
   }
 }, {
   timestamps: true,                  // 自动添加 createdAt 和 updatedAt 时间戳
@@ -198,3 +204,5 @@ userSchema.index({ role: 1 });       // 角色索引
 
 // 导出用户模型
 module.exports = mongoose.model('User', userSchema); 
+
+

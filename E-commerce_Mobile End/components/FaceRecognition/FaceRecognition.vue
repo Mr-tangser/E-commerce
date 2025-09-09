@@ -1,690 +1,626 @@
 <template>
-  <view class="face-recognition-modal" v-if="visible" @touchmove.stop.prevent>
-    <view class="modal-content" @click.stop>
-      <!-- 顶部标题栏 -->
-      <view class="modal-header">
-        <text class="modal-title">人脸识别</text>
-        <text class="close-btn" @click="closeModal">✕</text>
-      </view>
+  <div class="face-recognition">
+    <!-- 摄像头预览区域 -->
+    <div class="camera-container" v-if="showCamera">
+      <video 
+        ref="videoRef" 
+        class="camera-video"
+        :class="{ 'recording': isRecording }"
+        autoplay 
+        muted 
+        playsinline
+      ></video>
+      <canvas ref="canvasRef" class="capture-canvas" style="display: none;"></canvas>
       
-      <!-- 人脸识别主体区域 -->
-      <view class="face-area">
-        <!-- 相机预览区域 -->
-        <view class="camera-container">
-          <camera 
-            v-if="showCamera"
-            class="camera"
-            :device-position="'front'"
-            :flash="'off'"
-            @initdone="cameraInitDone"
-            @error="cameraError"
+      <!-- 人脸检测框 -->
+      <div 
+        v-if="faceDetected" 
+        class="face-frame"
+        :style="faceFrameStyle"
+      ></div>
+      
+      <!-- 拍照按钮和状态 -->
+      <div class="camera-controls">
+        <div class="status-text" :class="statusClass">
+          {{ statusText }}
+        </div>
+        <div class="control-buttons">
+          <button 
+            class="capture-btn"
+            :class="{ 'disabled': !faceDetected || isProcessing }"
+            @click="capturePhoto"
+            :disabled="!faceDetected || isProcessing"
           >
-            <!-- 人脸识别框 -->
-            <cover-view class="face-frame">
-              <cover-view class="frame-corner top-left"></cover-view>
-              <cover-view class="frame-corner top-right"></cover-view>
-              <cover-view class="frame-corner bottom-left"></cover-view>
-              <cover-view class="frame-corner bottom-right"></cover-view>
-            </cover-view>
-            
-            <!-- 扫描动画 -->
-            <cover-view class="scan-line" v-if="isScanning"></cover-view>
-          </camera>
-          
-          <!-- 人脸识别状态图片 -->
-          <view v-if="!showCamera" class="face-placeholder">
-            <image 
-              :src="statusImage" 
-              class="status-image"
-              mode="aspectFit"
-            ></image>
-          </view>
-        </view>
-        
-        <!-- 状态文字 -->
-        <view class="status-text">
-          <text class="status-title">{{ statusTitle }}</text>
-          <text class="status-desc">{{ statusDesc }}</text>
-        </view>
-        
-        <!-- 进度条 -->
-        <view class="progress-container" v-if="showProgress">
-          <view class="progress-bar">
-            <view class="progress-fill" :style="{ width: progress + '%' }"></view>
-          </view>
-          <text class="progress-text">{{ progress }}%</text>
-        </view>
-      </view>
-      
-      <!-- 操作按钮区域 -->
-      <view class="action-buttons">
-        <button 
-          class="action-btn capture-btn" 
-          @click="capturePhoto"
-          :disabled="!canCapture"
-          v-if="mode === 'capture'"
-        >
-          {{ isProcessing ? '识别中...' : '拍照识别' }}
-        </button>
-        
-        <button 
-          class="action-btn retry-btn" 
-          @click="retryCapture"
-          v-if="mode === 'retry'"
-        >
-          重新拍照
-        </button>
-        
-        <button 
-          class="action-btn cancel-btn" 
-          @click="closeModal"
-        >
-          取消
-        </button>
-      </view>
-      
-      <!-- 提示信息 -->
-      <view class="tips">
-        <text class="tip-text">请将面部置于识别框内，保持光线充足</text>
-      </view>
-    </view>
+            {{ isProcessing ? '处理中...' : (mode === 'register' ? '注册人脸' : '人脸登录') }}
+          </button>
+          <button class="cancel-btn" @click="closeCamera">
+            取消
+          </button>
+        </div>
+      </div>
+    </div>
     
-    <!-- 背景遮罩 -->
-    <view class="modal-overlay" @click="closeModal"></view>
-  </view>
+    <!-- 结果显示区域 -->
+    <div class="result-container" v-if="showResult && !showCamera">
+      <div class="result-content" :class="resultType">
+        <div class="result-icon">
+          <i :class="resultIcon"></i>
+        </div>
+        <h3>{{ resultTitle }}</h3>
+        <p>{{ resultMessage }}</p>
+        <div class="result-actions">
+          <button 
+            v-if="resultType === 'success'" 
+            class="primary-btn"
+            @click="handleSuccess"
+          >
+            确定
+          </button>
+          <button 
+            v-if="resultType === 'error' && mode === 'login'" 
+            class="secondary-btn"
+            @click="switchToRegister"
+          >
+            注册人脸
+          </button>
+          <button 
+            class="secondary-btn"
+            @click="retry"
+          >
+            重试
+          </button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 加载遮罩 -->
+    <div class="loading-overlay" v-if="isProcessing">
+      <div class="loading-spinner"></div>
+      <p>{{ loadingText }}</p>
+    </div>
+  </div>
 </template>
 
 <script>
-import api from '@/utils/api.js'
+import axios from 'axios'
 
 export default {
   name: 'FaceRecognition',
   props: {
-    visible: {
-      type: Boolean,
-      default: false
-    },
-    type: {
+    mode: {
       type: String,
-      default: 'login', // login: 登录, register: 注册
+      default: 'login', // 'login' 或 'register'
       validator: value => ['login', 'register'].includes(value)
     },
-    userId: {
+    apiBaseUrl: {
       type: String,
-      default: ''
+      default: '/api'
     }
   },
-  
   data() {
     return {
-      // 相机状态
+      // 摄像头相关
+      videoStream: null,
       showCamera: false,
-      cameraReady: false,
+      isRecording: false,
       
-      // 识别状态
-      isScanning: false,
+      // 人脸检测相关
+      faceDetected: false,
+      faceFrameStyle: {},
+      detectionTimer: null,
+      
+      // 处理状态
       isProcessing: false,
-      canCapture: false,
+      loadingText: '正在处理...',
       
-      // 模式：capture(拍照), processing(处理中), retry(重试)
-      mode: 'capture',
+      // 结果显示
+      showResult: false,
+      resultType: 'success', // 'success', 'error', 'warning'
+      resultTitle: '',
+      resultMessage: '',
+      resultIcon: '',
       
-      // 进度相关
-      showProgress: false,
-      progress: 0,
-      
-      // 状态信息
-      statusTitle: '请将面部置于识别框内',
-      statusDesc: '保持面部正对屏幕，确保光线充足',
-      statusImage: '/static/img/face_scan.png'
+      // 状态文本
+      statusText: '请将脸部对准摄像头',
+      statusClass: 'info'
     }
   },
-  
-  watch: {
-    visible(newVal) {
-      if (newVal) {
-        this.initFaceRecognition()
-      } else {
-        this.resetComponent()
+  computed: {
+    resultIcon() {
+      switch(this.resultType) {
+        case 'success': return 'fas fa-check-circle'
+        case 'error': return 'fas fa-times-circle'
+        case 'warning': return 'fas fa-exclamation-triangle'
+        default: return 'fas fa-info-circle'
       }
     }
   },
-  
+  mounted() {
+    this.initCamera()
+  },
+  beforeDestroy() {
+    this.cleanup()
+  },
   methods: {
-    /**
-     * 初始化人脸识别
-     */
-    async initFaceRecognition() {
+    // 初始化摄像头
+    async initCamera() {
       try {
-        this.statusTitle = '正在启动相机...'
-        this.statusDesc = '请授权相机权限'
-        
-        // 检查相机权限
-        const hasPermission = await this.checkCameraPermission()
-        if (!hasPermission) {
-          this.statusTitle = '需要相机权限'
-          this.statusDesc = '请在设置中开启相机权限'
-          return
-        }
-        
-        // 启动相机
         this.showCamera = true
-        this.mode = 'capture'
+        this.isRecording = true
+        
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+          video: { 
+            width: { ideal: 640 },
+            height: { ideal: 480 },
+            facingMode: 'user' // 前置摄像头
+          } 
+        })
+        
+        this.videoStream = stream
+        this.$refs.videoRef.srcObject = stream
+        
+        // 开始人脸检测
+        this.startFaceDetection()
         
       } catch (error) {
-        console.error('初始化人脸识别失败:', error)
-        this.statusTitle = '启动失败'
-        this.statusDesc = '请重试或检查设备兼容性'
+        console.error('摄像头初始化失败:', error)
+        this.showError('摄像头访问失败', '请确保已允许摄像头权限')
       }
     },
     
-    /**
-     * 检查相机权限
-     */
-    async checkCameraPermission() {
-      return new Promise((resolve) => {
-        uni.getSetting({
-          success: (res) => {
-            if (res.authSetting['scope.camera'] === undefined) {
-              // 首次申请权限
-              uni.authorize({
-                scope: 'scope.camera',
-                success: () => resolve(true),
-                fail: () => resolve(false)
-              })
-            } else if (res.authSetting['scope.camera'] === false) {
-              // 权限被拒绝，引导用户去设置
-              uni.showModal({
-                title: '需要相机权限',
-                content: '人脸识别需要使用相机，请在设置中开启相机权限',
-                showCancel: false,
-                confirmText: '去设置',
-                success: () => {
-                  uni.openSetting()
-                }
-              })
-              resolve(false)
-            } else {
-              resolve(true)
-            }
-          },
-          fail: () => resolve(false)
-        })
-      })
+    // 开始人脸检测
+    startFaceDetection() {
+      this.detectionTimer = setInterval(() => {
+        this.detectFace()
+      }, 500)
     },
     
-    /**
-     * 相机初始化完成
-     */
-    cameraInitDone() {
-      console.log('相机初始化完成')
-      this.cameraReady = true
-      this.canCapture = true
-      this.statusTitle = '请将面部置于识别框内'
-      this.statusDesc = '点击拍照识别按钮开始识别'
+    // 人脸检测（这里是模拟，实际项目中可以使用Face++或其他人脸检测库）
+    detectFace() {
+      if (!this.$refs.videoRef || this.isProcessing) return
       
-      // 开始扫描动画
-      this.startScanAnimation()
-    },
-    
-    /**
-     * 相机错误
-     */
-    cameraError(error) {
-      console.error('相机错误:', error)
-      this.statusTitle = '相机启动失败'
-      this.statusDesc = '请检查设备或重新授权相机权限'
-      this.showCamera = false
-    },
-    
-    /**
-     * 开始扫描动画
-     */
-    startScanAnimation() {
-      this.isScanning = true
+      // 模拟人脸检测结果
+      const mockDetection = Math.random() > 0.3 // 70% 概率检测到人脸
       
-      // 可以添加周期性的扫描效果
-      setInterval(() => {
-        if (this.isScanning && this.visible) {
-          // 扫描线动画效果
+      if (mockDetection) {
+        this.faceDetected = true
+        this.statusText = '检测到人脸，请点击按钮继续'
+        this.statusClass = 'success'
+        
+        // 模拟人脸框位置（实际应该从检测结果获取）
+        this.faceFrameStyle = {
+          left: '25%',
+          top: '20%',
+          width: '50%',
+          height: '60%'
         }
-      }, 2000)
+      } else {
+        this.faceDetected = false
+        this.statusText = '请将脸部对准摄像头'
+        this.statusClass = 'info'
+        this.faceFrameStyle = {}
+      }
     },
     
-    /**
-     * 拍照识别
-     */
+    // 拍照并处理
     async capturePhoto() {
-      if (!this.canCapture || this.isProcessing) return
+      if (!this.faceDetected || this.isProcessing) return
+      
+      this.isProcessing = true
+      this.loadingText = this.mode === 'register' ? '正在注册人脸...' : '正在验证人脸...'
       
       try {
-        this.isProcessing = true
-        this.mode = 'processing'
-        this.statusTitle = '拍照中...'
-        this.statusDesc = '请保持不动'
+        // 停止人脸检测
+        if (this.detectionTimer) {
+          clearInterval(this.detectionTimer)
+          this.detectionTimer = null
+        }
         
-        // 创建相机上下文
-        const cameraContext = uni.createCameraContext()
+        // 从视频捕获图像
+        const canvas = this.$refs.canvasRef
+        const video = this.$refs.videoRef
+        const ctx = canvas.getContext('2d')
         
-        // 拍照
-        cameraContext.takePhoto({
-          quality: 'high',
-          success: (res) => {
-            console.log('拍照成功:', res.tempImagePath)
-            this.processFaceImage(res.tempImagePath)
-          },
-          fail: (error) => {
-            console.error('拍照失败:', error)
-            this.handleError('拍照失败，请重试')
-          }
+        canvas.width = video.videoWidth
+        canvas.height = video.videoHeight
+        ctx.drawImage(video, 0, 0)
+        
+        // 转换为blob
+        const imageBlob = await new Promise(resolve => {
+          canvas.toBlob(resolve, 'image/jpeg', 0.8)
         })
         
-      } catch (error) {
-        console.error('拍照过程出错:', error)
-        this.handleError('拍照过程出错')
-      }
-    },
-    
-    /**
-     * 处理人脸图片
-     */
-    async processFaceImage(imagePath) {
-      try {
-        this.showProgress = true
-        this.progress = 0
-        this.statusTitle = '正在识别...'
-        this.statusDesc = '请稍候，正在分析人脸特征'
+        // 创建FormData
+        const formData = new FormData()
+        formData.append('image', imageBlob, 'face.jpg')
         
-        // 模拟进度
-        this.simulateProgress()
-        
-        // 准备上传数据
-        const uploadData = {
-          name: 'faceImage',
-          filePath: imagePath,
-          header: {
-            'Content-Type': 'multipart/form-data'
-          }
-        }
-        
-        let uploadUrl = ''
-        let formData = {}
-        
-        if (this.type === 'login') {
-          // 人脸登录
-          uploadUrl = `${api.baseURL}/auth/face-login`
-          formData = {
-            userId: this.userId
-          }
+        let result
+        if (this.mode === 'register') {
+          result = await this.registerFace(formData)
         } else {
-          // 人脸注册
-          uploadUrl = `${api.baseURL}/auth/register-face`
-          const token = uni.getStorageSync('token')
-          uploadData.header['Authorization'] = `Bearer ${token}`
+          result = await this.loginWithFace(formData)
         }
         
-        // 上传并识别
-        uni.uploadFile({
-          url: uploadUrl,
-          ...uploadData,
-          formData: formData,
-          success: (res) => {
-            this.handleRecognitionResult(res)
-          },
-          fail: (error) => {
-            console.error('上传失败:', error)
-            this.handleError('识别失败，网络错误')
-          }
-        })
+        this.handleResult(result)
         
       } catch (error) {
-        console.error('处理人脸图片失败:', error)
-        this.handleError('处理失败，请重试')
+        console.error('人脸处理失败:', error)
+        this.showError('处理失败', error.message || '请重试')
+      } finally {
+        this.isProcessing = false
       }
     },
     
-    /**
-     * 处理识别结果
-     */
-    handleRecognitionResult(res) {
-      try {
-        const data = JSON.parse(res.data)
-        
-        if (data.success) {
-          this.progress = 100
-          this.statusTitle = '识别成功！'
-          this.statusDesc = this.type === 'login' ? '正在为您登录...' : '人脸注册成功'
-          
-          // 延迟关闭并触发成功回调
-          setTimeout(() => {
-            this.showProgress = false
-            this.$emit('success', data.data)
-            this.closeModal()
-          }, 1500)
-          
-        } else {
-          this.handleError(data.error?.message || '识别失败')
+    // 注册人脸
+    async registerFace(formData) {
+      const response = await axios.post(`${this.apiBaseUrl}/auth/face/register`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          'Authorization': `Bearer ${this.$store.getters.token || localStorage.getItem('token')}`
         }
-        
-      } catch (error) {
-        console.error('解析识别结果失败:', error)
-        this.handleError('识别结果解析失败')
-      }
-    },
-    
-    /**
-     * 处理错误
-     */
-    handleError(message) {
-      this.isProcessing = false
-      this.mode = 'retry'
-      this.showProgress = false
-      this.statusTitle = '识别失败'
-      this.statusDesc = message
-      
-      uni.showToast({
-        title: message,
-        icon: 'none',
-        duration: 2000
       })
+      return response.data
     },
     
-    /**
-     * 重新拍照
-     */
-    retryCapture() {
-      this.mode = 'capture'
-      this.isProcessing = false
-      this.canCapture = true
-      this.progress = 0
-      this.showProgress = false
-      this.statusTitle = '请将面部置于识别框内'
-      this.statusDesc = '点击拍照识别按钮开始识别'
-    },
-    
-    /**
-     * 模拟进度条
-     */
-    simulateProgress() {
-      const timer = setInterval(() => {
-        if (this.progress < 90) {
-          this.progress += Math.random() * 20
-          if (this.progress > 90) this.progress = 90
-        } else {
-          clearInterval(timer)
+    // 人脸登录
+    async loginWithFace(formData) {
+      const response = await axios.post(`${this.apiBaseUrl}/auth/face/login`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
         }
-      }, 300)
+      })
+      return response.data
     },
     
-    /**
-     * 关闭模态框
-     */
-    closeModal() {
-      this.$emit('close')
-      this.resetComponent()
-    },
-    
-    /**
-     * 重置组件状态
-     */
-    resetComponent() {
+    // 处理结果
+    handleResult(result) {
       this.showCamera = false
-      this.cameraReady = false
-      this.isScanning = false
-      this.isProcessing = false
-      this.canCapture = false
-      this.mode = 'capture'
-      this.showProgress = false
-      this.progress = 0
-      this.statusTitle = '请将面部置于识别框内'
-      this.statusDesc = '保持面部正对屏幕，确保光线充足'
+      this.showResult = true
+      
+      if (result.success) {
+        this.resultType = 'success'
+        this.resultTitle = this.mode === 'register' ? '人脸注册成功' : '登录成功'
+        this.resultMessage = result.message || '操作完成'
+        
+        // 如果是登录成功，保存用户信息和token
+        if (this.mode === 'login' && result.data) {
+          this.saveLoginData(result.data)
+        }
+      } else {
+        this.resultType = 'error'
+        this.resultTitle = this.mode === 'register' ? '人脸注册失败' : '登录失败'
+        this.resultMessage = result.error?.message || '操作失败，请重试'
+      }
+    },
+    
+    // 保存登录数据
+    saveLoginData(data) {
+      if (data.token) {
+        localStorage.setItem('token', data.token)
+      }
+      if (data.user && this.$store) {
+        this.$store.dispatch('setUser', data.user)
+      }
+    },
+    
+    // 显示错误
+    showError(title, message) {
+      this.showCamera = false
+      this.showResult = true
+      this.resultType = 'error'
+      this.resultTitle = title
+      this.resultMessage = message
+    },
+    
+    // 关闭摄像头
+    closeCamera() {
+      this.cleanup()
+      this.$emit('close')
+    },
+    
+    // 成功后的处理
+    handleSuccess() {
+      if (this.mode === 'login') {
+        // 登录成功，跳转到主页或返回上一页
+        this.$router.push('/')
+      } else {
+        // 注册成功，可以继续其他操作或关闭
+        this.$emit('register-success')
+      }
+      this.closeCamera()
+    },
+    
+    // 切换到注册模式
+    switchToRegister() {
+      this.$emit('switch-mode', 'register')
+      this.showResult = false
+      this.initCamera()
+    },
+    
+    // 重试
+    retry() {
+      this.showResult = false
+      this.initCamera()
+    },
+    
+    // 清理资源
+    cleanup() {
+      if (this.detectionTimer) {
+        clearInterval(this.detectionTimer)
+        this.detectionTimer = null
+      }
+      
+      if (this.videoStream) {
+        this.videoStream.getTracks().forEach(track => track.stop())
+        this.videoStream = null
+      }
+      
+      this.showCamera = false
+      this.isRecording = false
+      this.faceDetected = false
     }
   }
 }
 </script>
 
-<style scoped lang="scss">
-.face-recognition-modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 9999;
+<style scoped>
+.face-recognition {
+  width: 100%;
+  height: 100vh;
+  background: #000;
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.modal-overlay {
+.camera-container {
+  position: relative;
+  width: 100%;
+  max-width: 640px;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.camera-video {
+  width: 100%;
+  flex: 1;
+  object-fit: cover;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+}
+
+.camera-video.recording {
+  border: 2px solid #00ff00;
+  box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+}
+
+.face-frame {
+  position: absolute;
+  border: 3px solid #00ff00;
+  border-radius: 8px;
+  box-shadow: 0 0 15px rgba(0, 255, 0, 0.5);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+.camera-controls {
+  position: absolute;
+  bottom: 20px;
+  left: 0;
+  right: 0;
+  padding: 0 20px;
+}
+
+.status-text {
+  text-align: center;
+  margin-bottom: 20px;
+  font-size: 16px;
+  font-weight: 500;
+  padding: 12px;
+  border-radius: 8px;
+  backdrop-filter: blur(10px);
+}
+
+.status-text.info {
+  background: rgba(59, 130, 246, 0.8);
+  color: white;
+}
+
+.status-text.success {
+  background: rgba(16, 185, 129, 0.8);
+  color: white;
+}
+
+.status-text.error {
+  background: rgba(239, 68, 68, 0.8);
+  color: white;
+}
+
+.control-buttons {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.capture-btn, .cancel-btn {
+  padding: 14px 24px;
+  border: none;
+  border-radius: 25px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+.capture-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  flex: 1;
+  max-width: 200px;
+}
+
+.capture-btn:hover:not(.disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+}
+
+.capture-btn.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.cancel-btn {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.cancel-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.result-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.result-content {
+  background: white;
+  border-radius: 20px;
+  padding: 40px;
+  text-align: center;
+  max-width: 400px;
+  margin: 20px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+}
+
+.result-icon {
+  font-size: 60px;
+  margin-bottom: 20px;
+}
+
+.result-content.success .result-icon {
+  color: #10b981;
+}
+
+.result-content.error .result-icon {
+  color: #ef4444;
+}
+
+.result-content.warning .result-icon {
+  color: #f59e0b;
+}
+
+.result-content h3 {
+  font-size: 24px;
+  margin-bottom: 10px;
+  color: #1f2937;
+}
+
+.result-content p {
+  font-size: 16px;
+  color: #6b7280;
+  margin-bottom: 30px;
+  line-height: 1.5;
+}
+
+.result-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.primary-btn, .secondary-btn {
+  padding: 14px 24px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: none;
+}
+
+.primary-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.primary-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+}
+
+.secondary-btn {
+  background: #f3f4f6;
+  color: #374151;
+  border: 1px solid #d1d5db;
+}
+
+.secondary-btn:hover {
+  background: #e5e7eb;
+}
+
+.loading-overlay {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
   background: rgba(0, 0, 0, 0.8);
-}
-
-.modal-content {
-  position: relative;
-  width: 90%;
-  max-width: 400px;
-  background: #fff;
-  border-radius: 20px;
-  overflow: hidden;
-  z-index: 10000;
-}
-
-.modal-header {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px 24px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  
-  .modal-title {
-    font-size: 18px;
-    font-weight: 600;
-  }
-  
-  .close-btn {
-    font-size: 24px;
-    width: 30px;
-    height: 30px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.2);
-  }
-}
-
-.face-area {
-  padding: 24px;
-}
-
-.camera-container {
-  position: relative;
-  width: 100%;
-  height: 300px;
-  border-radius: 16px;
-  overflow: hidden;
-  background: #f0f0f0;
-  margin-bottom: 20px;
-}
-
-.camera {
-  width: 100%;
-  height: 100%;
-}
-
-.face-placeholder {
-  width: 100%;
-  height: 100%;
-  display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(45deg, #f0f2f5, #e4e6ea);
-  
-  .status-image {
-    width: 120px;
-    height: 120px;
-    opacity: 0.6;
-  }
+  color: white;
+  z-index: 10;
 }
 
-.face-frame {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 200px;
-  height: 240px;
-  
-  .frame-corner {
-    position: absolute;
-    width: 30px;
-    height: 30px;
-    border: 3px solid #667eea;
-    
-    &.top-left {
-      top: 0;
-      left: 0;
-      border-right: none;
-      border-bottom: none;
-    }
-    
-    &.top-right {
-      top: 0;
-      right: 0;
-      border-left: none;
-      border-bottom: none;
-    }
-    
-    &.bottom-left {
-      bottom: 0;
-      left: 0;
-      border-right: none;
-      border-top: none;
-    }
-    
-    &.bottom-right {
-      bottom: 0;
-      right: 0;
-      border-left: none;
-      border-top: none;
-    }
-  }
-}
-
-.scan-line {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 180px;
-  height: 2px;
-  background: linear-gradient(90deg, transparent, #667eea, transparent);
-  animation: scanning 2s ease-in-out infinite;
-}
-
-@keyframes scanning {
-  0% { transform: translate(-50%, -120px); opacity: 0; }
-  50% { opacity: 1; }
-  100% { transform: translate(-50%, 120px); opacity: 0; }
-}
-
-.status-text {
-  text-align: center;
+.loading-spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: white;
+  animation: spin 1s linear infinite;
   margin-bottom: 20px;
-  
-  .status-title {
-    display: block;
-    font-size: 16px;
-    font-weight: 600;
-    color: #333;
-    margin-bottom: 8px;
-  }
-  
-  .status-desc {
-    display: block;
-    font-size: 14px;
-    color: #666;
-    line-height: 1.4;
-  }
 }
 
-.progress-container {
-  margin-bottom: 20px;
-  
-  .progress-bar {
-    width: 100%;
-    height: 6px;
-    background: #e4e6ea;
-    border-radius: 3px;
-    overflow: hidden;
-    margin-bottom: 8px;
-    
-    .progress-fill {
-      height: 100%;
-      background: linear-gradient(90deg, #667eea, #764ba2);
-      border-radius: 3px;
-      transition: width 0.3s ease;
-    }
-  }
-  
-  .progress-text {
-    display: block;
-    text-align: center;
-    font-size: 12px;
-    color: #666;
-  }
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
-.action-buttons {
-  padding: 0 24px 24px;
-  display: flex;
-  gap: 12px;
-}
-
-.action-btn {
-  flex: 1;
-  height: 44px;
-  border-radius: 22px;
-  border: none;
+.loading-overlay p {
   font-size: 16px;
-  font-weight: 600;
-  
-  &.capture-btn {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    
-    &:disabled {
-      background: #ccc;
-      color: #999;
-    }
-  }
-  
-  &.retry-btn {
-    background: linear-gradient(135deg, #ff9a56 0%, #ff6b6b 100%);
-    color: white;
-  }
-  
-  &.cancel-btn {
-    background: #f0f2f5;
-    color: #666;
-  }
+  margin: 0;
 }
 
-.tips {
-  padding: 0 24px 24px;
-  text-align: center;
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .camera-controls {
+    bottom: 60px;
+  }
   
-  .tip-text {
-    font-size: 12px;
-    color: #999;
-    line-height: 1.4;
+  .result-content {
+    margin: 10px;
+    padding: 30px 20px;
+  }
+  
+  .result-actions {
+    flex-direction: column;
   }
 }
 </style>
+
+
