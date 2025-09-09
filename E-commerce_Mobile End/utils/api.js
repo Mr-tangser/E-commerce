@@ -144,13 +144,6 @@ const api = {
       });
     },
 
-    // 微信登录
-    wechatLogin(code, phoneNumber, encryptedData, iv) {
-      return request('/auth/wechat-login', {
-        method: 'POST',
-        data: { code, phoneNumber, encryptedData, iv }
-      });
-    },
 
     // 发送手机验证码
     sendCode(phone, type = 'login') {

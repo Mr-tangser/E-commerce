@@ -151,11 +151,6 @@
           <text class="btn-text">人脸登录</text>
         </view>
         
-        <!-- 微信登录 -->
-        <view class="quick-login-btn" @click="wechatLogin">
-          <image src="/static/wx_ico.png" class="quick-login-icon"></image>
-          <text class="btn-text">微信登录</text>
-        </view>
       </view>
     </view>
 
@@ -172,7 +167,6 @@
 <script>
 // 导入工具类
 import BiometricAuth from '@/utils/biometricAuth.js'
-import WechatAuth from '@/utils/wechatAuth.js'
 import api from '@/utils/api.js'
 
 export default {
@@ -409,90 +403,6 @@ export default {
       }
     },
     
-    /**
-     * 微信登录
-     */
-    async wechatLogin() {
-      try {
-        this.loading = true;
-        this.loadingText = '微信授权中...';
-        
-        const result = await WechatAuth.login();
-        
-        if (result.success) {
-          // 调用后端微信登录接口
-          const wechatResponse = await api.user.wechatLogin(
-            result.code,
-            result.phoneNumber, // 从微信获取的手机号
-            result.encryptedData,
-            result.iv
-          );
-          
-          if (wechatResponse.success) {
-            // 保存登录信息 - 与"我的"页面保持一致
-            uni.setStorageSync('token', wechatResponse.data.token);
-            uni.setStorageSync('user', wechatResponse.data.user); // 改为'user'以保持一致
-            
-            // 同时保存一份用户信息供生物识别登录使用
-            uni.setStorageSync('biometric_user', {
-              ...wechatResponse.data.user,
-              token: wechatResponse.data.token,
-              timestamp: Date.now()
-            });
-            
-            console.log('✅ 微信登录成功，用户数据已保存:', wechatResponse.data.user);
-            
-            // 触发全局用户状态更新事件
-            uni.$emit('userStatusChange', {
-              isLoggedIn: true,
-              user: wechatResponse.data.user
-            });
-            
-            uni.showToast({
-              title: '登录成功',
-              icon: 'success'
-            });
-          
-            // 检查是否需要完善个人信息
-            const user = wechatResponse.data.user || {};
-            const needProfile = !user.address || !user.address.receiverName || !user.address.province;
-            
-            console.log('🔍 微信用户信息检查:', {
-              user: user,
-              hasAddress: !!user.address,
-              hasReceiverName: !!(user.address && user.address.receiverName),
-              hasProvince: !!(user.address && user.address.province),
-              needProfile: needProfile
-            });
-          
-            setTimeout(() => {
-              if (needProfile) {
-                console.log('🔄 微信用户信息不完整，但强制跳转到首页 (调试模式)')
-                // 临时跳过个人信息检查，直接跳转首页
-                this.navigateToHomeForMobile();
-                
-                // 如果需要跳转到个人资料页面，请取消上面的注释并启用下面的代码
-                // uni.navigateTo({
-                //   url: '/pages/UserProfile/UserProfile'
-                // });
-                              } else {
-                  // 跳转到首页，让用户看到登录后的状态
-                  console.log('🏠 微信登录成功，准备跳转到首页...')
-                  console.log('🔍 微信用户信息完整，开始执行跳转逻辑')
-                  this.navigateToHomeForMobile();
-                }
-            }, 1500);
-          }
-        }
-      } catch (error) {
-        uni.showToast({
-          title: error.message || '微信登录失败',
-          icon: 'none'
-        });
-      } finally {
-        this.loading = false;
-      }
-    },
     
     /**
      * 指纹登录
