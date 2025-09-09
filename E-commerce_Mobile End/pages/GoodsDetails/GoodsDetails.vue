@@ -420,22 +420,7 @@ export default {
 		if (this.productId) {
 			console.log('📦 接收到商品ID:', this.productId);
 			
-			// 添加测试：直接设置一些测试数据
-			console.log('🧪 设置测试数据验证页面渲染');
-			setTimeout(() => {
-				this.goodsDetail = {
-					name: '测试商品名称',
-					price: 99.99,
-					memberPrice: 89.99,
-					originalPrice: 199.99,
-					description: '这是一个测试商品描述',
-					images: ['/static/img/goods_thumb_01.png']
-				};
-				this.loading = false;
-				console.log('🧪 测试数据设置完成，loading:', this.loading);
-			}, 2000);
-			
-			// 同时执行真实的数据加载
+			// 加载商品详情数据
 			this.loadProductDetail();
 		} else {
 			console.warn('⚠️ 未接收到商品ID参数');
