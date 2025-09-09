@@ -21,6 +21,10 @@ import SalesAnalytics from "@/pages/Dashboard/Analytics/SalesAnalytics.vue";
 // Settings
 import SystemSettings from "@/pages/Dashboard/Settings/SystemSettings.vue";
 
+// Merchants Management
+import MerchantManagement from "@/pages/Dashboard/Merchants/MerchantManagement.vue";
+import MerchantAudit from "@/pages/Dashboard/Merchants/MerchantAudit.vue";
+
 // Pages
 import RtlSupport from "@/pages/Dashboard/Pages/RtlSupport.vue";
 import Login from "@/pages/Dashboard/Pages/Login/Login_zhao.vue";
@@ -190,6 +194,33 @@ let settingsMenu = {
   ]
 };
 
+// 商家管理路由
+let merchantsMenu = {
+  path: "/merchants",
+  component: DashboardLayout,
+  name: "Merchants",
+  children: [
+    {
+      path: "management",
+      name: "商家管理",
+      components: { default: MerchantManagement },
+      meta: { 
+        middleware: [auth, permission],
+        requiredPermission: { resource: 'merchants', action: 'view' }
+      }
+    },
+    {
+      path: "audit",
+      name: "商家审核",
+      components: { default: MerchantAudit },
+      meta: { 
+        middleware: [auth, permission],
+        requiredPermission: { resource: 'merchant_audit', action: 'view' }
+      }
+    }
+  ]
+};
+
 let authPages = {
   path: "/",
   component: AuthLayout,
@@ -236,6 +267,7 @@ const routes = [
   productsMenu,
   ordersMenu,
   analyticsMenu,
+  merchantsMenu,
   settingsMenu,
   loginPage,
   authPages

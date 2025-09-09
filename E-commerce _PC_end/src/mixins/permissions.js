@@ -54,7 +54,7 @@ export default {
         // 商家管理（内含商品管理）
         const merchantManagementItem = {
           name: '商家管理',
-          path: '/merchants/list'
+          path: '/merchants/management'
         };
         
         // 如果有商品管理权限，添加商品管理子菜单
@@ -62,7 +62,7 @@ export default {
           merchantManagementItem.children = [
             {
               name: '商品管理',
-              path: '/merchants/products'
+              path: '/products/list'  // 暂时指向现有的商品列表页面
             }
           ];
         }

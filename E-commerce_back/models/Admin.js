@@ -57,6 +57,23 @@ const adminSchema = new mongoose.Schema({
       edit: { type: Boolean, default: false },
       delete: { type: Boolean, default: false }
     },
+    merchants: {
+      view: { type: Boolean, default: false },
+      create: { type: Boolean, default: false },
+      edit: { type: Boolean, default: false },
+      delete: { type: Boolean, default: false }
+    },
+    merchant_products: {
+      view: { type: Boolean, default: false },
+      create: { type: Boolean, default: false },
+      edit: { type: Boolean, default: false },
+      delete: { type: Boolean, default: false }
+    },
+    merchant_audit: {
+      view: { type: Boolean, default: false },
+      approve: { type: Boolean, default: false },
+      reject: { type: Boolean, default: false }
+    },
     products: {
       view: { type: Boolean, default: true },
       create: { type: Boolean, default: false },
