@@ -323,6 +323,34 @@ const api = {
     getAPIUrl() {
       return BASE_URL;
     }
+  },
+
+  // 用户相关
+  user: {
+    // 获取当前用户信息 (需要token)
+    getCurrentUserInfo(token) {
+      return request('/users/me', {
+        method: 'GET',
+        token: token
+      });
+    },
+
+    // 根据ID获取用户信息 (需要token和用户ID)
+    getUserById(userId, token) {
+      return request(`/users/${userId}`, {
+        method: 'GET',
+        token: token
+      });
+    },
+
+    // 更新用户资料 (需要token)
+    updateUserProfile(updateData, token) {
+      return request('/users/profile', {
+        method: 'PUT',
+        data: updateData,
+        token: token
+      });
+    }
   }
 };
 

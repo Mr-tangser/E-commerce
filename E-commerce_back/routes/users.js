@@ -5,6 +5,37 @@ const { protect, authorize, checkOwnership } = require('../middleware/auth');
 
 const router = express.Router();
 
+// 获取当前用户信息
+router.get('/me', protect, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).select('-password');
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          message: '用户不存在'
+        }
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        user
+      }
+    });
+  } catch (error) {
+    console.error('获取当前用户信息错误:', error);
+    res.status(500).json({
+      success: false,
+      error: {
+        message: '获取用户信息失败'
+      }
+    });
+  }
+});
+
 // 获取所有用户（管理员）
 router.get('/', protect, authorize('admin'), async (req, res) => {
   try {
