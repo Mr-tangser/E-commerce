@@ -245,10 +245,224 @@
         >
           知道了
         </md-button>
-      </md-dialog-actions>
-    </md-dialog>
-  </div>
-</template>
+        </md-dialog-actions>
+      </md-dialog>
+
+      <!-- 添加管理员对话框 - 全新设计 -->
+      <md-dialog :md-active.sync="showAddDialog" class="add-admin-dialog">
+        <div class="dialog-header">
+          <div class="header-content">
+            <md-icon class="header-icon">person_add</md-icon>
+            <h2 class="header-title">添加新管理员</h2>
+          </div>
+          <md-button class="md-icon-button close-btn" @click="closeAddDialog">
+            <md-icon>close</md-icon>
+          </md-button>
+        </div>
+
+        <div class="dialog-body">
+          <form class="admin-form">
+            <!-- 账户信息卡片 -->
+            <div class="form-card account-card">
+              <div class="card-header">
+                <md-icon class="card-icon">account_circle</md-icon>
+                <h3 class="card-title">账户信息</h3>
+              </div>
+              <div class="card-content">
+                <div class="input-group">
+                  <div class="floating-input">
+                    <input 
+                      v-model="newAdmin.username" 
+                      type="text" 
+                      id="username" 
+                      class="form-input" 
+                      placeholder=" "
+                      maxlength="20"
+                      required
+                    />
+                    <label for="username" class="floating-label">用户名 *</label>
+                    <div class="input-border"></div>
+                  </div>
+                  <div class="input-hint">3-20个字符，字母数字下划线</div>
+                </div>
+
+                <div class="input-group">
+                  <div class="floating-input">
+                    <input 
+                      v-model="newAdmin.email" 
+                      type="email" 
+                      id="email" 
+                      class="form-input" 
+                      placeholder=" "
+                      required
+                    />
+                    <label for="email" class="floating-label">邮箱地址 *</label>
+                    <div class="input-border"></div>
+                  </div>
+                  <div class="input-hint">用于登录和接收通知</div>
+                </div>
+
+                <div class="input-group">
+                  <div class="floating-input password-input">
+                    <input 
+                      v-model="newAdmin.password" 
+                      type="password" 
+                      id="password" 
+                      class="form-input" 
+                      placeholder=" "
+                      required
+                    />
+                    <label for="password" class="floating-label">登录密码 *</label>
+                    <div class="input-border"></div>
+                  </div>
+                  <div class="input-hint">至少6个字符，建议包含字母和数字</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 个人信息卡片 -->
+            <div class="form-card profile-card">
+              <div class="card-header">
+                <md-icon class="card-icon">badge</md-icon>
+                <h3 class="card-title">个人信息</h3>
+              </div>
+              <div class="card-content">
+                <div class="input-row">
+                  <div class="input-group half-width">
+                    <div class="floating-input">
+                      <input 
+                        v-model="newAdmin.firstName" 
+                        type="text" 
+                        id="firstName" 
+                        class="form-input" 
+                        placeholder=" "
+                      />
+                      <label for="firstName" class="floating-label">姓氏</label>
+                      <div class="input-border"></div>
+                    </div>
+                  </div>
+
+                  <div class="input-group half-width">
+                    <div class="floating-input">
+                      <input 
+                        v-model="newAdmin.lastName" 
+                        type="text" 
+                        id="lastName" 
+                        class="form-input" 
+                        placeholder=" "
+                      />
+                      <label for="lastName" class="floating-label">名字</label>
+                      <div class="input-border"></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="input-group">
+                  <div class="floating-input">
+                    <input 
+                      v-model="newAdmin.phone" 
+                      type="tel" 
+                      id="phone" 
+                      class="form-input" 
+                      placeholder=" "
+                    />
+                    <label for="phone" class="floating-label">手机号码</label>
+                    <div class="input-border"></div>
+                  </div>
+                  <div class="input-hint">用于接收短信验证码</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 权限设置卡片 -->
+            <div class="form-card role-card">
+              <div class="card-header">
+                <md-icon class="card-icon">admin_panel_settings</md-icon>
+                <h3 class="card-title">权限设置</h3>
+              </div>
+              <div class="card-content">
+                <div class="input-row">
+                  <div class="input-group half-width">
+                    <div class="select-input">
+                      <select v-model="newAdmin.role" id="role" class="form-select" required>
+                        <option value="admin">管理员</option>
+                        <option value="super_admin">超级管理员</option>
+                      </select>
+                      <label for="role" class="select-label">管理员角色</label>
+                      <div class="select-border"></div>
+                    </div>
+                    <div class="role-description">
+                      <span v-if="newAdmin.role === 'super_admin'" class="role-desc super">
+                        🔑 拥有系统全部权限
+                      </span>
+                      <span v-else class="role-desc admin">
+                        🛡️ 拥有基础管理权限
+                      </span>
+                    </div>
+                  </div>
+
+                  <div class="input-group half-width">
+                    <div class="select-input">
+                      <select v-model="newAdmin.department" id="department" class="form-select" required>
+                        <option value="sales">销售部</option>
+                        <option value="marketing">市场部</option>
+                        <option value="customer_service">客服部</option>
+                        <option value="inventory">库存部</option>
+                        <option value="finance">财务部</option>
+                        <option value="technical">技术部</option>
+                      </select>
+                      <label for="department" class="select-label">所属部门</label>
+                      <div class="select-border"></div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 账户状态 -->
+                <div class="status-section">
+                  <div class="status-toggle">
+                    <div class="toggle-container">
+                      <input 
+                        type="checkbox" 
+                        id="isActive" 
+                        v-model="newAdmin.isActive" 
+                        class="toggle-input"
+                      />
+                      <label for="isActive" class="toggle-label">
+                        <span class="toggle-slider"></span>
+                        <span class="toggle-text">账户状态</span>
+                      </label>
+                    </div>
+                    <div class="status-indicator">
+                      <span :class="['status-badge', newAdmin.isActive ? 'active' : 'inactive']">
+                        {{ newAdmin.isActive ? '✓ 已激活' : '✗ 已停用' }}
+                      </span>
+                      <span class="status-desc">
+                        {{ newAdmin.isActive ? '用户可以正常登录使用' : '用户无法登录系统' }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <div class="dialog-footer">
+          <md-button class="cancel-btn" @click="closeAddDialog">
+            取消
+          </md-button>
+          <md-button 
+            class="confirm-btn" 
+            @click="addAdmin"
+            :disabled="savingAdmin || !isFormValid"
+          >
+            <md-icon v-if="savingAdmin">refresh</md-icon>
+            {{ savingAdmin ? '创建中...' : '创建管理员' }}
+          </md-button>
+        </div>
+      </md-dialog>
+    </div>
+  </template>
 
 <script>
 import Pagination from "@/components/Pagination";
@@ -265,11 +479,26 @@ export default {
 
     query: null,
 
-    filters: {
-      role: '',
-      department: '',
-      isActive: ''
-    },
+      filters: {
+        role: '',
+        department: '',
+        isActive: ''
+      },
+
+      // 添加管理员相关数据
+      showAddDialog: false,
+      newAdmin: {
+        username: '',
+        email: '',
+        password: '',
+        firstName: '',
+        lastName: '',
+        phone: '',
+        role: 'admin',
+        department: 'sales',
+        isActive: true
+      },
+      savingAdmin: false,
 
     sortation: {
       field: "createdAt",
@@ -290,6 +519,18 @@ export default {
   }),
 
   computed: {
+    // 表单验证
+    isFormValid() {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      return (
+        this.newAdmin.username.trim().length >= 3 &&
+        this.newAdmin.username.trim().length <= 20 &&
+        this.newAdmin.email.trim() &&
+        emailRegex.test(this.newAdmin.email.trim()) &&
+        this.newAdmin.password.length >= 6
+      );
+    },
+
     sort() {
       if (this.sortation.order === "desc") {
         return `-${this.sortation.field}`;
@@ -401,7 +642,84 @@ export default {
 
 
     onProFeature() {
-      this.$store.dispatch("alerts/error", "这是PRO功能，暂未开放。");
+      this.showAddDialog = true;
+    },
+
+    // 添加管理员相关方法
+    closeAddDialog() {
+      this.showAddDialog = false;
+      this.resetNewAdmin();
+    },
+
+    resetNewAdmin() {
+      this.newAdmin = {
+        username: '',
+        email: '',
+        password: '',
+        firstName: '',
+        lastName: '',
+        phone: '',
+        role: 'admin',
+        department: 'sales',
+        isActive: true
+      };
+    },
+
+    async addAdmin() {
+      // 表单验证
+      if (!this.isFormValid) {
+        this.$store.dispatch("alerts/error", "请填写必填项并确保格式正确");
+        return;
+      }
+
+      this.savingAdmin = true;
+
+      try {
+        // 构建管理员数据
+        const adminData = {
+          username: this.newAdmin.username.trim(),
+          email: this.newAdmin.email.trim(),
+          password: this.newAdmin.password,
+          firstName: this.newAdmin.firstName.trim(),
+          lastName: this.newAdmin.lastName.trim(),
+          phone: this.newAdmin.phone.trim(),
+          role: this.newAdmin.role,
+          department: this.newAdmin.department,
+          isActive: this.newAdmin.isActive
+        };
+
+        // 调用后端API创建管理员
+        const response = await this.$http.post('admin/users', adminData);
+
+        if (response.data.success) {
+          this.$store.dispatch("alerts/success", "管理员创建成功！");
+          this.closeAddDialog();
+          // 重新加载列表
+          this.getList();
+        } else {
+          throw new Error(response.data.message || '创建管理员失败');
+        }
+      } catch (error) {
+        console.error('创建管理员失败:', error);
+        
+        let errorMessage = '创建管理员失败，请重试';
+        if (error.response) {
+          const { status, data } = error.response;
+          if (status === 400) {
+            errorMessage = data.message || '数据格式错误';
+          } else if (status === 409) {
+            errorMessage = '用户名或邮箱已存在';
+          } else if (data && data.message) {
+            errorMessage = data.message;
+          }
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+        
+        this.$store.dispatch("alerts/error", errorMessage);
+      } finally {
+        this.savingAdmin = false;
+      }
     },
 
     handleEdit(user) {
@@ -1149,10 +1467,503 @@ export default {
   z-index: 1000;
 }
 
-/* 响应式设计 */
-@media (max-width: 768px) {
+/* 添加管理员对话框 - 现代设计 */
+.add-admin-dialog {
+  overflow: visible !important;
+}
+
+.add-admin-dialog .md-dialog {
+  max-width: 900px;
+  width: 90vw;
+  max-height: 90vh;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.15);
+}
+
+/* 对话框头部 */
+.dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px 32px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.header-icon {
+  font-size: 32px !important;
+  color: white !important;
+}
+
+.header-title {
+  font-size: 24px;
+  font-weight: 600;
+  margin: 0;
+  color: white;
+}
+
+.close-btn {
+  color: white !important;
+  background: rgba(255, 255, 255, 0.2) !important;
+  border-radius: 50%;
+  min-width: 40px !important;
+  width: 40px !important;
+  height: 40px !important;
+}
+
+.close-btn:hover {
+  background: rgba(255, 255, 255, 0.3) !important;
+}
+
+/* 对话框主体 */
+.dialog-body {
+  padding: 32px;
+  background-color: #f8fafc;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+/* 表单样式 */
+.admin-form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* 卡片样式 */
+.form-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.form-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 24px;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.card-icon {
+  color: #667eea !important;
+  font-size: 24px !important;
+}
+
+.card-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1a202c;
+  margin: 0;
+}
+
+.card-content {
+  padding: 24px;
+}
+
+/* 浮动标签输入框 */
+.input-group {
+  margin-bottom: 24px;
+}
+
+.input-row {
+  display: flex;
+  gap: 20px;
+}
+
+.half-width {
+  flex: 1;
+}
+
+.floating-input {
+  position: relative;
+  margin-bottom: 8px;
+}
+
+.form-input {
+  width: 100%;
+  padding: 16px 12px 8px;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 16px;
+  background-color: white;
+  transition: all 0.3s ease;
+  outline: none;
+  font-family: inherit;
+}
+
+.form-input:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.form-input:focus + .floating-label,
+.form-input:not(:placeholder-shown) + .floating-label {
+  transform: translateY(-24px) scale(0.85);
+  color: #667eea;
+  font-weight: 500;
+}
+
+.floating-label {
+  position: absolute;
+  left: 12px;
+  top: 16px;
+  font-size: 16px;
+  color: #718096;
+  transition: all 0.3s ease;
+  pointer-events: none;
+  background: white;
+  padding: 0 4px;
+}
+
+.input-border {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #667eea, #764ba2);
+  transform: scaleX(0);
+  transition: transform 0.3s ease;
+}
+
+.form-input:focus ~ .input-border {
+  transform: scaleX(1);
+}
+
+/* 密码字段特殊样式 */
+.password-input .form-input {
+  font-family: 'Courier New', monospace;
+  letter-spacing: 2px;
+}
+
+.password-input .form-input::placeholder {
+  font-family: inherit;
+  letter-spacing: normal;
+}
+
+/* 输入提示 */
+.input-hint {
+  font-size: 13px;
+  color: #718096;
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.input-hint::before {
+  content: '💡';
+  font-size: 14px;
+}
+
+/* 选择框样式 */
+.select-input {
+  position: relative;
+  margin-bottom: 8px;
+}
+
+.form-select {
+  width: 100%;
+  padding: 16px 12px 8px;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 16px;
+  background-color: white;
+  transition: all 0.3s ease;
+  outline: none;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.form-select:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.form-select:focus + .select-label {
+  transform: translateY(-24px) scale(0.85);
+  color: #667eea;
+  font-weight: 500;
+}
+
+.select-label {
+  position: absolute;
+  left: 12px;
+  top: 16px;
+  font-size: 16px;
+  color: #718096;
+  transition: all 0.3s ease;
+  pointer-events: none;
+  background: white;
+  padding: 0 4px;
+  transform: translateY(-24px) scale(0.85);
+  font-weight: 500;
+}
+
+.select-border {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #667eea, #764ba2);
+  transform: scaleX(0);
+  transition: transform 0.3s ease;
+}
+
+.form-select:focus ~ .select-border {
+  transform: scaleX(1);
+}
+
+/* 角色描述 */
+.role-description {
+  margin-top: 8px;
+}
+
+.role-desc {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 6px 12px;
+  border-radius: 20px;
+  transition: all 0.3s ease;
+}
+
+.role-desc.super {
+  background-color: #fef5e7;
+  color: #d69e2e;
+  border: 1px solid #ed8936;
+}
+
+.role-desc.admin {
+  background-color: #e6fffa;
+  color: #319795;
+  border: 1px solid #38b2ac;
+}
+
+/* 状态切换 */
+.status-section {
+  margin-top: 20px;
+  padding: 20px;
+  background-color: #f7fafc;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.status-toggle {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.toggle-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.toggle-input {
+  display: none;
+}
+
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 500;
+  color: #2d3748;
+}
+
+.toggle-slider {
+  width: 48px;
+  height: 24px;
+  background-color: #e2e8f0;
+  border-radius: 24px;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.toggle-slider::before {
+  content: '';
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background-color: white;
+  top: 2px;
+  left: 2px;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.toggle-input:checked + .toggle-label .toggle-slider {
+  background-color: #667eea;
+}
+
+.toggle-input:checked + .toggle-label .toggle-slider::before {
+  transform: translateX(24px);
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background-color: white;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.status-badge {
+  padding: 4px 12px;
+  border-radius: 16px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.status-badge.active {
+  background-color: #c6f6d5;
+  color: #22543d;
+}
+
+.status-badge.inactive {
+  background-color: #fed7d7;
+  color: #742a2a;
+}
+
+.status-desc {
+  font-size: 14px;
+  color: #718096;
+}
+
+/* 对话框底部 */
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 24px 32px;
+  background-color: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+}
+
+.cancel-btn {
+  padding: 12px 24px !important;
+  border-radius: 8px !important;
+  font-weight: 500 !important;
+  color: #718096 !important;
+  background-color: white !important;
+  border: 2px solid #e2e8f0 !important;
+  transition: all 0.3s ease !important;
+}
+
+.cancel-btn:hover {
+  background-color: #f7fafc !important;
+  border-color: #cbd5e0 !important;
+}
+
+.confirm-btn {
+  padding: 12px 24px !important;
+  border-radius: 8px !important;
+  font-weight: 500 !important;
+  color: white !important;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  border: none !important;
+  transition: all 0.3s ease !important;
+  min-width: 140px !important;
+}
+
+.confirm-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+}
+
+.confirm-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+.confirm-btn .md-icon {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+  /* 响应式设计 */
+  @media (max-width: 768px) {
   .permissions-container {
     max-width: 150px;
+  }
+
+  /* 添加管理员对话框移动端适配 */
+  .add-admin-dialog .md-dialog {
+    width: 95vw;
+    max-width: none;
+    max-height: 95vh;
+  }
+
+  .dialog-header {
+    padding: 16px 20px;
+  }
+
+  .header-title {
+    font-size: 20px;
+  }
+
+  .dialog-body {
+    padding: 20px 16px;
+  }
+
+  .input-row {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .form-card:hover {
+    transform: none;
+  }
+
+  .card-header {
+    padding: 16px 20px;
+  }
+
+  .card-content {
+    padding: 20px 16px;
+  }
+
+  .dialog-footer {
+    padding: 16px 20px;
+    flex-direction: column-reverse;
+  }
+
+  .cancel-btn,
+  .confirm-btn {
+    width: 100% !important;
+    margin: 0 !important;
   }
   
   .avatar-img {

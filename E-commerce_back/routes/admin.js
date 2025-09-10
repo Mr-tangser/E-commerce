@@ -958,6 +958,139 @@ router.put('/users/:id/permissions', protect, authorize('super_admin', 'admin'),
   }
 });
 
+// @desc    创建新管理员
+// @route   POST /api/admin/users
+// @access  Private (需要users:create权限)
+router.post('/users', protect, authorize('super_admin', 'admin'), async (req, res) => {
+  try {
+    const {
+      username,
+      email,
+      password,
+      firstName,
+      lastName,
+      phone,
+      role,
+      department,
+      isActive
+    } = req.body;
+
+    // 验证必填字段
+    if (!username || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: '用户名、邮箱和密码为必填项'
+      });
+    }
+
+    // 验证用户名长度
+    if (username.length < 3 || username.length > 20) {
+      return res.status(400).json({
+        success: false,
+        message: '用户名长度应为3-20个字符'
+      });
+    }
+
+    // 验证密码长度
+    if (password.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: '密码至少6个字符'
+      });
+    }
+
+    // 验证邮箱格式
+    const emailRegex = /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        success: false,
+        message: '请输入有效的邮箱地址'
+      });
+    }
+
+    console.log('➕ 创建管理员请求:', {
+      username,
+      email,
+      role,
+      department,
+      creator: req.user.username
+    });
+
+    // 检查用户名和邮箱是否已存在
+    const existingAdmin = await Admin.findOne({
+      $or: [{ username }, { email }]
+    });
+
+    if (existingAdmin) {
+      const field = existingAdmin.username === username ? '用户名' : '邮箱';
+      return res.status(409).json({
+        success: false,
+        message: `${field}已存在，请使用其他${field}`
+      });
+    }
+
+    // 设置默认权限
+    const defaultPermissions = role === 'super_admin' ? {
+      users: { view: true, create: true, edit: true, delete: true },
+      merchants: { view: true, create: true, edit: true, delete: true },
+      merchant_products: { view: true, create: true, edit: true, delete: true },
+      merchant_audit: { view: true, approve: true, reject: true },
+      orders: { view: true, create: true, edit: true, delete: true }
+    } : {
+      users: { view: true, create: false, edit: true, delete: false },
+      merchants: { view: true, create: false, edit: true, delete: false },
+      merchant_products: { view: true, create: true, edit: true, delete: false },
+      merchant_audit: { view: true, approve: false, reject: false },
+      orders: { view: true, create: false, edit: true, delete: false }
+    };
+
+    // 创建管理员
+    const newAdmin = await Admin.create({
+      username: username.trim(),
+      email: email.trim().toLowerCase(),
+      password,
+      firstName: firstName?.trim() || '',
+      lastName: lastName?.trim() || '',
+      phone: phone?.trim() || '',
+      role: role || 'admin',
+      department: department || 'sales',
+      permissions: defaultPermissions,
+      isActive: isActive !== undefined ? isActive : true
+    });
+
+    // 移除密码字段
+    const adminResponse = newAdmin.toObject();
+    delete adminResponse.password;
+
+    console.log('✅ 管理员创建成功:', adminResponse.username);
+
+    res.status(201).json({
+      success: true,
+      message: '管理员创建成功',
+      data: {
+        admin: adminResponse
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ 创建管理员失败:', error);
+    
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map(err => err.message);
+      return res.status(400).json({
+        success: false,
+        message: messages[0] || '数据验证失败'
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: '创建管理员失败',
+      error: error.message
+    });
+  }
+});
+
 // 获取单个用户详情（包含权限）
 router.get('/users/:id', protect, authorize('super_admin', 'admin'), async (req, res) => {
   try {

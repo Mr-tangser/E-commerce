@@ -17,6 +17,8 @@ const productRoutes = require('./routes/products');
 const orderRoutes = require('./routes/orders');
 const categoryRoutes = require('./routes/categories');
 const adminRoutes = require('./routes/admin');
+const merchantRoutes = require('./routes/merchants');
+const merchantAuditRoutes = require('./routes/merchantAudit');
 const paymentRoutes = require('./routes/payment');
 const captchaRoutes = require('./routes/captcha');
 
@@ -73,6 +75,8 @@ app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/admin/merchants', merchantRoutes);
+app.use('/api/admin/merchant-audit', merchantAuditRoutes);
 app.use('/api/payment', paymentRoutes);
 app.use('/api/captcha', captchaRoutes);
 

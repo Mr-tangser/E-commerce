@@ -359,6 +359,8 @@ import GoodsCoupon from '../../components/GoodsCoupon/GoodsCoupon.vue';
 import GoodsAttr from '../../components/GoodsAttr/GoodsAttr.vue';
 import api from '@/utils/api.js';
 import BrowsingHistory from '@/utils/browsing-history.js';
+// 导入环境配置
+import ENV_CONFIG from '../../config/env.js';
 
 export default {
   components: {
@@ -418,22 +420,7 @@ export default {
 		if (this.productId) {
 			console.log('📦 接收到商品ID:', this.productId);
 			
-			// 添加测试：直接设置一些测试数据
-			console.log('🧪 设置测试数据验证页面渲染');
-			setTimeout(() => {
-				this.goodsDetail = {
-					name: '测试商品名称',
-					price: 99.99,
-					memberPrice: 89.99,
-					originalPrice: 199.99,
-					description: '这是一个测试商品描述',
-					images: ['/static/img/goods_thumb_01.png']
-				};
-				this.loading = false;
-				console.log('🧪 测试数据设置完成，loading:', this.loading);
-			}, 2000);
-			
-			// 同时执行真实的数据加载
+			// 加载商品详情数据
 			this.loadProductDetail();
 		} else {
 			console.warn('⚠️ 未接收到商品ID参数');
@@ -546,9 +533,13 @@ export default {
 				}, 10000); // 10秒超时
 				
 				// 直接使用uni.request获取商品详情
+				// 从配置模块获取API地址
+				const apiBaseUrl = ENV_CONFIG.BASE_URL;
+				console.log('📦 商品详情API地址:', apiBaseUrl);
+				
 				const response = await new Promise((resolve, reject) => {
 					uni.request({
-						url: `http://192.168.107.128:3000/api/products/${this.productId}`,
+						url: `${apiBaseUrl}/products/${this.productId}`,
 						method: 'GET',
 						timeout: 10000,
 						success: (res) => {

@@ -40,6 +40,9 @@
 </template>
 
 <script>
+	// 导入环境配置
+	import ENV_CONFIG from '../../config/env.js';
+	
 	export default {
 		data() {
 			return {
@@ -192,10 +195,14 @@
 					subject: this.orderInfo.subject
 				});
 				
-				try {
-					// 调用后端创建支付宝支付订单
-								const response = await uni.request({
-				url: 'http://192.168.107.128:3000/api/payment/alipay/create',
+			try {
+			// 从配置模块获取API地址
+			const apiBaseUrl = ENV_CONFIG.BASE_URL;
+			console.log('💰 支付API地址:', apiBaseUrl);
+					
+				// 调用后端创建支付宝支付订单
+							const response = await uni.request({
+			url: `${apiBaseUrl}/payment/alipay/create`,
 				method: 'POST',
 				header: {
 							'Authorization': `Bearer ${uni.getStorageSync('token')}`,
@@ -304,8 +311,12 @@
 						const queryOrderNumber = this.actualOrderNumber || this.orderInfo.orderId;
 						console.log('查询订单号:', queryOrderNumber);
 						
-									const response = await uni.request({
-				url: `http://192.168.107.128:3000/api/payment/alipay/query/${queryOrderNumber}`,
+					// 从配置模块获取API地址
+					const apiBaseUrl = ENV_CONFIG.BASE_URL;
+					console.log('🔍 查询支付状态API地址:', apiBaseUrl);
+									
+					const response = await uni.request({
+						url: `${apiBaseUrl}/payment/alipay/query/${queryOrderNumber}`,
 				method: 'GET',
 				header: {
 								'Authorization': `Bearer ${uni.getStorageSync('token')}`

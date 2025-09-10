@@ -1,16 +1,6 @@
 <template>
 	<view class="page">
 		<view class="relevance-list">
-			<view class="list" @click="onRelevance('wx')">
-				<view class="title">
-					<image src="/static/wx_pay.png" mode=""></image>
-					<text>微信</text>
-				</view>
-				<view class="more">
-					<text>已关联</text>
-					<text class="iconfont icon-more"></text>
-				</view>
-			</view>
 			
 			<!-- 人脸识别关联 -->
 			<view class="list" @click="onRelevance('face')">
@@ -26,7 +16,7 @@
 			</view>
 		</view>
 		<view class="hint">
-			<text>账号关联之后，用户可以使用微信账号快速登录。在进行各个渠道进行购物时，均可同步会员账号，享受会员特权，同步订单物流信息。</text>
+			<text>账号关联功能可以绑定其他登录方式，享受会员特权，同步订单物流信息。</text>
 		</view>
 		<!-- 人脸注册弹窗 -->
 		<view v-if="showFaceModal" class="face-modal-overlay" @click="closeFaceModal">
@@ -103,6 +93,9 @@
 </template>
 
 <script>
+	// 导入环境配置
+	import ENV_CONFIG from '../../config/env.js';
+	
 	export default {
 		data() {
 			return {
@@ -117,8 +110,8 @@
 				faceIconExists: false,
 				// 摄像头和视频流
 				videoStream: null,
-				// API配置
-				apiBaseUrl: 'http://192.168.107.128:3000/api' // 根据您的后端地址配置
+			// API配置 - 使用配置模块
+			apiBaseUrl: ENV_CONFIG.BASE_URL
 			};
 		},
 		async mounted() {
@@ -148,16 +141,6 @@
 			 */
 			onRelevance(type){
 				switch (type){
-					case 'wx':
-						this.$refs['DialogBox'].confirm({
-							title: '提示',
-							content: '是否要解除关联?',
-							DialogType: 'inquiry',
-							animation: 0
-						}).then(()=>{
-							uni.navigateBack();
-						})
-						break;
 					case 'face':
 						this.handleFaceRelevance();
 						break;

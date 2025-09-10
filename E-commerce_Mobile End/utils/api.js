@@ -1,5 +1,10 @@
 // API工具函数
-const BASE_URL = 'http://192.168.107.128:3000/api'
+import ENV_CONFIG from '../config/env.js'
+
+// 从配置模块获取API地址
+const BASE_URL = ENV_CONFIG.BASE_URL
+
+console.log('🔧 API配置信息:', ENV_CONFIG.getInfo());
 
 // 构建查询字符串的兼容性函数
 function buildQuery(params = {}) {
@@ -139,13 +144,6 @@ const api = {
       });
     },
 
-    // 微信登录
-    wechatLogin(code, phoneNumber, encryptedData, iv) {
-      return request('/auth/wechat-login', {
-        method: 'POST',
-        data: { code, phoneNumber, encryptedData, iv }
-      });
-    },
 
     // 发送手机验证码
     sendCode(phone, type = 'login') {

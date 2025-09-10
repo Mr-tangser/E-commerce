@@ -34,7 +34,7 @@ export default {
           path: '/examples/user-profile'
         });
         
-        // 用户管理（查看权限）
+        // 用户管理
         userManagementChildren.push({
           name: '用户管理',
           path: '/examples/user-management/list-users'
@@ -47,115 +47,49 @@ export default {
         });
       }
       
-      // 商品管理模块
-      if (this.hasPermission('products', 'view')) {
-        const productChildren = [];
+      // 商家管理模块
+      if (this.hasPermission('merchants', 'view')) {
+        const merchantChildren = [];
         
-        productChildren.push({
-          name: '商品列表',
-          path: '/products/list'
-        });
+        // 商家管理（内含商品管理）
+        const merchantManagementItem = {
+          name: '商家管理',
+          path: '/merchants/management'
+        };
         
-        if (this.hasPermission('products', 'create')) {
-          productChildren.push({
-            name: '添加商品',
-            path: '/products/create'
+        // 如果有商品管理权限，添加商品管理子菜单
+        if (this.hasPermission('merchant_products', 'view')) {
+          merchantManagementItem.children = [
+            {
+              name: '商品管理',
+              path: '/products/list'  // 暂时指向现有的商品列表页面
+            }
+          ];
+        }
+        
+        merchantChildren.push(merchantManagementItem);
+        
+        // 商家审核
+        if (this.hasPermission('merchant_audit', 'view')) {
+          merchantChildren.push({
+            name: '商家审核',
+            path: '/merchants/audit'
           });
         }
         
-        productChildren.push({
-          name: '分类管理',
-          path: '/products/categories'
-        });
-        
         links.push({
-          name: '商品管理',
+          name: '商家管理',
           icon: 'store',
-          children: productChildren
+          children: merchantChildren
         });
       }
       
-      // 订单管理模块
+      // 订单管理（独立菜单项）
       if (this.hasPermission('orders', 'view')) {
-        const orderChildren = [];
-        
-        orderChildren.push({
-          name: '订单列表',
-          path: '/orders/list'
-        });
-        
-        orderChildren.push({
-          name: '订单状态',
-          path: '/orders/status'
-        });
-        
-        if (this.hasPermission('orders', 'edit')) {
-          orderChildren.push({
-            name: '退款管理',
-            path: '/orders/refunds'
-          });
-        }
-        
         links.push({
           name: '订单管理',
-          icon: 'receipt',
-          children: orderChildren
-        });
-      }
-      
-      // 数据分析模块
-      if (this.hasPermission('analytics', 'view')) {
-        const analyticsChildren = [];
-        
-        analyticsChildren.push({
-          name: '销售统计',
-          path: '/analytics/sales'
-        });
-        
-        analyticsChildren.push({
-          name: '用户分析',
-          path: '/analytics/users'
-        });
-        
-        if (this.hasPermission('analytics', 'export')) {
-          analyticsChildren.push({
-            name: '数据导出',
-            path: '/analytics/export'
-          });
-        }
-        
-        links.push({
-          name: '数据分析',
-          icon: 'bar_chart',
-          children: analyticsChildren
-        });
-      }
-      
-      // 系统设置模块（通常只有高级管理员可见）
-      if (this.hasPermission('settings', 'view')) {
-        const settingsChildren = [];
-        
-        settingsChildren.push({
-          name: '基础设置',
-          path: '/settings/basic'
-        });
-        
-        if (this.hasPermission('settings', 'edit')) {
-          settingsChildren.push({
-            name: '系统配置',
-            path: '/settings/system'
-          });
-          
-          settingsChildren.push({
-            name: '权限管理',
-            path: '/settings/permissions'
-          });
-        }
-        
-        links.push({
-          name: '系统设置',
-          icon: 'settings',
-          children: settingsChildren
+          icon: 'shopping_cart',
+          path: '/orders/list'
         });
       }
       
