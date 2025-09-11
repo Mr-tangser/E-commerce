@@ -5,7 +5,7 @@
         <template slot="header">
           <div class="card-icon">
             <i class="fab fa-twitter"></i>
-          </div>
+    </div>
           <p class="category">关注者</p>
           <h3 class="title">
             +245
@@ -16,16 +16,16 @@
           <div class="stats">
             <md-icon>update</md-icon>
             刚刚更新
-          </div>
+    </div>
         </template>
       </stats-card>
-    </div>
+          </div>
     <div class="md-layout-item md-medium-size-50 md-xsmall-size-100 md-size-25">
       <stats-card header-color="rose">
         <template slot="header">
           <div class="card-icon">
             <md-icon>equalizer</md-icon>
-          </div>
+              </div>
           <p class="category">网站访问量</p>
           <h3 class="title">
             75.521
@@ -39,13 +39,13 @@
           </div>
         </template>
       </stats-card>
-    </div>
+          </div>
     <div class="md-layout-item md-medium-size-50 md-xsmall-size-100 md-size-25">
       <stats-card header-color="green">
         <template slot="header">
           <div class="card-icon">
             <md-icon>store</md-icon>
-          </div>
+        </div>
           <p class="category">营收</p>
           <h3 class="title">
             $ 34.245
@@ -56,16 +56,16 @@
           <div class="stats">
             <md-icon>date_range</md-icon>
             过去24小时
-          </div>
+    </div>
         </template>
       </stats-card>
-    </div>
+          </div>
     <div class="md-layout-item md-medium-size-50 md-xsmall-size-100 md-size-25">
       <stats-card header-color="warning">
         <template slot="header">
           <div class="card-icon">
             <md-icon>weekend</md-icon>
-          </div>
+        </div>
           <p class="category">预订量</p>
           <h3 class="title">
             184
@@ -76,10 +76,10 @@
           <div class="stats">
             <md-icon class="text-danger">warning</md-icon>
             <a href="#pablo">获取更多空间...</a>
-          </div>
+              </div>
         </template>
       </stats-card>
-    </div>
+            </div>
     <div
       class="md-layout-item md-medium-size-100 md-xsmall-size-100 md-size-33"
     >
@@ -115,7 +115,7 @@
           </div>
         </template>
       </chart-card>
-    </div>
+              </div>
     <div
       class="md-layout-item md-medium-size-100 md-xsmall-size-100 md-size-33"
     >
@@ -153,7 +153,7 @@
           </div>
         </template>
       </chart-card>
-    </div>
+            </div>
     <div
       class="md-layout-item md-medium-size-100 md-xsmall-size-100 md-size-33"
     >
@@ -197,7 +197,7 @@
             <p class="category">
               New employees on 15th September, 2016
             </p>
-          </div>
+      </div>
         </md-card-header>
         <md-card-content>
           <md-table v-model="users" table-header-color="orange">

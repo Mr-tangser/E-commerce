@@ -127,6 +127,13 @@ const api = {
         data: { email, password }
       });
     },
+    // 用户登录（一键登录）
+    loginByUniverify(phone, access_token, openid) {
+      return request('/auth/univerify-login', {
+        method: 'POST',
+        data: { phone, access_token, openid }
+      });
+    },
 
     // 手机验证码登录
     loginByPhone(phone, code) {

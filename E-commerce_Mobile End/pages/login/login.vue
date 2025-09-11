@@ -131,6 +131,16 @@
     <view class="quick-login-section">
       <view class="quick-login-title">快速登录</view>
       <view class="quick-login-buttons">
+        <!-- 一键登录 -->
+        <view 
+          class="quick-login-btn univerify-login-btn" 
+          @click="univerifyLogin"
+          v-if="supportUniverify"
+        >
+          <text class="login-icon univerify-icon">📱</text>
+          <text class="btn-text">一键登录</text>
+        </view>
+        
         <!-- 指纹识别 -->
         <view 
           class="quick-login-btn" 
@@ -168,6 +178,7 @@
 // 导入工具类
 import BiometricAuth from '@/utils/biometricAuth.js'
 import api from '@/utils/api.js'
+import { univerifyLogin as doUniverifyLogin, checkUniverifySupport } from '@/utils/univerifyLogin.js'
 
 export default {
   data() {
@@ -188,6 +199,7 @@ export default {
       supportBiometric: true,    // 临时设为true，让按钮显示
       supportFingerprint: true,  // 临时设为true，让指纹按钮显示
       supportFaceID: true,       // 临时设为true，让人脸按钮显示
+      supportUniverify: true,    // 一键登录支持状态 - 默认显示，允许用户尝试
       
       // 表单数据
       form: {
@@ -221,6 +233,8 @@ export default {
   async mounted() {
     // 检查生物识别支持
     await this.checkBiometricSupport();
+    // 检查一键登录支持
+    await this.checkUniverifySupport();
   },
   
   methods: {
@@ -629,6 +643,103 @@ export default {
         this.supportFingerprint = true;
         this.supportFaceID = true;
         this.supportBiometric = true;
+      }
+    },
+    
+    /**
+     * 检查一键登录支持
+     */
+    async checkUniverifySupport() {
+      try {
+        console.log('🔍 检查一键登录支持...');
+        const isSupported = await checkUniverifySupport();
+        console.log('一键登录支持状态:', isSupported);
+        
+        // 只有当明确不支持时才隐藏按钮，其他情况保持显示
+        if (isSupported === false) {
+          console.log('❌ 设备明确不支持一键登录，隐藏按钮');
+          this.supportUniverify = false;
+        } else {
+          console.log('✅ 保持一键登录按钮显示');
+          this.supportUniverify = true;
+        }
+        
+        // 在APP环境下，强制开启一键登录功能（用于测试）
+        // #ifdef APP-PLUS
+        console.log('📱 APP环境下强制启用一键登录');
+        this.supportUniverify = true;
+        // #endif
+      } catch (error) {
+        console.log('检查一键登录支持失败:', error);
+        // 检查失败时默认显示按钮，让用户可以尝试
+        console.log('🔧 检查失败，默认显示一键登录按钮');
+        this.supportUniverify = true;
+        
+        // #ifdef APP-PLUS
+        this.supportUniverify = true;
+        // #endif
+      }
+    },
+    /**
+     * 一键登录
+     */
+    async univerifyLogin() {
+      try {
+        console.log('🚀 开始一键登录...');
+        this.loading = true;
+        this.loadingText = '正在启动一键登录...';
+        
+        await doUniverifyLogin(
+          // 成功回调
+          (result) => {
+            console.log('✅ 一键登录成功:', result);
+            uni.showToast({
+              title: '登录成功',
+              icon: 'success',
+              duration: 2000
+            });
+            
+            // 延迟跳转，让用户看到成功提示
+            setTimeout(() => {
+              this.navigateToHomeForMobile();
+            }, 2000);
+          },
+          // 失败回调
+          (error) => {
+            console.error('❌ 一键登录失败:', error);
+            uni.showToast({
+              title: error.message || '一键登录失败',
+              icon: 'none',
+              duration: 3000
+            });
+            
+            // 如果是设备不支持的错误，隐藏一键登录按钮
+            if (error.message && error.message.includes('不支持一键登录')) {
+              this.supportUniverify = false;
+            }
+          },
+          // 取消回调
+          (cancel) => {
+            console.log('ℹ️ 用户取消一键登录或选择其他方式:', cancel);
+            // 用户取消，不需要特殊处理
+            if (cancel.errCode === 30003) {
+              // 用户点击了其他登录方式
+              uni.showToast({
+                title: '请选择其他登录方式',
+                icon: 'none'
+              });
+            }
+          }
+        );
+      } catch (error) {
+        console.error('❌ 一键登录异常:', error);
+        uni.showToast({
+          title: error.message || '一键登录服务异常',
+          icon: 'none',
+          duration: 3000
+        });
+      } finally {
+        this.loading = false;
       }
     },
     
