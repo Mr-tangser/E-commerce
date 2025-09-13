@@ -57,11 +57,11 @@
 						<text class="iconfont icon-more"></text>
 					</view>
 				</div>
-				<div class="list">
+				<div class="list" @click="onToggleShippingInsurance">
 					<view class="title">运费险</view>
 					<view class="content">
-						<text>￥10.00</text>
-						<text class="iconfont icon-check"></text>
+						<text>￥{{ shippingInsurance.price.toFixed(2) }}</text>
+						<text class="iconfont" :class="shippingInsurance.selected ? 'icon-checked action' : 'icon-check'"></text>
 					</view>
 				</div>
 				<div class="list">
@@ -106,7 +106,7 @@
 						<text>商品金额</text>
 					</view>
 					<view class="price">
-						<text>￥299.00</text>
+						<text>￥{{ productAmount.toFixed(2) }}</text>
 					</view>
 				</view>
 				<view class="list">
@@ -114,7 +114,7 @@
 						<text>会员折扣</text>
 					</view>
 					<view class="price">
-						<text>-￥19.00</text>
+						<text>-￥{{ memberDiscount.toFixed(2) }}</text>
 					</view>
 				</view>
 				<view class="list">
@@ -130,7 +130,7 @@
 						<text>运费险</text>
 					</view>
 					<view class="price">
-						<text class="highlight">+￥0.00</text>
+						<text class="highlight">+￥{{ shippingInsurance.selected ? shippingInsurance.price.toFixed(2) : '0.00' }}</text>
 					</view>
 				</view>
 			</view>
@@ -173,6 +173,11 @@
 				scrollTop: 0,
 				// 订单数据
 				orderData: null,
+				// 运费险配置
+				shippingInsurance: {
+					selected: false,
+					price: 10.00
+				},
 			// 收货地址 - 将由loadDeliveryAddress动态加载
 			deliveryAddress: {
 				name: '请设置收货人',
@@ -228,10 +233,30 @@
 				}];
 			},
 			
+			// 商品原价金额
+			productAmount() {
+				if (!this.orderData) return 0;
+				return this.orderData.product.price * this.orderData.quantity;
+			},
+			
+			// 会员折扣金额
+			memberDiscount() {
+				// TODO: 根据实际业务逻辑计算会员折扣
+				// 这里暂时设为固定值，后续可根据用户会员等级计算
+				return 19.00;
+			},
+			
+			// 运费
+			shippingFee() {
+				// 免运费
+				return 0.00;
+			},
+			
 			// 订单总价
 			totalAmount() {
-				if (!this.orderData) return '0.00';
-				return this.orderData.totalPrice.toFixed(2);
+				const baseAmount = this.productAmount - this.memberDiscount + this.shippingFee;
+				const insuranceFee = this.shippingInsurance.selected ? this.shippingInsurance.price : 0;
+				return baseAmount + insuranceFee;
 			}
 		},
 		
@@ -418,12 +443,30 @@
 				
 				console.log('🎯 提交订单:', {
 					orderData: this.orderData,
-					deliveryAddress: this.deliveryAddress
+					deliveryAddress: this.deliveryAddress,
+					shippingInsurance: this.shippingInsurance,
+					totalAmount: this.totalAmount
 				});
 				
-				// 跳转到收银台
+				// 构建完整的订单信息传递给收银台
+				const orderInfo = {
+					orderId: 'TEST_' + Date.now(),
+					amount: this.totalAmount,
+					subject: this.orderData.product.name,
+					productAmount: this.productAmount,
+					memberDiscount: this.memberDiscount,
+					shippingFee: this.shippingFee,
+					shippingInsurance: this.shippingInsurance,
+					deliveryAddress: this.deliveryAddress,
+					orderItems: this.orderItems
+				};
+				
+				// 保存订单信息到本地存储
+				uni.setStorageSync('currentOrderInfo', orderInfo);
+				
+				// 跳转到收银台，传递关键参数
 				uni.redirectTo({
-					url: '/pages/CashierDesk/CashierDesk',
+					url: `/pages/CashierDesk/CashierDesk?orderId=${orderInfo.orderId}&amount=${orderInfo.amount}&subject=${encodeURIComponent(orderInfo.subject)}`
 				})
 			},
       /**
@@ -463,6 +506,21 @@
       validatePhone(phone) {
         const phoneRegex = /^1[3-9]\d{9}$/;
         return phoneRegex.test(phone);
+      },
+      
+      /**
+       * 切换运费险选择状态
+       */
+      onToggleShippingInsurance() {
+        this.shippingInsurance.selected = !this.shippingInsurance.selected;
+        
+        uni.showToast({
+          title: this.shippingInsurance.selected ? '已选择运费险' : '已取消运费险',
+          icon: 'none',
+          duration: 1500
+        });
+        
+        console.log('🛡️ 运费险状态切换:', this.shippingInsurance.selected);
       }
 		}
 	}

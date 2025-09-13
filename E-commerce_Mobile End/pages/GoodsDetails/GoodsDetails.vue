@@ -35,7 +35,7 @@
       <!-- 分享更多 -->
       <view class="share-more">
         <view class="share-more-one" :class="{ action: PageScrollTop > 120 }">
-          <view class="list">
+          <view class="list" @click="onShare">
             <text class="iconfont icon-share"></text>
           </view>
           <view class="list" @click.stop="isMore = !isMore">
@@ -552,6 +552,35 @@ export default {
       }
 
     },
+		
+		/**
+		 * 分享商品
+		 */
+		async onShare() {
+			try {
+				const ShareManager = require('@/utils/share.js').default;
+				
+				// 构建分享内容
+				const shareContent = ShareManager.buildShareContent(this.goodsDetail);
+				
+				console.log('📤 准备分享商品:', shareContent);
+				
+				// 显示分享选项并处理用户选择
+				await ShareManager.showShareOptions(shareContent, this);
+				
+			} catch (error) {
+				console.error('❌ 分享失败:', error);
+				
+				// 只有在非用户主动取消的情况下才显示错误提示
+				if (error.message !== '用户取消') {
+					uni.showToast({
+						title: '分享功能暂时不可用',
+						icon: 'none'
+					});
+				}
+			}
+		},
+		
 		/**
 		 * 评价点击
 		 */
@@ -845,19 +874,45 @@ export default {
 		 */
 		async addToCart(orderData) {
 			try {
-				// TODO: 实现添加到购物车的API调用
 				console.log('🛒 添加到购物车:', orderData);
 				
-				uni.showToast({
-					title: '已添加到购物车',
-					icon: 'success'
-				});
+				// 构建购物车商品数据
+				const cartItemData = {
+					productId: this.goodsDetail._id,
+					name: this.goodsDetail.name,
+					price: orderData.price,
+					image: this.goodsDetail.images && this.goodsDetail.images.length > 0 
+						? this.goodsDetail.images[0] 
+						: '/static/img/default_product.png',
+					variants: orderData.variants,
+					quantity: orderData.quantity
+				};
+				
+				console.log('📦 购物车商品数据:', cartItemData);
+				
+				// 使用购物车管理器添加商品
+				const CartManager = require('@/utils/cart.js').default;
+				const result = CartManager.addToCart(cartItemData);
+				
+				if (result.success) {
+					uni.showToast({
+						title: result.message,
+						icon: 'success'
+					});
+					
+					// 触发TabBar购物车数量更新
+					uni.$emit('updateCartCount');
+					
+					console.log('✅ 商品已成功添加到购物车');
+				} else {
+					throw new Error(result.message);
+				}
 				
 			} catch (error) {
 				console.error('❌ 添加购物车失败:', error);
 				uni.showToast({
-					title: '添加购物车失败',
-					icon: 'error'
+					title: error.message || '添加购物车失败',
+					icon: 'none'
 				});
 			}
 		},

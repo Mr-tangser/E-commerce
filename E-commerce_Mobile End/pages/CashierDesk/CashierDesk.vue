@@ -9,11 +9,11 @@
 			<view class="count-down">
 				<view class="title">支付剩余时间</view>
 				<view class="count">
-					<text class="time">{{hour}}</text>
+					<text class="time">{{formatTime(hour)}}</text>
 					<text class="dot">:</text>
-					<text class="time">{{min}}</text>
+					<text class="time">{{formatTime(min)}}</text>
 					<text class="dot">:</text>
-					<text class="time">{{sec}}</text>
+					<text class="time">{{formatTime(sec)}}</text>
 				</view>
 			</view>
 		</view> 
@@ -59,7 +59,7 @@
 				],
 				PayWay: 0,
 				PayPirce: `支付宝支付￥299.00`,
-				CountDown: 1000,
+				CountDown: 900, // 15分钟倒计时
 				day: 0,
 				hour: 0,
 				min: 0,
@@ -75,19 +75,47 @@
 				isLoading: false
 			};
 		},
+		async onShow() {
+			// 页面显示时测试API连通性
+			this.testAPIConnection();
+		},
+		
 		onLoad(options){
-			// 获取订单信息
+			console.log('💰 收银台页面参数:', options);
+			
+			// 获取URL参数中的订单信息
 			if (options.orderId) {
 				this.orderInfo.orderId = options.orderId;
 			}
 			if (options.amount) {
 				this.orderInfo.amount = parseFloat(options.amount);
-				this.updatePayPrice();
 			}
 			if (options.subject) {
 				this.orderInfo.subject = decodeURIComponent(options.subject);
 			}
 			
+			// 从本地存储获取完整的订单信息
+			try {
+				const savedOrderInfo = uni.getStorageSync('currentOrderInfo');
+				if (savedOrderInfo) {
+					console.log('📦 从本地存储获取订单信息:', savedOrderInfo);
+					
+					// 更新订单信息，优先使用本地存储的完整数据
+					this.orderInfo = {
+						...this.orderInfo,
+						...savedOrderInfo
+					};
+					
+					console.log('✅ 订单信息更新完成:', this.orderInfo);
+				}
+			} catch (error) {
+				console.error('❌ 获取本地订单信息失败:', error);
+			}
+			
+			// 更新支付价格显示
+			this.updatePayPrice();
+			
+			// 启动倒计时
 			this.CountDownData();
 		},
 		methods:{
@@ -108,21 +136,34 @@
 			},
 			
 			/**
+			 * 时间格式化 - 补零
+			 */
+			formatTime(time) {
+				return time.toString().padStart(2, '0');
+			},
+			
+			/**
 			 * 倒计时
 			 */
 			CountDownData(){
-				setTimeout(() =>{
-					this.CountDown--;
-					this.day = parseInt(this.CountDown / (24*60*60))
-					this.hour = parseInt(this.CountDown / (60 * 60) % 24);
-					this.min = parseInt(this.CountDown / 60 % 60);
-					this.sec = parseInt(this.CountDown % 60);
-					if(this.CountDown <= 0){
-						this.onPaymentTimeout();
-						return
-					}
+				if (this.CountDown <= 0) {
+					this.onPaymentTimeout();
+					return;
+				}
+				
+				// 计算时分秒
+				this.day = parseInt(this.CountDown / (24*60*60));
+				this.hour = parseInt(this.CountDown / (60 * 60) % 24);
+				this.min = parseInt(this.CountDown / 60 % 60);
+				this.sec = parseInt(this.CountDown % 60);
+				
+				// 减少1秒
+				this.CountDown--;
+				
+				// 1秒后继续倒计时
+				setTimeout(() => {
 					this.CountDownData();
-				},1000)
+				}, 1000);
 			},
 			
 			/**
@@ -189,31 +230,46 @@
 					mask: true
 				});
 				
-				console.log('发送支付请求，参数：', {
-					orderId: this.orderInfo.orderId,
-					amount: this.orderInfo.amount,
-					subject: this.orderInfo.subject
-				});
+			console.log('发送支付请求，参数：', {
+				orderId: this.orderInfo.orderId,
+				amount: this.orderInfo.amount,
+				subject: this.orderInfo.subject
+			});
+			
+		try {
+		// 从配置模块获取API地址
+		const apiBaseUrl = ENV_CONFIG.BASE_URL;
+		console.log('💰 支付API地址:', apiBaseUrl);
+		
+		const token = uni.getStorageSync('token');
+		console.log('🔑 Token信息:', token ? `已获取token(长度: ${token.length})` : '未获取到token');
+		
+		const requestData = {
+			orderId: this.orderInfo.orderId,
+			amount: this.orderInfo.amount,
+			subject: this.orderInfo.subject,
+			originalOrderInfo: this.orderInfo // 传递完整的原始订单信息
+		};
+		
+		console.log('📤 发送到后端的完整请求数据:', {
+			url: `${apiBaseUrl}/payment/zf`,
+			headers: {
+				'Authorization': token ? `Bearer ${token.substring(0, 20)}...` : 'None',
+				'Content-Type': 'application/json'
+			},
+			data: requestData
+		});
 				
-			try {
-			// 从配置模块获取API地址
-			const apiBaseUrl = ENV_CONFIG.BASE_URL;
-			console.log('💰 支付API地址:', apiBaseUrl);
-					
-				// 调用后端创建支付宝支付订单
-							const response = await uni.request({
-			url: `${apiBaseUrl}/payment/alipay/create`,
-				method: 'POST',
-				header: {
-							'Authorization': `Bearer ${uni.getStorageSync('token')}`,
-							'Content-Type': 'application/json'
-						},
-						data: {
-							orderId: this.orderInfo.orderId,
-							amount: this.orderInfo.amount,
-							subject: this.orderInfo.subject
-						}
-					});
+			// 调用后端创建支付宝支付订单
+						const response = await uni.request({
+		url: `${apiBaseUrl}/payment/zf`,
+			method: 'POST',
+			header: {
+						'Authorization': `Bearer ${token}`,
+						'Content-Type': 'application/json'
+					},
+					data: requestData
+				});
 					
 					uni.hideLoading();
 					
@@ -225,13 +281,27 @@
 						actualResponse = response[1];
 					}
 					
-					if (actualResponse.statusCode !== 200) {
-						uni.showToast({
-							title: `请求失败: ${actualResponse.statusCode}`,
-							icon: 'none'
-						});
-						return;
+				if (actualResponse.statusCode !== 200) {
+					console.error('❌ 请求失败详情:', {
+						statusCode: actualResponse.statusCode,
+						data: actualResponse.data,
+						header: actualResponse.header
+					});
+					
+					let errorMessage = `请求失败: ${actualResponse.statusCode}`;
+					if (actualResponse.data && actualResponse.data.error && actualResponse.data.error.message) {
+						errorMessage = actualResponse.data.error.message;
+					} else if (actualResponse.data && actualResponse.data.message) {
+						errorMessage = actualResponse.data.message;
 					}
+					
+					uni.showModal({
+						title: '支付创建失败',
+						content: errorMessage,
+						showCancel: false
+					});
+					return;
+				}
 					
 					if (actualResponse.data && actualResponse.data.success) {
 						// 获取支付URL和订单号
@@ -302,6 +372,32 @@
 			},
 			
 			/**
+			 * 测试API连通性
+			 */
+			async testAPIConnection() {
+				try {
+					const apiBaseUrl = ENV_CONFIG.BASE_URL;
+					console.log('🔗 测试API连通性:', apiBaseUrl);
+					
+					const response = await uni.request({
+						url: `${apiBaseUrl}/payment/test`,
+						method: 'GET',
+						timeout: 5000
+					});
+					
+					console.log('✅ API连通性测试结果:', response);
+					
+					if (response.statusCode === 200) {
+						console.log('✅ 支付API连接正常');
+					} else {
+						console.warn('⚠️ 支付API连接异常:', response.statusCode);
+					}
+				} catch (error) {
+					console.error('❌ API连通性测试失败:', error);
+				}
+			},
+			
+			/**
 			 * 检查支付结果
 			 */
 			async checkPaymentResult(){
@@ -335,10 +431,54 @@
 							const order = actualResponse.data.data.order;
 							if (order.payment.status === 'paid') {
 								clearInterval(checkInterval);
-								// 支付成功，跳转到结果页
+								
+								// 获取本地存储的真实订单信息
+								let realOrderInfo = null;
+								try {
+									realOrderInfo = uni.getStorageSync('currentOrderInfo');
+									console.log('🎯 获取真实订单信息用于支付成功页面:', realOrderInfo);
+								} catch (error) {
+									console.warn('⚠️ 获取本地订单信息失败:', error);
+								}
+								
+								// 支付成功，跳转到结果页面，使用真实订单数据
+								const paymentMethod = encodeURIComponent('支付宝支付');
+								
+								// 优先使用真实订单信息，否则使用后端返回的信息
+								const displayAmount = realOrderInfo?.amount || order.total;
+								const displayOrderNumber = order.orderNumber; // 使用真实订单号
+								const displaySubject = realOrderInfo?.subject || '商城订单';
+								
+								// 构建跳转参数，包含完整的订单信息
+								const jumpParams = [
+									`status=success`,
+									`orderNumber=${displayOrderNumber}`,
+									`amount=${displayAmount}`,
+									`paymentMethod=${paymentMethod}`,
+									`subject=${encodeURIComponent(displaySubject)}`
+								];
+								
+								// 如果有商品信息，也传递过去
+								if (realOrderInfo && realOrderInfo.orderItems && realOrderInfo.orderItems.length > 0) {
+									const item = realOrderInfo.orderItems[0];
+									jumpParams.push(`productName=${encodeURIComponent(item.name)}`);
+									jumpParams.push(`quantity=${item.quantity}`);
+								}
+								
+								const jumpUrl = `/pages/PayResult/PayResult?${jumpParams.join('&')}`;
+								console.log('🎉 支付成功，跳转到结果页:', jumpUrl);
+								
 								uni.redirectTo({
-									url: `/pages/PayResult/PayResult?status=success&orderNumber=${order.orderNumber}&amount=${order.total}`
+									url: jumpUrl
 								});
+								
+								// 清理本地存储的订单信息
+								try {
+									uni.removeStorageSync('currentOrderInfo');
+								} catch (error) {
+									console.warn('⚠️ 清理本地订单信息失败:', error);
+								}
+								
 							} else if (order.payment.status === 'failed') {
 								clearInterval(checkInterval);
 								// 支付失败

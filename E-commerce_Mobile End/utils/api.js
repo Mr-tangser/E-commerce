@@ -256,7 +256,7 @@ const api = {
   payment: {
     // 创建支付宝支付订单
     createAlipayPayment(paymentData, token) {
-      return request('/payment/alipay/create', {
+      return request('/payment/zf', {
         method: 'POST',
         data: paymentData,
         token
