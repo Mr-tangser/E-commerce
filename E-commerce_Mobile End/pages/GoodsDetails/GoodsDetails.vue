@@ -67,14 +67,14 @@
               <text>我的关注</text>
             </view>
           </navigator>
-          <navigator class="list">
+          <view class="list" @click="goToBrowsingHistory">
             <view class="icon">
               <text class="iconfont icon-zuji"></text>
             </view>
             <view class="title">
               <text>浏览记录</text>
             </view>
-          </navigator>
+          </view>
         </view>
       </view>
     </view>
@@ -572,6 +572,15 @@ export default {
 				console.error('❌ 分享失败:', error);
 				// 不显示错误提示，静默处理
 			}
+		},
+		
+		/**
+		 * 跳转到浏览记录页面
+		 */
+		goToBrowsingHistory() {
+			uni.navigateTo({
+				url: '/pages/BrowsingHistory/BrowsingHistory'
+			});
 		},
 		
 		/**

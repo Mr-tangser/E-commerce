@@ -406,6 +406,13 @@
 			uni.hideTabBar();
 		},
 		
+		onShow() {
+			// 每次显示页面时更新浏览记录数量
+			if (this.isLoggedIn) {
+				this.updateBrowsingHistoryCount();
+			}
+		},
+		
 		onPageScroll(e) {
 			this.scrollTop = e.scrollTop;
 		},
@@ -455,12 +462,16 @@
 			 */
 			async loadUserData() {
 				try {
+					// 获取真实的浏览记录数量
+					const BrowsingHistory = require('@/utils/browsing-history.js').default;
+					const historyStats = BrowsingHistory.getStatistics();
+					
 					// 这里可以调用API获取用户的统计数据
-					// 目前使用模拟数据
+					// 目前使用模拟数据（除了浏览记录）
 					this.userStats = {
 						goodsCount: 28,
 						contentCount: 15,
-						recordCount: 42
+						recordCount: historyStats.total
 					};
 					
 					this.orderStats = {
@@ -477,11 +488,25 @@
 						balance: '268.50'
 					};
 					
-					console.log('✅ 用户数据加载完成');
-				} catch (error) {
-					console.error('加载用户数据失败:', error);
-				}
-			},
+				console.log('✅ 用户数据加载完成');
+			} catch (error) {
+				console.error('加载用户数据失败:', error);
+			}
+		},
+		
+		/**
+		 * 更新浏览记录数量
+		 */
+		updateBrowsingHistoryCount() {
+			try {
+				const BrowsingHistory = require('@/utils/browsing-history.js').default;
+				const historyStats = BrowsingHistory.getStatistics();
+				this.userStats.recordCount = historyStats.total;
+				console.log('🔄 浏览记录数量已更新:', historyStats.total);
+			} catch (error) {
+				console.error('❌ 更新浏览记录数量失败:', error);
+			}
+		},
 			
 			/**
 			 * 处理用户状态变化
