@@ -52,8 +52,7 @@ class ShareManager {
       () => this.shareToWeChat(shareContent, 'WXSceneSession'),  // 分享给微信好友
       () => this.shareToWeChat(shareContent, 'WXSceneTimeline'), // 分享到朋友圈
       () => this.shareToQQ(shareContent),                        // 分享到QQ
-      () => this.copyProductLink(shareContent),                  // 复制商品链接
-      () => this.saveProductImage(shareContent)                  // 保存商品图片
+      () => this.copyProductLink(shareContent)                   // 复制商品链接
     ];
     
     if (appActions[index]) {
@@ -63,8 +62,7 @@ class ShareManager {
     
     // #ifdef H5
     const h5Actions = [
-      () => this.copyProductLink(shareContent),     // 复制商品链接
-      () => this.saveProductImage(shareContent)     // 保存商品图片
+      () => this.copyProductLink(shareContent)     // 复制商品链接
     ];
     
     if (h5Actions[index]) {
@@ -217,77 +215,6 @@ class ShareManager {
           });
           
           this.trackShareEvent('shareError', 'copy_link');
-          reject(err);
-        }
-      });
-    });
-  }
-  
-  /**
-   * 保存商品图片
-   */
-  static saveProductImage(shareContent) {
-    return new Promise((resolve, reject) => {
-      if (!shareContent.imageUrl) {
-        uni.showToast({
-          title: '暂无商品图片',
-          icon: 'none'
-        });
-        reject(new Error('无图片'));
-        return;
-      }
-      
-      // 显示保存进度
-      uni.showLoading({
-        title: '保存图片中...'
-      });
-      
-      // 下载并保存图片
-      uni.downloadFile({
-        url: shareContent.imageUrl,
-        success: (res) => {
-          if (res.statusCode === 200) {
-            uni.saveImageToPhotosAlbum({
-              filePath: res.tempFilePath,
-              success: () => {
-                uni.hideLoading();
-                uni.showToast({
-                  title: '图片已保存到相册',
-                  icon: 'success'
-                });
-                
-                this.trackShareEvent('shareSuccess', 'save_image');
-                resolve();
-              },
-              fail: (err) => {
-                uni.hideLoading();
-                console.error('❌ 保存图片失败:', err);
-                uni.showModal({
-                  title: '保存失败',
-                  content: '保存图片失败，请检查相册权限设置',
-                  showCancel: false
-                });
-                
-                this.trackShareEvent('shareError', 'save_image');
-                reject(err);
-              }
-            });
-          } else {
-            uni.hideLoading();
-            uni.showToast({
-              title: '图片下载失败',
-              icon: 'none'
-            });
-            reject(new Error('下载失败'));
-          }
-        },
-        fail: (err) => {
-          uni.hideLoading();
-          console.error('❌ 下载图片失败:', err);
-          uni.showToast({
-            title: '网络错误，下载失败',
-            icon: 'none'
-          });
           reject(err);
         }
       });

@@ -570,14 +570,7 @@ export default {
 				
 			} catch (error) {
 				console.error('❌ 分享失败:', error);
-				
-				// 只有在非用户主动取消的情况下才显示错误提示
-				if (error.message !== '用户取消') {
-					uni.showToast({
-						title: '分享功能暂时不可用',
-						icon: 'none'
-					});
-				}
+				// 不显示错误提示，静默处理
 			}
 		},
 		
