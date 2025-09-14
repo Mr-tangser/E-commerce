@@ -250,54 +250,13 @@
         <view class="more"><!-- <text class="iconfont icon-more"></text> --></view>
       </view>
     </view>
-    <!-- 评价 -->
-    <view class="evaluate-data" ref="evaluate">
-      <view class="title-more" @click="onEvaluate">
-        <view class="title">
-          <text>评价</text>
-          <text class="num">999+</text>
-        </view>
-        <view class="more">
-          <text class="iconfont icon-more"></text>
-        </view>
-      </view>
-      <view class="evaluate-list">
-        <view class="user-info">
-          <view class="thumb">
-            <image src="/static/img/user_pic.jpg" mode=""></image>
-          </view>
-          <view class="nickname-grade">
-            <view class="nickname">
-              <text>爱笑的汤姆</text>
-            </view>
-            <view class="grade">
-              <text class="cuIcon-favorfill lg text-gray"></text>
-            </view>
-          </view>
-        </view>
-        <view class="content">
-          <view class="character">
-            <text class="two-omit">搭建啊激动了阿建档立卡点击就阿卡丽登记卡加端口几啊开了都金坷垃就恐龙当家哦架空</text>
-          </view>
-          <view class="attr">
-            <text>蓝色</text>
-          </view>
-          <view class="thumb-list">
-            <view class="list">
-              <image src="/static/img/goods_banner_01.webp" mode=""></image>
-            </view>
-            <view class="list">
-              <image src="/static/img/goods_banner_02.webp" mode=""></image>
-            </view>
-            <view class="list">
-              <image src="/static/img/goods_banner_03.webp" mode=""></image>
-            </view>
-          </view>
-        </view>
-        <view class="look-all" @click="onEvaluate">
-          <text>查看全部评价</text>
-        </view>
-      </view>
+    <!-- 商品评论 -->
+    <view class="goods-comments" ref="evaluate">
+      <goods-comment 
+        :product-id="productId" 
+        @commentAdded="onCommentAdded"
+        @commentDeleted="onCommentDeleted"
+      ></goods-comment>
     </view>
 
     <!-- 商品介绍 -->
@@ -366,6 +325,7 @@
 import GoodsServe from '../../components/GoodsServe/GoodsServe.vue';
 import GoodsCoupon from '../../components/GoodsCoupon/GoodsCoupon.vue';
 import GoodsAttr from '../../components/GoodsAttr/GoodsAttr.vue';
+import GoodsComment from '../../components/GoodsComment/GoodsComment.vue';
 import api from '@/utils/api.js';
 import BrowsingHistory from '@/utils/browsing-history.js';
 // 导入环境配置
@@ -376,6 +336,7 @@ export default {
     GoodsServe,
     GoodsCoupon,
     GoodsAttr,
+    GoodsComment,
   },
   data() {
     return {
@@ -499,7 +460,7 @@ export default {
           });
           break;
         case 1:
-          uni.createSelectorQuery().select(".evaluate-data").boundingClientRect((data) => { //data - 各种参数
+          uni.createSelectorQuery().select(".goods-comments").boundingClientRect((data) => { //data - 各种参数
             uni.pageScrollTo({
 							scrollTop: this.PageScrollTop + data.top -50,
 							duration: 300
@@ -584,12 +545,26 @@ export default {
 		},
 		
 		/**
-		 * 评价点击
+		 * 评论添加完成回调
 		 */
-		onEvaluate(){
-			uni.navigateTo({
-				url: '/pages/GoodsEvaluateList/GoodsEvaluateList'
-			})
+		onCommentAdded(comment) {
+			console.log('📝 新评论已添加:', comment);
+			// 可以在这里处理评论添加后的逻辑，比如更新商品评分等
+		},
+
+		/**
+		 * 评论删除完成回调
+		 */
+		onCommentDeleted(comment) {
+			console.log('🗑️ 评论已删除:', comment);
+			// 可以在这里处理评论删除后的逻辑，比如更新商品评分、统计等
+			
+			// 可选：显示删除成功的额外提示
+			// uni.showToast({
+			// 	title: '您的评论已删除',
+			// 	icon: 'success',
+			// 	duration: 1500
+			// });
 		},
 
 		/**
@@ -1047,6 +1022,11 @@ export default {
     color: #666;
     font-size: 28rpx;
   }
+}
+
+/* 商品评论区域 */
+.goods-comments {
+  margin-top: 20rpx;
 }
 
 
