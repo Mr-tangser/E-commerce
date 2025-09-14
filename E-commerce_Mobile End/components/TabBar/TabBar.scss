@@ -31,5 +31,34 @@
 			.action{
 				color: $base;
 			}
+			
+			// 图标容器
+			.icon-container {
+				position: relative;
+				
+				// 购物车徽章
+				.cart-badge {
+					position: absolute;
+					top: -8rpx;
+					right: -12rpx;
+					min-width: 32rpx;
+					height: 32rpx;
+					background: #ff4757;
+					border-radius: 16rpx;
+					display: flex;
+					align-items: center;
+					justify-content: center;
+					padding: 0 8rpx;
+					border: 2rpx solid #ffffff;
+					
+					.badge-text {
+						color: #ffffff;
+						font-size: 20rpx;
+						line-height: 1;
+						font-weight: bold;
+						transform: scale(0.9);
+					}
+				}
+			}
 		}
 	}

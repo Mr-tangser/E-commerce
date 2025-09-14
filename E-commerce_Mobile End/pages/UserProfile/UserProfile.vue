@@ -272,11 +272,15 @@ export default {
       try {
         const token = uni.getStorageSync('token');
         if (token) {
-          const response = await api.user.getUserInfo(token);
+          const response = await api.user.getCurrentUserInfo(token);
           if (response.success && response.data.user) {
             const user = response.data.user;
             this.form.nickname = user.username || '';
             this.form.avatar = user.avatar || '/static/img/5.jpg';
+            // 如果用户已有手机号，填入表单
+            if (user.phone) {
+              this.form.address.receiverPhone = user.phone;
+            }
           }
         }
       } catch (error) {
@@ -358,7 +362,7 @@ export default {
         };
         
         // 调用更新API
-        const response = await api.user.updateUserInfo(updateData, token);
+        const response = await api.user.updateUserProfile(updateData, token);
         
         if (response.success) {
           uni.showToast({

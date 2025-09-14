@@ -20,6 +20,14 @@
 					<view class="title">订单号</view>
 					<view class="content">：{{paymentResult.orderNumber}}</view>
 				</view>
+				<view class="list" v-if="paymentResult.productName">
+					<view class="title">商品名称</view>
+					<view class="content">：{{paymentResult.productName}}</view>
+				</view>
+				<view class="list" v-if="paymentResult.quantity">
+					<view class="title">购买数量</view>
+					<view class="content">：{{paymentResult.quantity}}件</view>
+				</view>
 			</view>
 		</view>
 		<!-- 跳转按钮 -->
@@ -65,12 +73,15 @@
 	export default {
 		data() {
 			return {
-				paymentResult: {
-					status: 'success', // success or fail
-					paymentMethod: '支付宝支付',
-					amount: '299.00',
-					orderNumber: ''
-				},
+			paymentResult: {
+				status: 'success', // success or fail
+				paymentMethod: '支付宝支付',
+				amount: '299.00',
+				orderNumber: '',
+				subject: '',
+				productName: '',
+				quantity: ''
+			},
         goodsList:[
           {
             id: 1,
@@ -217,6 +228,8 @@
 			}
 		},
 		onLoad(options) {
+			console.log('💰 支付成功页面接收参数:', options);
+			
 			// 获取支付结果参数
 			if (options.status) {
 				this.paymentResult.status = options.status;
@@ -230,6 +243,17 @@
 			if (options.paymentMethod) {
 				this.paymentResult.paymentMethod = decodeURIComponent(options.paymentMethod);
 			}
+			if (options.subject) {
+				this.paymentResult.subject = decodeURIComponent(options.subject);
+			}
+			if (options.productName) {
+				this.paymentResult.productName = decodeURIComponent(options.productName);
+			}
+			if (options.quantity) {
+				this.paymentResult.quantity = options.quantity;
+			}
+			
+			console.log('✅ 支付成功页面数据设置完成:', this.paymentResult);
 		},
 		methods: {
 			/**

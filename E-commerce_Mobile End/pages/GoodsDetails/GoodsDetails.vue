@@ -35,7 +35,7 @@
       <!-- 分享更多 -->
       <view class="share-more">
         <view class="share-more-one" :class="{ action: PageScrollTop > 120 }">
-          <view class="list">
+          <view class="list" @click="onShare">
             <text class="iconfont icon-share"></text>
           </view>
           <view class="list" @click.stop="isMore = !isMore">
@@ -67,14 +67,14 @@
               <text>我的关注</text>
             </view>
           </navigator>
-          <navigator class="list">
+          <view class="list" @click="goToBrowsingHistory">
             <view class="icon">
               <text class="iconfont icon-zuji"></text>
             </view>
             <view class="title">
               <text>浏览记录</text>
             </view>
-          </navigator>
+          </view>
         </view>
       </view>
     </view>
@@ -224,18 +224,18 @@
       <view class="list" @click="$refs['GoodsAttr'].show(1)">
         <view class="title">已选</view>
         <view class="content">
-          <text>蓝色,2件</text>
+          <text>{{ selectedVariantsText }}</text>
         </view>
         <view class="more">
           <text class="iconfont icon-more"></text>
         </view>
       </view>
-      <view class="list">
+      <view class="list" @click="onSelectAddress">
         <view class="title">送至</view>
         <view class="content">
           <view class="serve">
             <text class="iconfont icon-dingwei"></text>
-            <text>黑龙江哈尔滨道外</text>
+            <text>{{ selectedAddress.address || '请选择收货地址' }}</text>
           </view>
         </view>
         <view class="more">
@@ -348,7 +348,16 @@
     <!-- 优惠券 -->
     <goods-coupon ref="GoodsCoupon"></goods-coupon>
     <!-- 属性规格 -->
-    <goods-attr ref="GoodsAttr"></goods-attr>
+    <goods-attr 
+      ref="GoodsAttr" 
+      :goods-data="goodsDetail"
+      :current-selected-variants="selectedVariants"
+      :current-quantity="selectedQuantity"
+      @variant-change="onVariantChange"
+      @quantity-change="onQuantityChange"
+      @confirm="onAttrConfirm"
+      @selection-update="onSelectionUpdate"
+    ></goods-attr>
     </view>
   </view>
 </template>
@@ -410,7 +419,44 @@ export default {
           '<div class="m-img"><img src="https://zhedplus.oss-cn-hangzhou.aliyuncs.com/content_img/20191118/1fb5ff162f25fd4c7383bd998ff2fde9.jpg"><div class="tools" hidden><i class="fa fa-arrow-up move-up"></i><i class="fa fa-arrow-down move-down"></i><em class="move-remove" hidden ><i class="fa fa-times" aria-hidden="true"></i> 移除</em><div class="cover"></div></div></div>',
       PageScrollTop: 0,
 			type: 0,
+			
+			// 商品选择状态
+			selectedVariants: {},
+			selectedQuantity: 1,
+			
+			// 选择的收货地址
+			selectedAddress: {
+				address: '', // 默认为空，显示"请选择收货地址"
+				name: '',
+				longitude: 0,
+				latitude: 0,
+				province: '',
+				city: '',
+				district: '',
+				detail: ''
+			},
     };
+  },
+  computed: {
+    // 格式化已选择的属性文本
+    selectedVariantsText() {
+      if (!this.selectedVariants || Object.keys(this.selectedVariants).length === 0) {
+        return '请选择规格';
+      }
+      
+      const variantTexts = [];
+      for (let variantId in this.selectedVariants) {
+        const variant = this.selectedVariants[variantId];
+        // 兼容两种数据结构：size字段（来自GoodsAttr组件）和value字段（来自后端数据）
+        if (variant && (variant.size || variant.value)) {
+          variantTexts.push(variant.size || variant.value);
+        }
+      }
+      
+      return variantTexts.length > 0 ? 
+        `${variantTexts.join('，')}，${this.selectedQuantity}件` : 
+        '请选择规格';
+    }
   },
 	onLoad(params) {
 		console.log('🛒 商品详情页参数:', params);
@@ -506,6 +552,37 @@ export default {
       }
 
     },
+		
+		/**
+		 * 分享商品
+		 */
+		async onShare() {
+			try {
+				const ShareManager = require('@/utils/share.js').default;
+				
+				// 构建分享内容
+				const shareContent = ShareManager.buildShareContent(this.goodsDetail);
+				
+				console.log('📤 准备分享商品:', shareContent);
+				
+				// 显示分享选项并处理用户选择
+				await ShareManager.showShareOptions(shareContent, this);
+				
+			} catch (error) {
+				console.error('❌ 分享失败:', error);
+				// 不显示错误提示，静默处理
+			}
+		},
+		
+		/**
+		 * 跳转到浏览记录页面
+		 */
+		goToBrowsingHistory() {
+			uni.navigateTo({
+				url: '/pages/BrowsingHistory/BrowsingHistory'
+			});
+		},
+		
 		/**
 		 * 评价点击
 		 */
@@ -582,6 +659,12 @@ export default {
 						console.warn('⚠️ 浏览历史记录失败:', error);
 					}
 					
+					// 初始化默认属性选择
+					this.initializeDefaultSelection(product);
+					
+					// 初始化收货地址
+					this.initializeDeliveryAddress();
+					
 					console.log('🖼️ 商品图片数量:', product.images?.length || 0);
 					console.log('💰 商品价格:', product.price);
 					
@@ -633,6 +716,54 @@ export default {
 		},
 
 		/**
+		 * 初始化默认属性选择
+		 */
+		initializeDefaultSelection(product) {
+			try {
+				if (!product || !product.variants || !Array.isArray(product.variants)) {
+					console.log('📋 商品无variants数据，跳过属性初始化');
+					return;
+				}
+
+				console.log('🔧 开始初始化默认属性选择');
+				
+				this.selectedVariants = {};
+				
+				// 遍历每个variant，选择默认选项
+				product.variants.forEach((variant) => {
+					if (variant.options && variant.options.length > 0) {
+						// 寻找默认选项
+						let defaultOption = variant.options.find(option => option.isDefault);
+						
+						// 如果没有默认选项，取第一个选项
+						if (!defaultOption) {
+							defaultOption = variant.options[0];
+						}
+						
+						// 设置选中的variant，保持与子组件数据结构一致
+						this.selectedVariants[variant._id] = {
+							...defaultOption,
+							size: defaultOption.value,  // 添加size字段，保持兼容性
+							variantId: variant._id,
+							variantName: variant.name,
+							optionId: defaultOption._id
+						};
+						
+						console.log(`🎨 ${variant.name}默认选择:`, defaultOption.value);
+					}
+				});
+				
+				// 设置默认数量
+				this.selectedQuantity = 1;
+				
+				console.log('✅ 默认属性选择初始化完成:', this.selectedVariants);
+				
+			} catch (error) {
+				console.error('❌ 初始化默认属性选择失败:', error);
+			}
+		},
+
+		/**
 		 * 记录商品浏览历史
 		 */
 		recordBrowsingHistory(product) {
@@ -657,6 +788,208 @@ export default {
 			} catch (error) {
 				console.error('❌ 记录浏览历史失败:', error);
 			}
+		},
+
+		/**
+		 * 商品属性选择变化事件
+		 */
+		onVariantChange(data) {
+			console.log('🎨 属性选择变化:', data);
+			this.selectedVariants = data.selectedVariants;
+		},
+
+		/**
+		 * 商品数量变化事件
+		 */
+		onQuantityChange(quantity) {
+			console.log('🔢 数量变化:', quantity);
+			this.selectedQuantity = quantity;
+		},
+
+		/**
+		 * 属性选择更新事件（点击"已选"确定时触发）
+		 */
+		onSelectionUpdate(data) {
+			console.log('🔄 属性选择更新:', data);
+			this.selectedVariants = data.selectedVariants;
+			this.selectedQuantity = data.quantity;
+			
+			// 可选：显示选择成功提示
+			// uni.showToast({
+			// 	title: '选择已更新',
+			// 	icon: 'success',
+			// 	duration: 1000
+			// });
+		},
+
+		/**
+		 * 属性选择确认事件（购买操作时触发）
+		 */
+		onAttrConfirm(orderData) {
+			console.log('✅ 购买操作确认:', orderData);
+			
+			if (orderData.type === 2) {
+				// 加入购物车
+				this.addToCart(orderData);
+			} else if (orderData.type === 3) {
+				// 立即购买 - 构建完整订单数据并保存
+				console.log('🛒 立即购买，准备订单数据');
+				
+				const completeOrderData = {
+					product: {
+						id: this.goodsDetail._id,
+						name: this.goodsDetail.name,
+						price: orderData.price,
+						originalPrice: this.goodsDetail.originalPrice,
+						images: this.goodsDetail.images || [],
+						description: this.goodsDetail.description
+					},
+					selectedVariants: orderData.variants,
+					quantity: orderData.quantity,
+					totalPrice: orderData.price * orderData.quantity,
+					orderType: 'buy_now',
+					createdAt: new Date().toISOString()
+				};
+				
+				try {
+					// 保存订单数据到本地存储
+					uni.setStorageSync('tempOrderData', completeOrderData);
+					console.log('💾 订单数据已保存:', completeOrderData);
+					
+					// 跳转到订单确认页面
+					uni.navigateTo({
+						url: '/pages/ConfirmOrder/ConfirmOrder'
+					});
+					
+				} catch (error) {
+					console.error('❌ 保存订单数据失败:', error);
+					uni.showToast({
+						title: '订单数据保存失败',
+						icon: 'none'
+					});
+				}
+			}
+		},
+
+		/**
+		 * 添加到购物车
+		 */
+		async addToCart(orderData) {
+			try {
+				console.log('🛒 添加到购物车:', orderData);
+				
+				// 构建购物车商品数据
+				const cartItemData = {
+					productId: this.goodsDetail._id,
+					name: this.goodsDetail.name,
+					price: orderData.price,
+					image: this.goodsDetail.images && this.goodsDetail.images.length > 0 
+						? this.goodsDetail.images[0] 
+						: '/static/img/default_product.png',
+					variants: orderData.variants,
+					quantity: orderData.quantity
+				};
+				
+				console.log('📦 购物车商品数据:', cartItemData);
+				
+				// 使用购物车管理器添加商品
+				const CartManager = require('@/utils/cart.js').default;
+				const result = CartManager.addToCart(cartItemData);
+				
+				if (result.success) {
+					uni.showToast({
+						title: result.message,
+						icon: 'success'
+					});
+					
+					// 触发TabBar购物车数量更新
+					uni.$emit('updateCartCount');
+					
+					console.log('✅ 商品已成功添加到购物车');
+				} else {
+					throw new Error(result.message);
+				}
+				
+			} catch (error) {
+				console.error('❌ 添加购物车失败:', error);
+				uni.showToast({
+					title: error.message || '添加购物车失败',
+					icon: 'none'
+				});
+			}
+		},
+
+		/**
+		 * 初始化收货地址
+		 */
+		initializeDeliveryAddress() {
+			try {
+				// 尝试从本地存储读取用户上次选择的地址
+				const savedAddress = uni.getStorageSync('lastDeliveryAddress');
+				
+				if (savedAddress && savedAddress.address) {
+					this.selectedAddress = savedAddress;
+					console.log('📍 恢复上次选择的地址:', savedAddress.address);
+				} else {
+					console.log('📍 未找到保存的地址，使用默认提示');
+				}
+			} catch (error) {
+				console.error('❌ 初始化收货地址失败:', error);
+			}
+		},
+
+		/**
+		 * 选择收货地址 - 使用UniApp原生API
+		 */
+		onSelectAddress() {
+			console.log('🗺️ 点击选择收货地址');
+			
+			uni.chooseLocation({
+				success: (res) => {
+					console.log('📍 选择地址成功:', res);
+					
+					// 更新选择的地址信息
+					this.selectedAddress = {
+						address: res.address,
+						name: res.name,
+						latitude: res.latitude,
+						longitude: res.longitude,
+						province: '', // chooseLocation不返回省市区信息
+						city: '',
+						district: '',
+						detail: ''
+					};
+					
+					// 保存地址到本地存储，下次自动恢复
+					try {
+						uni.setStorageSync('lastDeliveryAddress', this.selectedAddress);
+						console.log('💾 地址已保存到本地存储');
+					} catch (error) {
+						console.warn('⚠️ 保存地址到本地存储失败:', error);
+					}
+					
+					// 显示地址更新提示
+					uni.showToast({
+						title: '地址已更新',
+						icon: 'success',
+						duration: 1500
+					});
+				},
+				fail: (error) => {
+					console.error('❌ 选择地址失败:', error);
+					
+					if (error.errMsg && error.errMsg.includes('cancel')) {
+						// 用户取消选择，不显示错误提示
+						return;
+					}
+					
+					uni.showToast({
+						title: '选择地址失败',
+						icon: 'none',
+						duration: 2000
+					});
+				}
+			});
 		}
   }
 };

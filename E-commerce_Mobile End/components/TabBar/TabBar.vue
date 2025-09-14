@@ -4,8 +4,14 @@
 			<view class="list" v-for="(item,index) in TabBarList" 
 			@click="onTabBar(item,index)"
 			:key="index">
-				<image :src="item.acImg" mode="widthFix" v-show="tabBarShow === index"></image>
-				<image :src="item.img" mode="widthFix" v-show="tabBarShow != index"></image>
+				<view class="icon-container">
+					<image :src="item.acImg" mode="widthFix" v-show="tabBarShow === index"></image>
+					<image :src="item.img" mode="widthFix" v-show="tabBarShow != index"></image>
+					<!-- 购物车数量徽章 -->
+					<view class="cart-badge" v-if="index === 3 && cartItemCount > 0">
+						<text class="badge-text">{{cartItemCount > 99 ? '99+' : cartItemCount}}</text>
+					</view>
+				</view>
 				<text :class="{'action':tabBarShow===index}">{{item.name}}</text>
 			</view>
 		</view>
@@ -13,6 +19,8 @@
 </template>
 
 <script>
+	import CartManager from '@/utils/cart.js';
+	
 	export default {
 		data() {
 			return {
@@ -51,6 +59,7 @@
 				codeheight: 0,
 				isOverall: 0,
 				phoneModel: '',
+				cartItemCount: 0, // 购物车商品数量
 			};
 		},
 		props:{
@@ -83,8 +92,32 @@
 			} catch (e) {
 			    // error
 			}
+			
+			// 初始化购物车数量
+			this.updateCartCount();
+			
+			// 监听页面显示事件，更新购物车数量
+			uni.$on('updateCartCount', () => {
+				this.updateCartCount();
+			});
+		},
+		beforeDestroy() {
+			// 移除事件监听
+			uni.$off('updateCartCount');
 		},
 		methods:{
+			/**
+			 * 更新购物车数量
+			 */
+			updateCartCount() {
+				try {
+					this.cartItemCount = CartManager.getCartItemCount();
+					console.log('🛒 TabBar购物车数量更新:', this.cartItemCount);
+				} catch (error) {
+					console.error('❌ 更新购物车数量失败:', error);
+					this.cartItemCount = 0;
+				}
+			},
 			/**
 			 * @param {Object} item
 			 * @param {Number} index
