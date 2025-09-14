@@ -244,7 +244,13 @@
 			</view>
 		</view>
     </mescroll-body>
-    <ClassifyData v-show="classifyShow!=0"></ClassifyData>
+    <ClassifyData 
+			v-show="classifyShow!=0" 
+			:categoryProducts="categoryProducts"
+			:categoryLoading="categoryLoading"
+			:currentCategoryId="currentCategoryId"
+			:selectedCategory="classList[classifyShow]"
+		></ClassifyData>
 		<!-- tabbar -->
 		<TabBar :tabBarShow="0"></TabBar>
 	</view>
@@ -476,6 +482,10 @@ export default {
 			isRealtimeRecommending: false,
 			lastClickedProduct: null,
 			realtimeRecommendationCount: 0,
+			// 分类相关
+			currentCategoryId: null,
+			categoryProducts: [],
+			categoryLoading: false,
 		}
 	},
 	onReady() {
@@ -555,25 +565,352 @@ export default {
 			uni.navigateTo({url:'/pages/search/search'})
 		},
 		/**
-		 * 扫一扫点击
+		 * 扫一扫点击 - 物品识别功能
 		 */
 		onCode(){
-			// 只允许通过相机扫码
-			uni.scanCode({
-				onlyFromCamera: true,
+			const that = this;
+			uni.showActionSheet({
+				itemList: ['物品识别', '扫码', '从相册选择'],
 				success: function (res) {
-						console.log('条码类型：' + res.scanType);
-						console.log('条码内容：' + res.result);
+					switch(res.tapIndex) {
+						case 0: // 物品识别
+							that.handleImageRecognition();
+							break;
+						case 1: // 扫码
+							that.handleScanCode();
+							break;
+						case 2: // 从相册选择
+							that.handleChooseFromAlbum();
+							break;
+					}
 				}
 			});
 		},
+
+		/**
+		 * 处理图片识别
+		 */
+		async handleImageRecognition() {
+			try {
+				// 获取用户token
+				const token = uni.getStorageSync('token');
+				console.log('🔐 获取到的token:', token ? token.substring(0, 20) + '...' : '未获取');
+				
+				if (!token) {
+					this.showLoginPrompt();
+					return;
+				}
+
+				// 验证token有效性
+				if (!await this.validateToken(token)) {
+					this.showLoginPrompt('登录已过期，请重新登录');
+					return;
+				}
+
+				// 选择图片来源
+				const sourceType = await this.chooseImageSource();
+				
+				// 获取图片
+				const imagePath = await this.getImage(sourceType);
+				console.log('📁 选择的图片路径:', imagePath);
+				
+				// 检查图片文件是否存在
+				try {
+					const fileInfo = await new Promise((resolve, reject) => {
+						uni.getFileInfo({
+							filePath: imagePath,
+							success: resolve,
+							fail: reject
+						});
+					});
+					console.log('📊 图片文件信息:', fileInfo);
+				} catch (fileError) {
+					console.error('❌ 图片文件检查失败:', fileError);
+					throw new Error('图片文件异常，请重新选择');
+				}
+				
+				// 显示识别中提示
+				uni.showLoading({
+					title: '识别中...',
+					mask: true
+				});
+				
+				// 调用识别API
+				const result = await api.recognition.identifyImage(imagePath, token);
+				
+				uni.hideLoading();
+				
+				// 显示识别结果，并传递图片路径
+				this.showRecognitionResult(result.data, imagePath);
+				
+			} catch (error) {
+				uni.hideLoading();
+				console.error('物品识别失败:', error);
+				uni.showToast({
+					title: error.message || '识别失败，请重试',
+					icon: 'none',
+					duration: 2000
+				});
+			}
+		},
+
+		/**
+		 * 处理扫码
+		 */
+		handleScanCode() {
+			uni.scanCode({
+				onlyFromCamera: true,
+				success: function (res) {
+					console.log('条码类型：' + res.scanType);
+					console.log('条码内容：' + res.result);
+					
+					// 可以根据扫码结果跳转到相应页面
+					uni.showToast({
+						title: '扫码成功',
+						icon: 'success'
+					});
+				},
+				fail: function (error) {
+					console.log('扫码失败:', error);
+					uni.showToast({
+						title: '扫码失败',
+						icon: 'none'
+					});
+				}
+			});
+		},
+
+		/**
+		 * 从相册选择图片识别
+		 */
+		async handleChooseFromAlbum() {
+			try {
+				// 获取用户token
+				const token = uni.getStorageSync('token');
+				console.log('🔐 获取到的token:', token ? token.substring(0, 20) + '...' : '未获取');
+				
+				if (!token) {
+					this.showLoginPrompt();
+					return;
+				}
+
+				// 验证token有效性
+				if (!await this.validateToken(token)) {
+					this.showLoginPrompt('登录已过期，请重新登录');
+					return;
+				}
+
+				// 从相册选择图片
+				const imagePath = await this.getImage('album');
+				console.log('📁 选择的图片路径:', imagePath);
+				
+				// 检查图片文件是否存在
+				try {
+					const fileInfo = await new Promise((resolve, reject) => {
+						uni.getFileInfo({
+							filePath: imagePath,
+							success: resolve,
+							fail: reject
+						});
+					});
+					console.log('📊 图片文件信息:', fileInfo);
+				} catch (fileError) {
+					console.error('❌ 图片文件检查失败:', fileError);
+					throw new Error('图片文件异常，请重新选择');
+				}
+				
+				// 显示识别中提示
+				uni.showLoading({
+					title: '识别中...',
+					mask: true
+				});
+				
+				// 调用识别API
+				const result = await api.recognition.identifyImage(imagePath, token);
+				
+				uni.hideLoading();
+				
+				// 显示识别结果，并传递图片路径
+				this.showRecognitionResult(result.data, imagePath);
+				
+			} catch (error) {
+				uni.hideLoading();
+				console.error('图片识别失败:', error);
+				uni.showToast({
+					title: error.message || '识别失败，请重试',
+					icon: 'none',
+					duration: 2000
+				});
+			}
+		},
+
+		/**
+		 * 选择图片来源
+		 */
+		chooseImageSource() {
+			return new Promise((resolve) => {
+				uni.showActionSheet({
+					itemList: ['拍照识别', '从相册选择'],
+					success: (res) => {
+						resolve(res.tapIndex === 0 ? 'camera' : 'album');
+					},
+					fail: () => {
+						resolve('camera'); // 默认使用相机
+					}
+				});
+			});
+		},
+
+		/**
+		 * 获取图片
+		 */
+		getImage(sourceType) {
+			return new Promise((resolve, reject) => {
+				uni.chooseImage({
+					count: 1,
+					sourceType: [sourceType === 'camera' ? 'camera' : 'album'],
+					sizeType: ['compressed'], // 压缩图片
+					success: (res) => {
+						console.log('选择图片成功:', res.tempFilePaths[0]);
+						resolve(res.tempFilePaths[0]);
+					},
+					fail: (error) => {
+						console.error('选择图片失败:', error);
+						reject(new Error('获取图片失败'));
+					}
+				});
+			});
+		},
+
+		/**
+		 * 显示识别结果
+		 */
+		showRecognitionResult(data, imagePath) {
+			console.log('📋 识别结果数据:', data);
+			console.log('📸 图片路径:', imagePath);
+			
+			if (!data || !data.topResult || !data.topResult.name) {
+				uni.showToast({
+					title: '未识别出物品',
+					icon: 'none',
+					duration: 2000
+				});
+				return;
+			}
+
+			const topResult = data.topResult;
+			const confidence = (topResult.score * 100).toFixed(1);
+			
+			// 跳转到识别结果详情页面
+			uni.navigateTo({
+				url: `/pages/recognition/result?data=${encodeURIComponent(JSON.stringify(data))}&image=${encodeURIComponent(imagePath)}`
+			});
+			
+			// 显示成功提示
+			uni.showToast({
+				title: '识别成功！',
+				icon: 'success',
+				duration: 1500
+			});
+		},
+
+			/**
+			 * 显示登录提示
+			 */
+			showLoginPrompt(message = '请先登录后再使用识别功能') {
+				uni.showModal({
+					title: '需要登录',
+					content: message,
+					confirmText: '去登录',
+					cancelText: '取消',
+					success: (res) => {
+						if (res.confirm) {
+							uni.navigateTo({
+								url: '/pages/Login'
+							});
+						}
+					}
+				});
+			},
+
+			/**
+			 * 验证token有效性
+			 */
+			async validateToken(token) {
+				try {
+					console.log('🔍 验证token有效性...');
+					const result = await api.user.getUserInfo(token);
+					
+					if (result.success && result.data) {
+						console.log('✅ Token有效，用户信息:', result.data.username || result.data.email);
+						return true;
+					} else {
+						console.log('❌ Token无效:', result.message);
+						return false;
+					}
+				} catch (error) {
+					console.log('❌ Token验证失败:', error.message);
+					
+					// 如果是401错误，说明token过期或无效
+					if (error.message.includes('401') || error.message.includes('认证')) {
+						// 清除过期的token
+						uni.removeStorageSync('token');
+						uni.removeStorageSync('userInfo');
+						return false;
+					}
+					
+					// 其他错误可能是网络问题，暂时认为token有效
+					return true;
+				}
+			},
 		/**
 		 * 分类点击
 		 * @param {Object} item
 		 * @param {Number} index
 		 */
-		onClassify(item,index){
+		async onClassify(item, index){
+			console.log('🏷️ 分类点击:', item, '索引:', index);
+			console.log('🔍 完整classList数据:', this.classList);
+			console.log('🔍 当前点击的分类详情:', JSON.stringify(item, null, 2));
+			
+			// 更新选中状态
 			this.classifyShow = index;
+			
+			// 如果点击的是首页（index为0），不需要加载分类商品
+			if (index === 0) {
+				this.currentCategoryId = null;
+				this.categoryProducts = [];
+				console.log('🏠 回到首页，清空分类商品，显示推荐商品');
+				return;
+			}
+			
+			// 如果分类有ID，加载该分类的商品
+			if (item && item.id) {
+				this.currentCategoryId = item.id;
+				console.log('📦 开始加载分类商品，分类ID:', item.id, '分类名称:', item.name);
+				
+				// 显示加载提示
+				uni.showToast({
+					title: `正在加载${item.name}商品...`,
+					icon: 'loading',
+					duration: 2000
+				});
+				
+				await this.loadCategoryProducts(item.id, item.name);
+			} else {
+				console.warn('⚠️ 分类缺少ID信息:', item);
+				console.warn('⚠️ 可能的原因: API返回的分类数据格式不正确或分类没有ID字段');
+				uni.showToast({
+					title: '分类信息异常',
+					icon: 'error'
+				});
+				
+				// 使用备用方案，根据分类名称加载默认商品
+				if (item && item.name) {
+					console.log('🔄 使用备用方案，根据分类名称加载默认商品');
+					this.setDefaultCategoryProducts(item.name);
+				}
+			}
 		},
 		/**
 		 * 跳转点击
@@ -769,9 +1106,9 @@ export default {
 					// 检查每个分类的homeDisplay配置
 					categories.forEach((category, index) => {
 						console.log(`🏷️  分类${index + 1}: ${category.name}`, {
-							showOnHome: category.homeDisplay?.showOnHome,
-							homeTitle: category.homeDisplay?.homeTitle,
-							homeOrder: category.homeDisplay?.homeOrder
+							showOnHome: category.homeDisplay && category.homeDisplay.showOnHome,
+							homeTitle: category.homeDisplay && category.homeDisplay.homeTitle,
+							homeOrder: category.homeDisplay && category.homeDisplay.homeOrder
 						});
 					});
 					
@@ -788,7 +1125,7 @@ export default {
 						// 手动转换导航数据 (9宫格导航)
 						const navData = homeCategories.slice(0, 10).map((category, index) => ({
 							id: category._id || category.id,
-							name: category.homeDisplay?.homeTitle || category.name,
+							name: (category.homeDisplay && category.homeDisplay.homeTitle) || category.name,
 							icon: category.icon || `/static/nav/nav_ico${(index % 10) + 1}.png`
 						}));
 						console.log('🧭 转换后的导航数据:', navData);
@@ -799,7 +1136,7 @@ export default {
 							{ id: 0, name: '首页' },
 							...homeCategories.slice(0, 7).map((category, index) => ({
 								id: category._id || category.id,
-								name: category.homeDisplay?.homeTitle || category.name
+								name: (category.homeDisplay && category.homeDisplay.homeTitle) || category.name
 							}))
 						];
 						console.log('🏷️  转换后的分类标签:', newClassList);
@@ -919,36 +1256,37 @@ export default {
 		setDefaultNavigationData() {
 			console.log('设置默认导航数据');
 			
-			// 默认10宫格导航数据（2行×5列）
+			// 使用真实的分类ID作为默认数据
 			const defaultNavList = [
-				{ id: 1, name: '手机专区' },
-				{ id: 2, name: '潮牌男装' },
-				{ id: 3, name: '运动男装' },
-				{ id: 4, name: '时尚背包' },
-				{ id: 5, name: '台式电脑' },
-				{ id: 6, name: '珠宝首饰' },
-				{ id: 7, name: '美颜美妆' },
-				{ id: 8, name: '家用电器' },
-				{ id: 9, name: '洗护用品' },
-				{ id: 10, name: '女装' }
+				{ id: '68b039423b0bc493f4cc4aa3', name: '手机专区' },
+				{ id: '68b039423b0bc493f4cc4aac', name: '潮牌男装' },
+				{ id: '68b039423b0bc493f4cc4aab', name: '运动男装' },
+				{ id: '68b039423b0bc493f4cc4aa4', name: '时尚背包' },
+				{ id: '68b039423b0bc493f4cc4aa5', name: '台式电脑' },
+				{ id: '68b039423b0bc493f4cc4aa7', name: '珠宝首饰' },
+				{ id: '68b039423b0bc493f4cc4aa6', name: '美颜美妆' },
+				{ id: '68b039423b0bc493f4cc4aa8', name: '家用电器' },
+				{ id: '68b039423b0bc493f4cc4aa9', name: '洗护用品' },
+				{ id: '68b039423b0bc493f4cc4aaa', name: '女装' }
 			];
 			
-			// 默认分类标签数据
+			// 使用真实的分类ID作为默认分类标签数据
 			const defaultClassList = [
 				{ id: 0, name: '首页' },
-				{ id: 1, name: '手机' },
-				{ id: 2, name: '男装' },
-				{ id: 3, name: '背包' },
-				{ id: 4, name: '电脑' },
-				{ id: 5, name: '珠宝' },
-				{ id: 6, name: '美妆' },
-				{ id: 7, name: '女装' }
+				{ id: '68b039423b0bc493f4cc4aa3', name: '手机专区' },
+				{ id: '68b039423b0bc493f4cc4aac', name: '潮牌男装' },
+				{ id: '68b039423b0bc493f4cc4aa4', name: '时尚背包' },
+				{ id: '68b039423b0bc493f4cc4aa5', name: '台式电脑' },
+				{ id: '68b039423b0bc493f4cc4aa7', name: '珠宝首饰' },
+				{ id: '68b039423b0bc493f4cc4aa6', name: '美颜美妆' },
+				{ id: '68b039423b0bc493f4cc4aaa', name: '女装' }
 			];
 			
 			this.$set(this, 'navList', defaultNavList);
 			this.$set(this, 'classList', defaultClassList);
 			
-			console.log('默认导航数据设置完成');
+			console.log('默认导航数据设置完成，使用真实分类ID');
+			console.log('分类列表:', defaultClassList);
 		},
 		
 		// 设置默认商品数据
@@ -993,8 +1331,15 @@ export default {
 		
 		// 获取商品图片
 		getProductImage(product) {
-			if (product.images && product.images.length > 0) {
-				return product.images[0];
+			if (product.images) {
+				// 如果images是数组
+				if (Array.isArray(product.images) && product.images.length > 0) {
+					return product.images[0];
+				}
+				// 如果images是字符串
+				if (typeof product.images === 'string' && product.images.trim() !== '') {
+					return product.images;
+				}
 			}
 			// 使用默认图片
 			return '/static/img/goods_thumb_01.png';
@@ -1518,6 +1863,199 @@ export default {
 			}
 		},
 		
+		// 加载分类商品数据
+		async loadCategoryProducts(categoryId, categoryName) {
+			// 防止组件销毁后执行
+			if (this._isDestroyed) {
+				console.log('⚠️ 组件已销毁，停止加载分类商品');
+				return;
+			}
+			
+			try {
+				this.categoryLoading = true;
+				console.log('🔄 开始加载分类商品数据...');
+				console.log('📋 分类ID:', categoryId, '分类名称:', categoryName);
+				console.log('📋 分类ID类型:', typeof categoryId);
+				
+				// 验证分类ID
+				if (!categoryId) {
+					throw new Error('分类ID为空或未定义');
+				}
+				
+				// 从配置模块获取API地址
+				const apiBaseUrl = ENV_CONFIG.BASE_URL;
+				const requestUrl = `${apiBaseUrl}/categories/${categoryId}/products`;
+				console.log('🌐 请求URL:', requestUrl);
+				console.log('🌐 API基础URL:', apiBaseUrl);
+				
+				// 调用后端API获取分类商品
+				const response = await new Promise((resolve, reject) => {
+					uni.request({
+						url: requestUrl,
+						method: 'GET',
+						data: {
+							limit: 20, // 加载更多商品
+							page: 1
+						},
+						timeout: 10000,
+						success: (res) => {
+							console.log('📦 分类商品API原始响应:', res);
+							console.log('📦 响应状态码:', res.statusCode);
+							console.log('📦 响应数据:', JSON.stringify(res.data, null, 2));
+							resolve(res);
+						},
+						fail: (error) => {
+							console.error('📦 分类商品API请求失败:', error);
+							console.error('📦 请求失败详情:', JSON.stringify(error, null, 2));
+							reject(new Error(`获取分类商品失败: ${error.errMsg || 'unknown error'}`));
+						}
+					});
+				});
+				
+				// 再次检查组件是否已销毁
+				if (this._isDestroyed) {
+					console.log('⚠️ 组件已销毁，停止处理分类商品数据');
+					return;
+				}
+				
+				if (response.statusCode === 200 && response.data && response.data.success && response.data.data && response.data.data.products) {
+					const products = response.data.data.products;
+					console.log('✅ 获取到分类商品数据:', products.length, '个商品');
+					console.log('📋 分类商品详情:', products.slice(0, 2)); // 显示前2个商品的详情
+					
+					// 转换商品数据格式
+					const categoryProducts = products.map((product, index) => ({
+						id: product._id || product.id,
+						name: product.name,
+						description: product.description,
+						shortDescription: product.shortDescription,
+						price: product.price,
+						vip_price: product.memberPrice || (product.price * 0.8).toFixed(2),
+						img: this.getProductImage(product),
+						is_goods: product.isFeatured ? 1 : 0,
+						sales: (product.sales && product.sales.totalSold) || Math.floor(Math.random() * 1000),
+						rating: (product.rating && product.rating.average) ? product.rating.average.toFixed(1) : (4 + Math.random()).toFixed(1),
+						category: categoryName,
+						brand: product.brand,
+						stock: product.stock,
+						sku: product.sku
+					}));
+					
+					// 更新分类商品数据
+					this.categoryProducts = categoryProducts;
+					this.$forceUpdate();
+					
+					console.log('✅ 分类商品数据加载成功:', categoryProducts.length, '个商品');
+					console.log('🏷️ 商品所属分类:', categoryName);
+					console.log('📦 转换后的商品数据预览:', categoryProducts.slice(0, 1));
+					
+					// 显示成功提示
+					uni.showToast({
+						title: `${categoryName}: ${categoryProducts.length}个商品`,
+						icon: 'success',
+						duration: 2000
+					});
+				} else {
+					console.warn('⚠️ 无法获取分类商品数据');
+					console.log('📊 API响应状态码:', response.statusCode);
+					console.log('📊 API响应是否成功:', response.data && response.data.success);
+					console.log('📊 API响应数据结构:', {
+						hasData: !!(response.data && response.data.data),
+						hasProducts: !!(response.data && response.data.data && response.data.data.products),
+						productCount: response.data && response.data.data && response.data.data.products ? response.data.data.products.length : 0
+					});
+					
+					// 使用默认数据作为备选方案
+					this.setDefaultCategoryProducts(categoryName);
+				}
+			} catch (error) {
+				if (!this._isDestroyed) {
+					console.error('❌ 加载分类商品失败:', error);
+					
+					// 显示错误提示
+					uni.showToast({
+						title: '加载商品失败',
+						icon: 'error'
+					});
+					
+					// 使用默认数据作为备选方案
+					this.setDefaultCategoryProducts(categoryName);
+				}
+			} finally {
+				if (!this._isDestroyed) {
+					this.categoryLoading = false;
+				}
+			}
+		},
+		
+		// 设置默认分类商品数据
+		setDefaultCategoryProducts(categoryName) {
+			console.log('🔄 设置默认分类商品数据，分类:', categoryName);
+			
+			// 根据分类名称筛选相关商品
+			let filteredProducts = [];
+			const allProducts = this.goodsList;
+			
+			// 根据分类名称匹配商品
+			if (categoryName.includes('手机') || categoryName.includes('iPhone') || categoryName.includes('华为') || categoryName.includes('小米')) {
+				filteredProducts = allProducts.filter(product => 
+					product.name.toLowerCase().includes('手机') || 
+					product.name.toLowerCase().includes('iphone') || 
+					product.name.toLowerCase().includes('华为') || 
+					product.name.toLowerCase().includes('小米') ||
+					product.name.toLowerCase().includes('荣耀')
+				);
+			} else if (categoryName.includes('男装') || categoryName.includes('服装')) {
+				filteredProducts = allProducts.filter(product => 
+					product.name.includes('男装') || 
+					product.name.includes('男') ||
+					product.name.includes('T恤') ||
+					product.name.includes('卫衣')
+				);
+			} else if (categoryName.includes('女装')) {
+				filteredProducts = allProducts.filter(product => 
+					product.name.includes('女装') || 
+					product.name.includes('女') ||
+					product.name.includes('连衣裙') ||
+					product.name.includes('t恤女')
+				);
+			} else if (categoryName.includes('电脑') || categoryName.includes('笔记本')) {
+				filteredProducts = allProducts.filter(product => 
+					product.name.includes('电脑') || 
+					product.name.includes('笔记本') ||
+					product.name.includes('MacBook') ||
+					product.name.includes('戴尔') ||
+					product.name.includes('联想')
+				);
+			} else {
+				// 默认选择一些商品
+				filteredProducts = allProducts.slice(0, 10);
+			}
+			
+			// 如果没有匹配的商品，使用默认商品
+			if (filteredProducts.length === 0) {
+				filteredProducts = allProducts.slice(0, 8);
+			}
+			
+			// 转换为标准格式
+			const categoryProducts = filteredProducts.map((product, index) => ({
+				id: product.id || `default-${categoryName}-${index}`,
+				name: product.name,
+				price: product.price,
+				vip_price: product.vip_price,
+				img: product.img,
+				is_goods: product.is_goods,
+				sales: Math.floor(Math.random() * 1000),
+				rating: (4 + Math.random()).toFixed(1),
+				category: categoryName
+			}));
+			
+			this.categoryProducts = categoryProducts;
+			this.$forceUpdate();
+			
+			console.log('✅ 默认分类商品数据设置完成:', categoryProducts.length, '个商品');
+		},
+		
 		// 清理资源
 		cleanup() {
 			console.log('🧹 清理页面资源...');
@@ -1537,7 +2075,9 @@ export default {
 			
 			console.log('✅ 资源清理完成');
 		}
+		
 	}
+	
 };
 </script>
 

@@ -9,6 +9,25 @@
           <h4 class="title">商家审核</h4>
         </md-card-header>
         <md-card-content>
+          <!-- 导入导出按钮 -->
+          <div class="text-right" style="margin-bottom: 20px;">
+            <md-button class="md-success md-dense" @click="exportToExcel" style="margin-right: 10px;">
+              <md-icon>file_download</md-icon>
+              导出Excel
+            </md-button>
+            <md-button class="md-info md-dense" @click="exportToPDF" style="margin-right: 10px;">
+              <md-icon>picture_as_pdf</md-icon>
+              导出PDF
+            </md-button>
+            <md-button class="md-warning md-dense" @click="importFromExcel" style="margin-right: 10px;">
+              <md-icon>file_upload</md-icon>
+              导入Excel
+            </md-button>
+            <md-button class="md-accent md-dense" @click="downloadTemplate">
+              <md-icon>get_app</md-icon>
+              下载模板
+            </md-button>
+          </div>
           
           <!-- 过滤器 -->
           <div class="md-layout" style="margin-bottom: 20px;">
@@ -61,7 +80,7 @@
           </div>
 
           <md-table
-            :value="filteredTable"
+            :value="paginatedTable"
             :md-sort.sync="sortation.field"
             :md-sort-order.sync="sortation.order"
             :md-sort-fn="customSort"
@@ -338,12 +357,68 @@
         </md-button>
       </md-dialog-actions>
     </md-dialog>
+
+    <!-- 文件导入对话框 -->
+    <md-dialog :md-active.sync="showImportDialog" :md-fullscreen="false" :md-backdrop="true">
+      <md-dialog-title>导入审核数据</md-dialog-title>
+      <md-dialog-content style="padding: 24px; min-width: 400px;">
+        <div class="import-area">
+          <input 
+            ref="fileInput" 
+            type="file" 
+            accept=".xlsx,.xls" 
+            @change="handleFileSelect" 
+            style="display: none;"
+          />
+          <div 
+            class="file-drop-zone" 
+            :class="{ 'drag-over': isDragOver }"
+            @click="$refs.fileInput.click()"
+            @dragover.prevent="isDragOver = true"
+            @dragleave.prevent="isDragOver = false"
+            @drop.prevent="handleFileDrop"
+          >
+            <md-icon class="upload-icon">cloud_upload</md-icon>
+            <p>点击选择文件或将Excel文件拖拽到此处</p>
+            <p class="file-info">支持 .xlsx 和 .xls 格式</p>
+            <p class="template-info">
+              <md-button class="md-dense md-accent" @click="downloadTemplate">
+                下载导入模板
+              </md-button>
+            </p>
+          </div>
+          <div v-if="selectedFile" class="selected-file">
+            <md-icon>description</md-icon>
+            <span>{{ selectedFile.name }}</span>
+            <md-button class="md-icon-button" @click="clearFile">
+              <md-icon>close</md-icon>
+            </md-button>
+          </div>
+          <div v-if="importProgress.show" class="import-progress">
+            <md-progress-bar :md-value="importProgress.value"></md-progress-bar>
+            <p>{{ importProgress.text }}</p>
+          </div>
+        </div>
+      </md-dialog-content>
+      <md-dialog-actions>
+        <md-button @click="closeImportDialog">取消</md-button>
+        <md-button 
+          class="md-primary md-raised" 
+          @click="processImport" 
+          :disabled="!selectedFile || importProgress.show"
+        >
+          开始导入
+        </md-button>
+      </md-dialog-actions>
+    </md-dialog>
   </div>
 </template>
 
 <script>
 import Pagination from "@/components/Pagination";
 import permissionsMixin from "@/mixins/permissions";
+import * as XLSX from 'xlsx';
+import html2pdf from 'html2pdf.js';
 
 export default {
   components: {
@@ -382,6 +457,16 @@ export default {
     auditComment: '',
     rejectReason: '',
     savingAudit: false,
+
+    // 导入导出相关数据
+    showImportDialog: false,
+    selectedFile: null,
+    isDragOver: false,
+    importProgress: {
+      show: false,
+      value: 0,
+      text: ''
+    },
   }),
 
   computed: {
@@ -430,6 +515,13 @@ export default {
       return filtered;
     },
 
+    // 分页后的审核数据
+    paginatedTable() {
+      const start = this.from;
+      const end = start + this.pagination.perPage;
+      return this.filteredTable.slice(start, end);
+    },
+
     filteredTotal() {
       return this.filteredTable.length;
     },
@@ -455,18 +547,12 @@ export default {
     filters: {
       handler() {
         this.pagination.currentPage = 1;
-        this.getList();
       },
       deep: true
     },
     
-    'pagination.currentPage'() {
-      this.getList();
-    },
-    
     'pagination.perPage'() {
       this.pagination.currentPage = 1;
-      this.getList();
     }
   },
 
@@ -574,6 +660,198 @@ export default {
               action: '审核拒绝',
               reviewer: '刘审核员',
               comment: '地址变更证明不完整，请补充相关材料'
+            }
+          ]
+        },
+        {
+          _id: '4',
+          applicationId: 'APP20231202004',
+          merchantName: '苹果授权专卖店',
+          contactPerson: '陈总监',
+          contactPhone: '135****2468',
+          businessAddress: '深圳市南山区科技园',
+          applicationType: 'level_upgrade',
+          auditStatus: 'pending',
+          priority: 'high',
+          submitTime: '2023-12-02T11:15:00Z',
+          reviewer: '张审核员',
+          timeRemaining: 48,
+          applicationContent: '申请升级为钻石级商家，提供更高品质的产品和服务',
+          documents: [
+            { name: '销售业绩报告.pdf', url: '/docs/performance.pdf' },
+            { name: '客户满意度调研.pdf', url: '/docs/satisfaction.pdf' },
+            { name: '质量认证证书.pdf', url: '/docs/quality-cert.pdf' }
+          ],
+          auditHistory: [
+            {
+              time: '2023-12-02T14:00:00Z',
+              action: '审核中',
+              reviewer: '张审核员',
+              comment: '已接收申请，正在审核相关材料'
+            }
+          ]
+        },
+        {
+          _id: '5',
+          applicationId: 'APP20231203005',
+          merchantName: '德国汽车配件专营店',
+          contactPerson: '穆勒先生',
+          contactPhone: '186****7890',
+          businessAddress: '北京市海淀区中关村',
+          applicationType: 'new_registration',
+          auditStatus: 'resubmitted',
+          priority: 'medium',
+          submitTime: '2023-12-03T08:45:00Z',
+          reviewer: null,
+          timeRemaining: 168,
+          applicationContent: '申请入驻平台，专营德国进口汽车配件和维修工具',
+          documents: [
+            { name: '进口资质证明.pdf', url: '/docs/import-license.pdf' },
+            { name: '品牌授权书.pdf', url: '/docs/brand-auth.pdf' },
+            { name: '产品质量检测报告.pdf', url: '/docs/quality-test.pdf' }
+          ],
+          auditHistory: [
+            {
+              time: '2023-12-01T16:30:00Z',
+              action: '审核拒绝',
+              reviewer: '李审核员',
+              comment: '缺少海关报关单据'
+            },
+            {
+              time: '2023-12-03T08:45:00Z',
+              action: '重新提交',
+              reviewer: null,
+              comment: '已补充海关报关单据，请重新审核'
+            }
+          ]
+        },
+        {
+          _id: '6',
+          applicationId: 'APP20231204006',
+          merchantName: '韩式美妆连锁店',
+          contactPerson: '金小姐',
+          contactPhone: '151****3579',
+          businessAddress: '成都市锦江区春熙路',
+          applicationType: 'category_expansion',
+          auditStatus: 'approved',
+          priority: 'low',
+          submitTime: '2023-12-04T13:20:00Z',
+          reviewer: '赵审核员',
+          timeRemaining: 0,
+          applicationContent: '申请扩展经营范围，新增护肤工具和美容仪器销售',
+          documents: [
+            { name: '品类扩展申请.pdf', url: '/docs/category-ext.pdf' },
+            { name: '供应商资质证明.pdf', url: '/docs/supplier-cert.pdf' }
+          ],
+          auditHistory: [
+            {
+              time: '2023-12-05T09:30:00Z',
+              action: '审核通过',
+              reviewer: '赵审核员',
+              comment: '申请材料完整，扩展类目合规'
+            }
+          ]
+        },
+        {
+          _id: '7',
+          applicationId: 'APP20231205007',
+          merchantName: '书香阁古籍书店',
+          contactPerson: '文老师',
+          contactPhone: '159****4681',
+          businessAddress: '西安市雁塔区大雁塔',
+          applicationType: 'info_update',
+          auditStatus: 'pending',
+          priority: 'low',
+          submitTime: '2023-12-05T15:30:00Z',
+          reviewer: null,
+          timeRemaining: 96,
+          applicationContent: '更新店铺营业时间和联系方式，增加在线客服支持',
+          documents: [
+            { name: '营业时间调整申请.pdf', url: '/docs/hours-update.pdf' }
+          ],
+          auditHistory: []
+        },
+        {
+          _id: '8',
+          applicationId: 'APP20231206008',
+          merchantName: '健身器材专业店',
+          contactPerson: '刘教练',
+          contactPhone: '177****2580',
+          businessAddress: '杭州市西湖区文三路',
+          applicationType: 'level_upgrade',
+          auditStatus: 'rejected',
+          priority: 'medium',
+          submitTime: '2023-12-06T10:00:00Z',
+          reviewer: '孙审核员',
+          timeRemaining: 0,
+          applicationContent: '申请从铜牌商家升级为银牌商家，提升服务等级',
+          documents: [
+            { name: '销售数据统计.pdf', url: '/docs/sales-data.pdf' },
+            { name: '客户评价汇总.pdf', url: '/docs/reviews.pdf' }
+          ],
+          auditHistory: [
+            {
+              time: '2023-12-07T14:15:00Z',
+              action: '审核拒绝',
+              reviewer: '孙审核员',
+              comment: '销售额未达到升级标准，客户投诉率偏高'
+            }
+          ]
+        },
+        {
+          _id: '9',
+          applicationId: 'APP20231207009',
+          merchantName: '意大利家居生活馆',
+          contactPerson: '马可先生',
+          contactPhone: '138****9527',
+          businessAddress: '上海市黄浦区南京路',
+          applicationType: 'new_registration',
+          auditStatus: 'pending',
+          priority: 'high',
+          submitTime: '2023-12-07T16:45:00Z',
+          reviewer: '周审核员',
+          timeRemaining: 24,
+          applicationContent: '申请入驻平台，专营意大利进口家居用品和装饰品',
+          documents: [
+            { name: '进口商营业执照.pdf', url: '/docs/import-license2.pdf' },
+            { name: '意大利品牌授权.pdf', url: '/docs/italy-brand.pdf' },
+            { name: '产品展示目录.pdf', url: '/docs/product-catalog.pdf' },
+            { name: '质量保证书.pdf', url: '/docs/quality-guarantee.pdf' }
+          ],
+          auditHistory: [
+            {
+              time: '2023-12-07T17:00:00Z',
+              action: '审核中',
+              reviewer: '周审核员',
+              comment: '材料已接收，正在核实品牌授权信息'
+            }
+          ]
+        },
+        {
+          _id: '10',
+          applicationId: 'APP20231208010',
+          merchantName: '宠物用品生活馆',
+          contactPerson: '王小姐',
+          contactPhone: '152****8642',
+          businessAddress: '武汉市汉口区江汉路',
+          applicationType: 'category_expansion',
+          auditStatus: 'approved',
+          priority: 'medium',
+          submitTime: '2023-12-08T09:15:00Z',
+          reviewer: '李审核员',
+          timeRemaining: 0,
+          applicationContent: '申请新增宠物食品和宠物医疗用品销售类目',
+          documents: [
+            { name: '宠物食品经营许可.pdf', url: '/docs/pet-food-license.pdf' },
+            { name: '兽医资质证明.pdf', url: '/docs/vet-cert.pdf' },
+            { name: '类目扩展申请表.pdf', url: '/docs/category-expansion2.pdf' }
+          ],
+          auditHistory: [
+            {
+              time: '2023-12-09T11:30:00Z',
+              action: '审核通过',
+              reviewer: '李审核员',
+              comment: '经营资质齐全，符合平台宠物用品销售要求'
             }
           ]
         }
@@ -749,6 +1027,249 @@ export default {
         hour: '2-digit', 
         minute: '2-digit' 
       });
+    },
+
+    // ========== 导入导出相关方法 ==========
+    
+    // 显示导入对话框
+    importFromExcel() {
+      this.showImportDialog = true;
+      this.selectedFile = null;
+      this.importProgress = { show: false, value: 0, text: '' };
+    },
+
+    // 关闭导入对话框
+    closeImportDialog() {
+      this.showImportDialog = false;
+      this.selectedFile = null;
+      this.importProgress = { show: false, value: 0, text: '' };
+    },
+
+    // 处理文件选择
+    handleFileSelect(event) {
+      const file = event.target.files[0];
+      if (file) {
+        this.validateAndSetFile(file);
+      }
+    },
+
+    // 处理文件拖放
+    handleFileDrop(event) {
+      this.isDragOver = false;
+      const files = event.dataTransfer.files;
+      if (files.length > 0) {
+        this.validateAndSetFile(files[0]);
+      }
+    },
+
+    // 验证并设置文件
+    validateAndSetFile(file) {
+      const validTypes = [
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'application/vnd.ms-excel'
+      ];
+      
+      if (!validTypes.includes(file.type)) {
+        this.$store.dispatch("alerts/error", "请选择有效的Excel文件（.xlsx或.xls格式）");
+        return;
+      }
+      
+      if (file.size > 10 * 1024 * 1024) {
+        this.$store.dispatch("alerts/error", "文件大小不能超过10MB");
+        return;
+      }
+      
+      this.selectedFile = file;
+    },
+
+    // 清除选中的文件
+    clearFile() {
+      this.selectedFile = null;
+      this.$refs.fileInput.value = '';
+    },
+
+    // 导出到Excel
+    exportToExcel() {
+      try {
+        const exportData = this.prepareExportData();
+        const ws = XLSX.utils.json_to_sheet(exportData);
+        
+        // 设置列宽
+        const colWidths = [
+          { wch: 18 }, { wch: 20 }, { wch: 12 }, { wch: 15 }, 
+          { wch: 12 }, { wch: 10 }, { wch: 10 }, { wch: 18 }, { wch: 12 }
+        ];
+        ws['!cols'] = colWidths;
+
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, '商家审核列表');
+        
+        const fileName = `商家审核数据_${this.formatDateForFile(new Date())}.xlsx`;
+        XLSX.writeFile(wb, fileName);
+        
+        this.$store.dispatch("alerts/success", "Excel文件导出成功");
+      } catch (error) {
+        console.error('Excel导出失败:', error);
+        this.$store.dispatch("alerts/error", "Excel导出失败");
+      }
+    },
+
+    // 导出到PDF
+    async exportToPDF() {
+      try {
+        const htmlContent = this.generateHTMLReport();
+        
+        const element = document.createElement('div');
+        element.innerHTML = htmlContent;
+        element.style.padding = '20px';
+        element.style.fontFamily = 'Microsoft YaHei, SimSun, sans-serif';
+        element.style.fontSize = '12px';
+        
+        const opt = {
+          margin: 10,
+          filename: `商家审核报表_${this.formatDateForFile(new Date())}.pdf`,
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2 },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+        };
+        
+        await html2pdf().set(opt).from(element).save();
+        
+        this.$store.dispatch("alerts/success", "PDF文件导出成功");
+      } catch (error) {
+        console.error('PDF导出失败:', error);
+        this.$store.dispatch("alerts/error", `PDF导出失败: ${error.message}`);
+      }
+    },
+
+    // 准备导出数据
+    prepareExportData() {
+      return this.filteredTable.map(item => ({
+        '申请编号': item.applicationId,
+        '商家名称': item.merchantName,
+        '联系人': item.contactPerson,
+        '联系电话': item.contactPhone,
+        '申请类型': this.getApplicationTypeText(item.applicationType),
+        '审核状态': this.getAuditStatusText(item.auditStatus),
+        '紧急程度': this.getPriorityText(item.priority),
+        '提交时间': this.formatDateTime(item.submitTime),
+        '审核员': item.reviewer || '未分配'
+      }));
+    },
+
+    // 下载导入模板
+    downloadTemplate() {
+      try {
+        const templateData = [
+          {
+            '申请编号': 'APP20231201001',
+            '商家名称': '示例商家A',
+            '联系人': '张经理',
+            '联系电话': '138****1234',
+            '申请类型': '新入驻申请',
+            '审核状态': '待审核',
+            '紧急程度': '普通',
+            '提交时间': '2023-12-01 09:30:00',
+            '申请内容': '申请开设示例店铺，主营数码产品'
+          }
+        ];
+
+        const ws = XLSX.utils.json_to_sheet(templateData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, '审核数据导入模板');
+        
+        XLSX.writeFile(wb, '商家审核导入模板.xlsx');
+        
+        this.$store.dispatch("alerts/success", "模板下载成功");
+      } catch (error) {
+        console.error('模板下载失败:', error);
+        this.$store.dispatch("alerts/error", "模板下载失败");
+      }
+    },
+
+    // 生成HTML报表内容
+    generateHTMLReport() {
+      const exportData = this.prepareExportData();
+      
+      let html = `
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #333; margin-bottom: 10px;">商家审核报表</h1>
+          <p style="color: #666; margin: 5px 0;">导出时间：${this.formatDateTime(new Date())}</p>
+          <p style="color: #666; margin: 5px 0;">总数量：${this.filteredTable.length} 条记录</p>
+        </div>
+        
+        <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
+          <thead>
+            <tr style="background-color: #ff9800; color: white;">
+              <th style="border: 1px solid #ddd; padding: 8px;">申请编号</th>
+              <th style="border: 1px solid #ddd; padding: 8px;">商家名称</th>
+              <th style="border: 1px solid #ddd; padding: 8px;">联系人</th>
+              <th style="border: 1px solid #ddd; padding: 8px;">申请类型</th>
+              <th style="border: 1px solid #ddd; padding: 8px;">审核状态</th>
+              <th style="border: 1px solid #ddd; padding: 8px;">紧急程度</th>
+              <th style="border: 1px solid #ddd; padding: 8px;">提交时间</th>
+              <th style="border: 1px solid #ddd; padding: 8px;">审核员</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+      
+      exportData.forEach((item, index) => {
+        const rowStyle = index % 2 === 0 ? 'background-color: #f9f9f9;' : 'background-color: white;';
+        html += `
+          <tr style="${rowStyle}">
+            <td style="border: 1px solid #ddd; padding: 6px;">${item['申请编号']}</td>
+            <td style="border: 1px solid #ddd; padding: 6px;">${item['商家名称']}</td>
+            <td style="border: 1px solid #ddd; padding: 6px;">${item['联系人']}</td>
+            <td style="border: 1px solid #ddd; padding: 6px;">${item['申请类型']}</td>
+            <td style="border: 1px solid #ddd; padding: 6px;">${item['审核状态']}</td>
+            <td style="border: 1px solid #ddd; padding: 6px;">${item['紧急程度']}</td>
+            <td style="border: 1px solid #ddd; padding: 6px;">${item['提交时间']}</td>
+            <td style="border: 1px solid #ddd; padding: 6px;">${item['审核员']}</td>
+          </tr>
+        `;
+      });
+      
+      html += `
+          </tbody>
+        </table>
+        
+        <div style="margin-top: 20px; text-align: center; color: #666; font-size: 10px;">
+          <p>生成时间：${new Date().toLocaleString('zh-CN')}</p>
+        </div>
+      `;
+      
+      return html;
+    },
+
+    // 格式化文件名日期
+    formatDateForFile(date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      return `${year}${month}${day}_${hours}${minutes}`;
+    },
+
+    // 处理Excel导入（简化版本）
+    async processImport() {
+      if (!this.selectedFile) {
+        this.$store.dispatch("alerts/error", "请先选择文件");
+        return;
+      }
+
+      this.importProgress = { show: true, value: 50, text: '正在处理文件...' };
+
+      // 简化的导入逻辑
+      setTimeout(() => {
+        this.importProgress = { show: true, value: 100, text: '导入完成！' };
+        
+        setTimeout(() => {
+          this.closeImportDialog();
+          this.$store.dispatch("alerts/success", "Excel导入功能演示完成");
+        }, 1000);
+      }, 2000);
     },
   },
 };
@@ -968,6 +1489,80 @@ export default {
   gap: 8px;
 }
 
+/* 导入对话框样式 */
+.import-area {
+  padding: 16px;
+}
+
+.file-drop-zone {
+  border: 2px dashed #ccc;
+  border-radius: 8px;
+  padding: 40px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background-color: #fafafa;
+}
+
+.file-drop-zone:hover,
+.file-drop-zone.drag-over {
+  border-color: #ff9800;
+  background-color: #fff3e0;
+  transform: scale(1.02);
+}
+
+.upload-icon {
+  font-size: 48px !important;
+  color: #ff9800;
+  margin-bottom: 16px;
+}
+
+.file-drop-zone p {
+  margin: 8px 0;
+  color: #666;
+}
+
+.file-info {
+  font-size: 12px;
+  color: #999;
+}
+
+.template-info {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #eee;
+}
+
+.template-info p {
+  margin: 0;
+}
+
+.selected-file {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+  padding: 12px;
+  background-color: #e8f5e8;
+  border-radius: 4px;
+  border: 1px solid #4caf50;
+}
+
+.selected-file md-icon {
+  color: #4caf50;
+}
+
+.import-progress {
+  margin-top: 20px;
+}
+
+.import-progress p {
+  margin-top: 8px;
+  font-size: 14px;
+  color: #666;
+  text-align: center;
+}
+
 /* 响应式设计 */
 @media (max-width: 768px) {
   .detail-item {
@@ -994,6 +1589,14 @@ export default {
   .merchant-info,
   .application-id {
     font-size: 14px;
+  }
+
+  .file-drop-zone {
+    padding: 20px;
+  }
+  
+  .upload-icon {
+    font-size: 36px !important;
   }
 }
 </style>

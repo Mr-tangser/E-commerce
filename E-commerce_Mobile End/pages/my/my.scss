@@ -61,27 +61,55 @@
 			display: flex;
 			align-items: center;
 			height: 100%;
-			margin-right: -40rpx;
+			margin-right: 20rpx; /* 调整右边距，确保按钮位置固定 */
 			.setting{
 				display: flex;
 				justify-content: center;
 				align-items: center;
-				width: 80rpx;
-				height: 100%;
+				width: 60rpx;
+				height: 60rpx;
 				text{
 					color: #FFFFFF;
-					font-size: 38rpx;
+					font-size: 36rpx;
 				}
 			}
 			.mess{
 				display: flex;
 				justify-content: center;
 				align-items: center;
-				width: 80rpx;
-				height: 100%;
+				width: 60rpx;
+				height: 60rpx;
+				margin-left: 10rpx;
 				text{
 					color: #FFFFFF;
-					font-size: 38rpx;
+					font-size: 36rpx;
+				}
+			}
+			.extra-button{
+				display: flex;
+				justify-content: center;
+				align-items: center;
+				width: 60rpx;
+				height: 60rpx;
+				margin-left: 10rpx;
+				border-radius: 50%;
+				background: rgba(255, 255, 255, 0.1);
+				transition: all 0.3s ease;
+				
+				&.placeholder {
+					/* 占位按钮，不可见但占据空间 */
+					opacity: 0;
+					pointer-events: none;
+				}
+				
+				&:not(.placeholder):active {
+					background: rgba(255, 255, 255, 0.2);
+					transform: scale(0.95);
+				}
+				
+				text{
+					color: #FFFFFF;
+					font-size: 32rpx;
 				}
 			}
 		}
@@ -563,5 +591,21 @@
 				}
 			}
 		}
+	}
+}
+
+/* 账号关联图标样式 */
+.account-icon {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 40rpx !important;
+	height: 40rpx !important;
+	background: rgba(25, 137, 250, 0.1) !important;
+	border-radius: 8rpx !important;
+	
+	text {
+		font-size: 24rpx;
+		line-height: 1;
 	}
 }

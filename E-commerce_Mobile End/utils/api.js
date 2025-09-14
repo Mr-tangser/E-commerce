@@ -127,6 +127,13 @@ const api = {
         data: { email, password }
       });
     },
+    // 用户登录（一键登录）
+    loginByUniverify(phone, access_token, openid) {
+      return request('/auth/univerify-login', {
+        method: 'POST',
+        data: { phone, access_token, openid }
+      });
+    },
 
     // 手机验证码登录
     loginByPhone(phone, code) {
@@ -266,6 +273,208 @@ const api = {
     // 测试支付接口连通性
     testPayment() {
       return request('/payment/test');
+    }
+  },
+
+  // 物品识别相关
+  recognition: {
+    // 图片识别 - 看图识万物
+    identifyImage(imageFile, token) {
+      return new Promise((resolve, reject) => {
+        const fullUrl = `${BASE_URL}/recognition/identify`;
+        
+        console.log('🔍 发起图片识别请求:', fullUrl);
+        console.log('📝 请求参数:', { imageFile, token: token ? '已提供' : '未提供' });
+        
+        uni.uploadFile({
+          url: fullUrl,
+          filePath: imageFile,
+          name: 'image',
+          header: {
+            'Authorization': `Bearer ${token}`
+          },
+          success: (res) => {
+            console.log('📸 图片识别原始响应:', res);
+            
+            // 检查响应状态
+            if (res.statusCode !== 200) {
+              console.error('❌ API响应状态异常:', res.statusCode, res.data);
+              reject(new Error(`服务器响应异常: ${res.statusCode}`));
+              return;
+            }
+            
+            // 检查响应数据类型
+            if (typeof res.data !== 'string') {
+              console.error('❌ API响应数据类型异常:', typeof res.data, res.data);
+              reject(new Error('服务器响应格式异常'));
+              return;
+            }
+            
+            // 检查是否是HTML错误页面
+            if (res.data.trim().toLowerCase().startsWith('<html') || 
+                res.data.trim().toLowerCase().startsWith('<!doctype')) {
+              console.error('❌ 服务器返回HTML错误页面:', res.data.substring(0, 100));
+              reject(new Error('服务器错误，请确保后端服务正常运行'));
+              return;
+            }
+            
+            try {
+              const result = JSON.parse(res.data);
+              console.log('✅ 解析识别结果成功:', result);
+              
+              if (result.success) {
+                resolve(result);
+              } else {
+                reject(new Error(result.message || '识别失败'));
+              }
+            } catch (error) {
+              console.error('❌ JSON解析失败:', error);
+              console.error('原始响应数据:', res.data);
+              reject(new Error(`识别结果解析失败: ${error.message}`));
+            }
+          },
+          fail: (error) => {
+            console.error('📸 图片识别失败详细信息:', error);
+            console.error('📸 错误对象属性:', Object.keys(error));
+            console.error('📸 错误消息:', error.errMsg);
+            console.error('📸 错误代码:', error.errCode);
+            
+            let errorMessage = '图片上传失败';
+            if (error.errMsg) {
+              if (error.errMsg.includes('timeout')) {
+                errorMessage = '网络超时，请检查网络连接';
+              } else if (error.errMsg.includes('network')) {
+                errorMessage = '网络连接失败，请检查服务器地址';
+              } else if (error.errMsg.includes('file not found')) {
+                errorMessage = '文件不存在或路径错误';
+              } else {
+                errorMessage = `上传失败: ${error.errMsg}`;
+              }
+            }
+            
+            reject(new Error(errorMessage));
+          }
+        });
+      });
+    },
+
+    // 通用物体识别
+    generalRecognition(imageFile, token) {
+      return new Promise((resolve, reject) => {
+        const fullUrl = `${BASE_URL}/recognition/general`;
+        console.log('🔍 发起通用物体识别请求:', fullUrl);
+        
+        // 检查token
+        if (!token) {
+          reject(new Error('用户未登录，请先登录'));
+          return;
+        }
+
+        // 检查图片文件路径
+        console.log('📁 通用识别-图片文件路径:', imageFile);
+        console.log('🌐 通用识别-上传URL:', fullUrl);
+
+        console.log('🔧 准备上传参数:', {
+          url: fullUrl,
+          filePath: imageFile,
+          name: 'image',
+          token: token ? `${token.substring(0, 10)}...` : '无token'
+        });
+
+        uni.uploadFile({
+          url: fullUrl,
+          filePath: imageFile,
+          name: 'image',
+          header: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'multipart/form-data'
+          },
+          timeout: 30000, // 30秒超时
+          success: (res) => {
+            console.log('📸 通用识别原始响应:', res);
+            
+            // 检查响应状态
+            if (res.statusCode !== 200) {
+              console.error('❌ API响应状态异常:', res.statusCode, res.data);
+              reject(new Error(`服务器响应异常: ${res.statusCode}`));
+              return;
+            }
+            
+            // 检查响应数据类型
+            if (typeof res.data !== 'string') {
+              console.error('❌ API响应数据类型异常:', typeof res.data, res.data);
+              reject(new Error('服务器响应格式异常'));
+              return;
+            }
+            
+            // 检查是否是HTML错误页面
+            if (res.data.trim().toLowerCase().startsWith('<html') || 
+                res.data.trim().toLowerCase().startsWith('<!doctype')) {
+              console.error('❌ 服务器返回HTML错误页面:', res.data.substring(0, 100));
+              reject(new Error('服务器错误，请确保后端服务正常运行'));
+              return;
+            }
+            
+            try {
+              const result = JSON.parse(res.data);
+              console.log('✅ 解析通用识别结果成功:', result);
+              
+              if (result.success) {
+                resolve(result);
+              } else {
+                reject(new Error(result.message || '识别失败'));
+              }
+            } catch (error) {
+              console.error('❌ JSON解析失败:', error);
+              console.error('原始响应数据:', res.data);
+              reject(new Error(`识别结果解析失败: ${error.message}`));
+            }
+          },
+          fail: (error) => {
+            console.error('📸 通用识别失败:', error);
+            reject(new Error(error.errMsg || '图片上传失败'));
+          }
+        });
+      });
+    },
+
+    // URL图片识别
+    identifyImageUrl(imageUrl, token) {
+      return request('/recognition/identify-url', {
+        method: 'POST',
+        data: { imageUrl },
+        token
+      });
+    },
+
+    // 获取识别历史
+    getHistory(params = {}, token) {
+      const query = buildQuery(params);
+      return request(`/recognition/history?${query}`, {
+        token
+      });
+    },
+
+    // 获取识别记录详情
+    getDetail(id, token) {
+      return request(`/recognition/detail/${id}`, {
+        token
+      });
+    },
+
+    // 删除识别记录
+    deleteRecord(id, token) {
+      return request(`/recognition/${id}`, {
+        method: 'DELETE',
+        token
+      });
+    },
+
+    // 获取识别统计
+    getStats(token) {
+      return request('/recognition/stats', {
+        token
+      });
     }
   },
 
