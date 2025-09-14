@@ -23,66 +23,154 @@
 				<view class="name"><text class="one-omit">vivo</text></view>
 			</view>
 		</view>
-		<!-- 超值爆款 -->
-		<view class="super-hot-style">
-			<view class="hot-title">
-				<view class="iconfont icon-zhizi"></view>
-				<view class="title">超值爆款</view>
+		
+		<!-- 分类商品加载状态 -->
+		<view class="loading-state" v-if="categoryLoading">
+			<view class="loading-content">
+				<text>正在加载{{(selectedCategory && selectedCategory.name) || '分类'}}商品...</text>
 			</view>
-			<view class="goods-list">
-				<view class="list" v-for="(item, index) in classGoodsList" @click="onSkip('goods')" :key="index">
-					<view class="thumb">
-						<image :src="item.img" mode="widthFix"></image>
+		</view>
+		
+		<!-- 分类商品展示区域 -->
+		<view v-else-if="categoryProducts && categoryProducts.length > 0">
+			<!-- 分类标题 -->
+			<view class="category-header">
+				<view class="category-title">
+					<text class="iconfont icon-zhizi"></text>
+					<text class="title">{{(selectedCategory && selectedCategory.name) || '分类商品'}}</text>
+					<text class="count">({{categoryProducts.length}}件商品)</text>
+				</view>
+			</view>
+			
+			<!-- 分类商品列表 -->
+			<view class="category-goods-list">
+				<view class="list" v-for="(item, index) in categoryProducts" @click="onSkip('goods', item)" :key="index">
+					<view class="pictrue">
+						<image :src="item.img" mode="heightFix"></image>
+						<view class="tag" v-if="item.is_goods === 1">特价</view>
 					</view>
-					<view class="title"><text class="one-omit">{{item.name}}</text></view>
-					<view class="price">
-						<view class="retail-price">
-							<text class="min">￥</text>
-							<text class="max">{{item.price}}</text>
+					<view class="content">
+						<view class="title">
+							<text class="two-omit">{{item.name}}</text>
 						</view>
-						<view class="sales-volume">已售4件</view>
+						<view class="rating-sales">
+							<view class="rating">
+								<text class="iconfont icon-xingxing"></text>
+								<text>{{item.rating || '4.8'}}</text>
+							</view>
+							<view class="sales">
+								<text>已售{{item.sales || 0}}件</text>
+							</view>
+						</view>
+						<view class="price-info">
+							<view class="user-price">
+								<text class="symbol">￥</text>
+								<text class="price">{{item.price}}</text>
+							</view>
+							<view class="vip-price">
+								<image src="/static/vip_ico.png"></image>
+								<text>￥{{item.vip_price}}</text>
+							</view>
+						</view>
 					</view>
 				</view>
 			</view>
 		</view>
-		<!-- 更多热卖 -->
-		<view class="more-hot">
-			<view class="hot-title">
-				<view class="title">
-					<text class="iconfont icon-xiedian"></text>
-					<text class="icon">更多热卖</text>
-					<text class="iconfont icon-xiedian"></text>
+		
+		<!-- 空状态 -->
+		<view class="empty-state" v-else>
+			<view class="empty-content">
+				<image src="/static/img/empty.png" mode="aspectFit"></image>
+				<text>该分类暂无商品</text>
+				<text class="tip">换个分类看看吧~</text>
+			</view>
+		</view>
+		
+		<!-- 默认商品展示（备用方案） -->
+		<view class="default-products" v-if="!categoryLoading && (!categoryProducts || categoryProducts.length === 0)">
+			<!-- 超值爆款 -->
+			<view class="super-hot-style">
+				<view class="hot-title">
+					<view class="iconfont icon-zhizi"></view>
+					<view class="title">超值爆款</view>
+				</view>
+				<view class="goods-list">
+					<view class="list" v-for="(item, index) in classGoodsList" @click="onSkip('goods', item)" :key="index">
+						<view class="thumb">
+							<image :src="item.img" mode="widthFix"></image>
+						</view>
+						<view class="title"><text class="one-omit">{{item.name}}</text></view>
+						<view class="price">
+							<view class="retail-price">
+								<text class="min">￥</text>
+								<text class="max">{{item.price}}</text>
+							</view>
+							<view class="sales-volume">已售4件</view>
+						</view>
+					</view>
 				</view>
 			</view>
-      <view class="goods-list">
-        <view class="list" v-for="(item,index) in goodsList" @click="onSkip('goods')" :key="index">
-          <view class="pictrue">
-            <image :src="item.img" mode="heightFix"></image>
-          </view>
-          <view class="title-tag">
-            <view class="tag">
-              <text v-if="item.is_goods === 1">特价</text>
-              {{item.name}}
-            </view>
-          </view>
-          <view class="price-info">
-            <view class="user-price">
-              <text class="min">￥</text>
-              <text class="max">{{item.price}}</text>
-            </view>
-            <view class="vip-price">
-              <image src="/static/vip_ico.png"></image>
-              <text>￥{{item.vip_price}}</text>
-            </view>
-          </view>
-        </view>
-      </view>
+			<!-- 更多热卖 -->
+			<view class="more-hot">
+				<view class="hot-title">
+					<view class="title">
+						<text class="iconfont icon-xiedian"></text>
+						<text class="icon">更多热卖</text>
+						<text class="iconfont icon-xiedian"></text>
+					</view>
+				</view>
+				<view class="goods-list">
+					<view class="list" v-for="(item,index) in goodsList" @click="onSkip('goods', item)" :key="index">
+						<view class="pictrue">
+							<image :src="item.img" mode="heightFix"></image>
+						</view>
+						<view class="title-tag">
+							<view class="tag">
+								<text v-if="item.is_goods === 1">特价</text>
+								{{item.name}}
+							</view>
+						</view>
+						<view class="price-info">
+							<view class="user-price">
+								<text class="min">￥</text>
+								<text class="max">{{item.price}}</text>
+							</view>
+							<view class="vip-price">
+								<image src="/static/vip_ico.png"></image>
+								<text>￥{{item.vip_price}}</text>
+							</view>
+						</view>
+					</view>
+				</view>
+			</view>
 		</view>
 	</view>
 </template>
 
 <script>
 export default {
+	props: {
+		// 分类商品数据
+		categoryProducts: {
+			type: Array,
+			default: () => []
+		},
+		// 分类加载状态
+		categoryLoading: {
+			type: Boolean,
+			default: false
+		},
+		// 当前分类ID
+		currentCategoryId: {
+			type: [String, Number],
+			default: null
+		},
+		// 选中的分类信息
+		selectedCategory: {
+			type: Object,
+			default: () => null
+		}
+	},
 	data() {
 		return {
 			goodsList:[
@@ -279,8 +367,9 @@ export default {
 		/**
 		 * 跳转点击
 		 * @param {String} type 跳转类型
+		 * @param {Object} data 商品数据
 		 */
-		onSkip(type){
+		onSkip(type, data = null){
 			switch (type){
 				case 'classify':
 					uni.navigateTo({
@@ -288,11 +377,41 @@ export default {
 					})
 					break;
 				case 'goods':
+					// 跳转到商品详情页，传递商品ID
+					console.log('🛒 分类商品点击:', data);
+					console.log('🔍 商品ID:', data && data.id);
+					console.log('🔍 商品名称:', data && data.name);
+					
+					let goodsUrl = '/pages/GoodsDetails/GoodsDetails';
+					if (data && data.id) {
+						goodsUrl += `?id=${data.id}`;
+						console.log('🔍 跳转商品详情页:', goodsUrl);
+						console.log('📋 完整商品数据:', JSON.stringify(data, null, 2));
+					} else {
+						console.error('❌ 商品数据或ID缺失:', data);
+						uni.showToast({
+							title: '商品数据异常',
+							icon: 'error'
+						});
+						return;
+					}
+					
+					console.log('🔄 执行页面跳转...');
 					uni.navigateTo({
-						url: '/pages/GoodsDetails/GoodsDetails',
+						url: goodsUrl,
 						animationType: 'zoom-fade-out',
-						animationDuration: 200
-					})
+						animationDuration: 200,
+						success: () => {
+							console.log('✅ 页面跳转成功');
+						},
+						fail: (error) => {
+							console.error('❌ 页面跳转失败:', error);
+							uni.showToast({
+								title: '页面跳转失败',
+								icon: 'error'
+							});
+						}
+					});
 					break;
 			}
 		}
