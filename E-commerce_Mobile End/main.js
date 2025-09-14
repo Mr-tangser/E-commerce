@@ -2,8 +2,6 @@ import Vue from 'vue';
 import App from './App';
 // 弹出框
 import DialogBox from './components/DialogBox/DialogBox';
-// 初始化uniCloud
-import uniCloud from '@dcloudio/uni-cloud';
 
 
 Vue.config.productionTip = false

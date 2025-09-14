@@ -74,14 +74,6 @@
 						<text>商品关注</text>
 					</view>
 				</view>
-				<view class="list" @click="onCollect('content')">
-					<view class="num">
-						<text>{{ isLoggedIn ? userStats.contentCount : '0' }}</text>
-					</view>
-					<view class="title">
-						<text>喜欢的内容</text>
-					</view>
-				</view>
 				<view class="list" @click="onCollect('record')">
 					<view class="num">
 						<text>{{ isLoggedIn ? userStats.recordCount : '0' }}</text>
@@ -306,6 +298,7 @@
 
 <script>
 	import TabBar from '../../components/TabBar/TabBar.vue';
+	import FavoriteManager from '@/utils/favorites.js';
 	
 	export default {
 		components:{
@@ -330,7 +323,6 @@
 				// 用户统计数据
 				userStats: {
 					goodsCount: 0,
-					contentCount: 0,
 					recordCount: 0
 				},
 				
@@ -471,14 +463,16 @@
 					const BrowsingHistory = require('@/utils/browsing-history.js').default;
 					const historyStats = BrowsingHistory.getStatistics();
 					
-					// 这里可以调用API获取用户的统计数据
-					// 目前使用模拟数据（除了浏览记录）
+					// 获取真实的收藏统计数据
+					const favoriteStats = await FavoriteManager.getFavoriteStats();
+					console.log('📊 收藏统计数据:', favoriteStats);
+					
 					this.userStats = {
-						goodsCount: 28,
-						contentCount: 15,
+						goodsCount: favoriteStats.productCount || 0,
 						recordCount: historyStats.total
 					};
 					
+					// 订单统计数据（目前使用模拟数据）
 					this.orderStats = {
 						unpaid: 2,
 						unshipped: 1,
@@ -487,6 +481,7 @@
 						refund: 0
 					};
 					
+					// 钱包数据（目前使用模拟数据）
 					this.userWallet = {
 						points: 1580,
 						coupons: 3,
@@ -496,6 +491,11 @@
 				console.log('✅ 用户数据加载完成');
 			} catch (error) {
 				console.error('加载用户数据失败:', error);
+				// 加载失败时使用默认值
+				this.userStats = {
+					goodsCount: 0,
+					recordCount: 0
+				};
 			}
 		},
 		
@@ -529,7 +529,7 @@
 				} else {
 					this.isLoggedIn = false;
 					this.userInfo = {};
-					this.userStats = { goodsCount: 0, contentCount: 0, recordCount: 0 };
+					this.userStats = { goodsCount: 0, recordCount: 0 };
 					this.orderStats = { unpaid: 0, unshipped: 0, shipped: 0, unreviewed: 0, refund: 0 };
 					this.userWallet = { points: 0, coupons: 0, balance: '0.00' };
 				}
@@ -568,7 +568,7 @@
 					// 更新本页面状态
 					this.isLoggedIn = false;
 					this.userInfo = {};
-					this.userStats = { goodsCount: 0, contentCount: 0, recordCount: 0 };
+					this.userStats = { goodsCount: 0, recordCount: 0 };
 					this.orderStats = { unpaid: 0, unshipped: 0, shipped: 0, unreviewed: 0, refund: 0 };
 					this.userWallet = { points: 0, coupons: 0, balance: '0.00' };
 					
@@ -651,11 +651,6 @@
 					case 'goods':
 						uni.navigateTo({
 							url: '/pages/GoodsOn/GoodsOn'
-						})
-						break;
-					case 'content':
-						uni.navigateTo({
-							url: '/pages/ContentCollection/ContentCollection'
 						})
 						break;
 					case 'record':
