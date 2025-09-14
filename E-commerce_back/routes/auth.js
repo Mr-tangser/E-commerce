@@ -14,6 +14,9 @@ const multer = require('multer');
 // 模型引入
 const User = require('../models/User');
 
+// 服务引入
+const smsService = require('../utils/smsService');
+
 // 中间件引入
 const { protect } = require('../middleware/auth');
 
@@ -38,7 +41,7 @@ const facePlusPlusService = require('../utils/facePlusPlus');
 // 生成JWT令牌的辅助函数
 const generateToken = (userId) => {
   return jwt.sign(
-    { userId }, 
+    { userId },
     process.env.JWT_SECRET || 'your-fallback-secret-key',
     { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
   );
@@ -314,7 +317,7 @@ router.post('/login-by-phone-password', loginLimiter, [
 // 发送手机验证码
 router.post('/send-code', async (req, res) => {
   try {
-    const { phone, type } = req.body;
+    const { phone, type = 'login' } = req.body;
 
     if (!phone || !/^1[3-9]\d{9}$/.test(phone)) {
       return res.status(400).json({
@@ -325,36 +328,40 @@ router.post('/send-code', async (req, res) => {
       });
     }
 
-    // 生成6位验证码
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5分钟后过期
+    // 获取客户端IP
+    const ip = req.ip || req.connection.remoteAddress || '127.0.0.1';
 
-    // 这里应该调用短信服务发送验证码
-    console.log(`发送验证码到 ${phone}: ${code}`);
+    console.log(`📱 准备发送验证码到 ${phone}, 类型: ${type}, IP: ${ip}`);
 
-    // 在实际应用中，应该将验证码存储到Redis或数据库中
-    // 这里为了演示，我们暂时存储在内存中（生产环境中不要这样做）
-    global.smsVerificationCodes = global.smsVerificationCodes || {};
-    global.smsVerificationCodes[phone] = {
-      code,
-      expiresAt,
-      type
-    };
+    // 调用短信服务发送验证码
+    const result = await smsService.sendCode(phone, type, ip);
 
-    res.json({
-      success: true,
-      message: '验证码发送成功',
-      data: {
-        phone,
-        expiresIn: 300 // 5分钟
-      }
-    });
+    if (result.success) {
+      console.log('✅ 验证码发送成功');
+      res.json({
+        success: true,
+        message: '验证码发送成功',
+        data: {
+          phone,
+          expiresIn: 300 // 5分钟
+        }
+      });
+    } else {
+      console.log('❌ 验证码发送失败:', result.message);
+      res.status(400).json({
+        success: false,
+        error: {
+          message: result.message || '验证码发送失败'
+        }
+      });
+    }
+
   } catch (error) {
-    console.error('发送验证码错误:', error);
+    console.error('❌ 发送验证码异常:', error);
     res.status(500).json({
       success: false,
       error: {
-        message: '发送验证码失败，请稍后重试'
+        message: error.message || '发送验证码失败，请稍后重试'
       }
     });
   }
@@ -384,21 +391,12 @@ router.post('/login-by-phone', async (req, res) => {
     }
 
     // 验证验证码
-    const storedCode = global.smsVerificationCodes?.[phone];
-    if (!storedCode || storedCode.code !== code) {
+    const verifyResult = await smsService.verifyCode(phone, code, 'login');
+    if (!verifyResult.success) {
       return res.status(400).json({
         success: false,
         error: {
-          message: '验证码错误'
-        }
-      });
-    }
-
-    if (new Date() > storedCode.expiresAt) {
-      return res.status(400).json({
-        success: false,
-        error: {
-          message: '验证码已过期'
+          message: verifyResult.message || '验证码验证失败'
         }
       });
     }
@@ -429,8 +427,7 @@ router.post('/login-by-phone', async (req, res) => {
     user.lastLogin = new Date();
     await user.save();
 
-    // 清除验证码
-    delete global.smsVerificationCodes[phone];
+    // 验证码已在smsService.verifyCode中自动标记为已使用
 
     // 生成令牌
     const token = generateToken(user._id);
@@ -487,9 +484,9 @@ router.post('/face/register', protect, upload.single('image'), async (req, res) 
       email: req.user.email,
       phone: req.user.phone
     });
-    
+
     const user = await User.findById(userId);
-    
+
     if (!user) {
       console.error('❌ 人脸注册失败 - 用户不存在:', {
         searchedUserId: userId,
@@ -549,7 +546,7 @@ router.post('/face/register', protect, upload.single('image'), async (req, res) 
         }
       });
     }
-    
+
     console.log('✅ 人脸添加到Face++人脸库成功');
 
     // 更新用户信息 - 保存人脸信息到数据库
@@ -557,7 +554,7 @@ router.post('/face/register', protect, upload.single('image'), async (req, res) 
     user.faceSetId = facePlusPlusService.facesetToken;
     user.hasFace = true;
     user.faceRegisterTime = new Date();
-    
+
     console.log('💾 保存用户人脸信息到数据库:', {
       userId: user._id,
       username: user.username,
@@ -565,7 +562,7 @@ router.post('/face/register', protect, upload.single('image'), async (req, res) 
       faceSetId: user.faceSetId,
       hasFace: user.hasFace
     });
-    
+
     await user.save();
 
     res.json({
@@ -647,7 +644,7 @@ router.post('/face/login', upload.single('image'), async (req, res) => {
     console.log('🔍 根据faceToken查找数据库中的用户...');
     const user = await User.findOne({ faceToken: matchedFaceToken })
       .select('+faceToken +faceSetId +hasFace +faceRegisterTime'); // 显式选择人脸相关字段
-    
+
     if (!user) {
       console.error('❌ 未找到匹配的用户:', matchedFaceToken);
       return res.status(401).json({
@@ -657,7 +654,7 @@ router.post('/face/login', upload.single('image'), async (req, res) => {
         }
       });
     }
-    
+
     console.log('✅ 找到匹配用户完整信息:', {
       userId: user._id,
       username: user.username,
@@ -729,7 +726,7 @@ router.post('/face/login', upload.single('image'), async (req, res) => {
 router.get('/face/check', protect, async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
-    
+
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -764,7 +761,7 @@ router.get('/face/check', protect, async (req, res) => {
 router.delete('/face/remove', protect, async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
-    
+
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -822,7 +819,7 @@ router.post('/face/clear', protect, async (req, res) => {
   try {
     const userId = req.user._id;
     const user = await User.findById(userId);
-    
+
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -831,7 +828,7 @@ router.post('/face/clear', protect, async (req, res) => {
         }
       });
     }
-    
+
     console.log('🗑️ 清除用户人脸关联:', {
       userId: user._id,
       username: user.username,
@@ -839,7 +836,7 @@ router.post('/face/clear', protect, async (req, res) => {
       phone: user.phone,
       currentHasFace: user.hasFace
     });
-    
+
     // 如果用户有人脸，先从Face++人脸库中删除
     if (user.hasFace && user.faceToken) {
       try {
@@ -851,16 +848,16 @@ router.post('/face/clear', protect, async (req, res) => {
         // 继续执行，确保数据库清理
       }
     }
-    
+
     // 清除数据库中的人脸关联
     user.faceToken = null;
     user.faceSetId = null;
     user.hasFace = false;
     user.faceRegisterTime = null;
     await user.save();
-    
+
     console.log('✅ 用户人脸关联已清除');
-    
+
     res.json({
       success: true,
       message: '人脸关联已清除，可以重新注册',
@@ -874,7 +871,7 @@ router.post('/face/clear', protect, async (req, res) => {
         }
       }
     });
-    
+
   } catch (error) {
     console.error('清除人脸关联失败:', error);
     res.status(500).json({
@@ -893,7 +890,7 @@ router.post('/face/cleanup-temp-users', protect, async (req, res) => {
   try {
     // 只有当前用户可以清理与自己手机号相关的临时账户
     const currentUser = req.user;
-    
+
     if (!currentUser.phone) {
       return res.status(400).json({
         success: false,
@@ -902,11 +899,11 @@ router.post('/face/cleanup-temp-users', protect, async (req, res) => {
         }
       });
     }
-    
+
     // 查找可能的临时用户账户（用户名格式为"用户+手机号后4位"）
     const phone = currentUser.phone;
     const tempUsername = `用户${phone.slice(-4)}`;
-    
+
     console.log('🔍 查找临时用户账户:', {
       currentUser: {
         id: currentUser._id,
@@ -915,23 +912,23 @@ router.post('/face/cleanup-temp-users', protect, async (req, res) => {
       },
       searchingTempUsername: tempUsername
     });
-    
+
     const tempUsers = await User.find({
       username: tempUsername,
       phone: phone,
       _id: { $ne: currentUser._id } // 排除当前用户
     }).select('+faceToken +faceSetId +hasFace');
-    
+
     console.log('🔍 找到的临时用户:', tempUsers.map(user => ({
       id: user._id,
       username: user.username,
       phone: user.phone,
       hasFace: user.hasFace
     })));
-    
+
     let deletedCount = 0;
     let faceCleanedCount = 0;
-    
+
     // 清理临时用户的人脸关联和账户
     for (const tempUser of tempUsers) {
       try {
@@ -945,17 +942,17 @@ router.post('/face/cleanup-temp-users', protect, async (req, res) => {
             console.warn(`⚠️ 删除临时用户 ${tempUser.username} 的Face++人脸失败:`, error.message);
           }
         }
-        
+
         // 删除临时用户账户
         await User.findByIdAndDelete(tempUser._id);
         deletedCount++;
         console.log(`🗑️ 临时用户账户已删除: ${tempUser.username}`);
-        
+
       } catch (error) {
         console.error(`❌ 清理临时用户 ${tempUser.username} 失败:`, error);
       }
     }
-    
+
     res.json({
       success: true,
       message: `清理完成：删除了 ${deletedCount} 个临时账户，清理了 ${faceCleanedCount} 个人脸关联`,
@@ -964,7 +961,7 @@ router.post('/face/cleanup-temp-users', protect, async (req, res) => {
         cleanedFaceAssociations: faceCleanedCount
       }
     });
-    
+
   } catch (error) {
     console.error('清理临时用户失败:', error);
     res.status(500).json({
@@ -985,17 +982,17 @@ router.get('/debug/users-face-info', protect, async (req, res) => {
   try {
     // 只有管理员或当前用户可以查看
     const currentUserId = req.user._id;
-    
+
     // 查找所有有人脸的用户
     const usersWithFace = await User.find({ hasFace: true })
       .select('+faceToken +faceSetId +hasFace +faceRegisterTime')
       .lean();
-    
+
     // 查找当前用户的人脸信息
     const currentUser = await User.findById(currentUserId)
       .select('+faceToken +faceSetId +hasFace +faceRegisterTime')
       .lean();
-    
+
     console.log('🔍 调试 - 用户人脸关联情况:', {
       currentUser: {
         id: currentUser._id,
@@ -1016,7 +1013,7 @@ router.get('/debug/users-face-info', protect, async (req, res) => {
         faceRegisterTime: user.faceRegisterTime
       }))
     });
-    
+
     res.json({
       success: true,
       data: {
@@ -1040,13 +1037,130 @@ router.get('/debug/users-face-info', protect, async (req, res) => {
         }))
       }
     });
-    
+
   } catch (error) {
     console.error('查看用户人脸信息失败:', error);
     res.status(500).json({
       success: false,
       error: {
         message: '查看失败'
+      }
+    });
+  }
+});
+// 一键登录接口
+router.post('/univerify-login', loginLimiter, [
+  body('phone').isMobilePhone('zh-CN').withMessage('请输入有效的手机号'),
+  body('access_token').notEmpty().withMessage('access_token不能为空'),
+  body('openid').notEmpty().withMessage('openid不能为空')
+], async (req, res) => {
+  try {
+    console.log('🔍 一键登录接口被调用:', req.body);
+    
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: '参数验证失败',
+          details: errors.array()
+        }
+      });
+    }
+
+    const { phone, access_token, openid } = req.body;
+
+    // 可选：验证access_token和openid的有效性
+    // 这里可以调用运营商API验证token有效性
+
+    // 查找或创建用户
+    let user = await User.findOne({ phone });
+    if (!user) {
+      // 如果用户不存在，创建新用户
+      user = await User.create({
+        username: `用户${phone.slice(-4)}`,
+        phone,
+        email: `${phone}@univerify.com`, // 一键登录用户的临时邮箱
+        password: Math.random().toString(36).slice(-8), // 随机密码
+        loginMethod: 'univerify' // 标记登录方式
+      });
+    }
+
+    // 检查账户状态
+    if (!user.isActive) {
+      return res.status(401).json({
+        success: false,
+        error: {
+          message: '账户已被禁用，请联系管理员'
+        }
+      });
+    }
+
+    // 更新最后登录时间
+    user.lastLogin = new Date();
+    await user.save();
+
+    // 生成令牌
+    const token = generateToken(user._id);
+
+    res.json({
+      success: true,
+      message: '一键登录成功',
+      data: {
+        user: {
+          id: user._id,
+          username: user.username,
+          email: user.email,
+          phone: user.phone,
+          role: user.role,
+          avatar: user.avatar,
+          lastLogin: user.lastLogin
+        },
+        token
+      }
+    });
+  } catch (error) {
+    console.error('一键登录错误:', error);
+    res.status(500).json({
+      success: false,
+      error: {
+        message: '一键登录失败，请稍后重试'
+      }
+    });
+  }
+});
+// 获取当前用户信息接口
+router.get('/me', protect, async (req, res) => {
+  try {
+    console.log('📋 获取用户信息请求，用户ID:', req.user._id);
+    
+    // 返回用户信息（已经在protect中间件中获取）
+    const userInfo = {
+      id: req.user._id,
+      username: req.user.username,
+      email: req.user.email,
+      phone: req.user.phone,
+      avatar: req.user.avatar,
+      isActive: req.user.isActive,
+      role: req.user.role,
+      userType: req.user.userType || 'user'
+    };
+    
+    console.log('✅ 用户信息获取成功:', userInfo.username || userInfo.email);
+    
+    res.json({
+      success: true,
+      message: '获取用户信息成功',
+      data: userInfo
+    });
+    
+  } catch (error) {
+    console.error('❌ 获取用户信息失败:', error);
+    res.status(500).json({
+      success: false,
+      error: {
+        message: '获取用户信息失败',
+        statusCode: 500
       }
     });
   }

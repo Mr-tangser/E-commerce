@@ -424,7 +424,21 @@
                 "navigationBarTitleText": "瀑布流演示",
                 "navigationBarBackgroundColor": "#FFFFFF"
             }
-        }
+        },
+		{
+			"path": "pages/recognition/result",
+			"style": {
+				"navigationStyle": "custom",
+				"navigationBarTitleText": "识别结果"
+			}
+		},
+		{
+			"path": "pages/recognition/history",
+			"style": {
+				"navigationStyle": "custom",
+				"navigationBarTitleText": "识别历史"
+			}
+		}
     ],
     "globalStyle": {
         "navigationBarTextStyle": "black",
