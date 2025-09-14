@@ -21,6 +21,7 @@ const merchantRoutes = require('./routes/merchants');
 const merchantAuditRoutes = require('./routes/merchantAudit');
 const paymentRoutes = require('./routes/payment');
 const captchaRoutes = require('./routes/captcha');
+const recognitionRoutes = require('./routes/recognition');
 
 // 导入中间件
 const errorHandler = require('./middleware/errorHandler');
@@ -79,6 +80,7 @@ app.use('/api/admin/merchants', merchantRoutes);
 app.use('/api/admin/merchant-audit', merchantAuditRoutes);
 app.use('/api/payment', paymentRoutes);
 app.use('/api/captcha', captchaRoutes);
+app.use('/api/recognition', recognitionRoutes);
 
 // 健康检查端点
 app.get('/health', (req, res) => {
@@ -113,7 +115,7 @@ const startServer = async () => {
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 服务器运行在端口 ${PORT}`);
       console.log(`📱 本地访问: http://localhost:${PORT}`);
-      console.log(`📱 局域网访问: http://192.168.92.58:${PORT}`);
+      console.log(`📱 局域网访问: http://192.168.107.128:${PORT}`);
       console.log(`🔍 健康检查: http://localhost:${PORT}/health`);
       console.log(`🎨 验证码API: http://localhost:${PORT}/api/captcha/generate`);
     });

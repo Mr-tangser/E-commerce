@@ -1,0 +1,438 @@
+.video-item {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: #000;
+}
+
+/* 视频容器 */
+.video-container {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+  
+  .video-player {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+/* 播放按钮遮罩 */
+.play-mask {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 100;
+  
+  .play-btn {
+    width: 120rpx;
+    height: 120rpx;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(10rpx);
+    
+    .iconfont {
+      font-size: 60rpx;
+      color: #333;
+      margin-left: 6rpx; // 播放图标视觉居中调整
+    }
+  }
+}
+
+/* 加载遮罩 */
+.loading-mask {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 99;
+  
+  .loading-spinner {
+    width: 60rpx;
+    height: 60rpx;
+    border: 4rpx solid rgba(255, 255, 255, 0.3);
+    border-top: 4rpx solid #fff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+}
+
+/* 右侧控制栏 */
+.right-controls {
+  position: absolute;
+  right: 24rpx;
+  bottom: 200rpx;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 40rpx;
+}
+
+/* 作者信息 */
+.author-info {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  
+  .avatar {
+    width: 96rpx;
+    height: 96rpx;
+    border-radius: 50%;
+    border: 4rpx solid #fff;
+    box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.3);
+  }
+  
+  .follow-btn {
+    position: absolute;
+    bottom: -8rpx;
+    right: -8rpx;
+    width: 32rpx;
+    height: 32rpx;
+    border-radius: 50%;
+    background: #ff4757;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2rpx solid #fff;
+    
+    .iconfont {
+      font-size: 20rpx;
+      color: #fff;
+    }
+  }
+}
+
+/* 控制项 */
+.control-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8rpx;
+  cursor: pointer;
+  
+  .control-icon {
+    width: 80rpx;
+    height: 80rpx;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(10rpx);
+    transition: all 0.3s ease;
+    
+    .iconfont {
+      font-size: 36rpx;
+      color: #fff;
+    }
+    
+    &.active {
+      background: rgba(255, 71, 87, 0.8);
+      
+      .iconfont {
+        color: #fff;
+      }
+    }
+    
+    &:active {
+      transform: scale(0.9);
+      background: rgba(255, 255, 255, 0.4);
+    }
+  }
+  
+  .control-text {
+    font-size: 24rpx;
+    color: #fff;
+    text-align: center;
+    text-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.5);
+    min-width: 60rpx;
+  }
+}
+
+/* 底部信息区域 */
+.bottom-info {
+  position: absolute;
+  left: 24rpx;
+  right: 160rpx;
+  bottom: 120rpx;
+  z-index: 200;
+  color: #fff;
+}
+
+/* 作者昵称 */
+.author-name {
+  margin-bottom: 16rpx;
+  
+  text {
+    font-size: 28rpx;
+    font-weight: 600;
+    text-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.5);
+  }
+}
+
+/* 视频描述 */
+.video-description {
+  margin-bottom: 16rpx;
+  
+  .description-text {
+    font-size: 26rpx;
+    line-height: 1.5;
+    text-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.5);
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    
+    &:not(.expanded) {
+      -webkit-line-clamp: 2;
+    }
+  }
+  
+  .expand-btn {
+    font-size: 24rpx;
+    color: #ccc;
+    margin-left: 8rpx;
+  }
+}
+
+/* 标签 */
+.video-tags {
+  margin-bottom: 16rpx;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+  
+  .tag {
+    font-size: 24rpx;
+    color: #fff;
+    background: rgba(255, 255, 255, 0.2);
+    padding: 6rpx 12rpx;
+    border-radius: 16rpx;
+    backdrop-filter: blur(10rpx);
+  }
+}
+
+/* 音乐信息 */
+.music-info {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 12rpx 16rpx;
+  border-radius: 24rpx;
+  backdrop-filter: blur(10rpx);
+  
+  .music-icon {
+    font-size: 24rpx;
+    color: #fff;
+    
+    &.spinning {
+      animation: spin 2s linear infinite;
+    }
+  }
+  
+  .music-name {
+    font-size: 24rpx;
+    color: #fff;
+    flex: 1;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+}
+
+/* 动画效果 */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes heartBeat {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+}
+
+.control-item.liked .control-icon {
+  animation: heartBeat 0.6s ease-in-out;
+}
+
+/* 点击波纹效果 */
+@keyframes ripple {
+  0% {
+    transform: scale(0);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+.control-icon::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.6);
+  transform: translate(-50%, -50%);
+  transition: all 0.3s ease;
+}
+
+.control-icon:active::after {
+  width: 100%;
+  height: 100%;
+  animation: ripple 0.6s ease-out;
+}
+
+/* 适配不同屏幕 */
+@media screen and (max-width: 375px) {
+  .right-controls {
+    right: 20rpx;
+    gap: 32rpx;
+  }
+  
+  .author-info .avatar {
+    width: 80rpx;
+    height: 80rpx;
+  }
+  
+  .control-item .control-icon {
+    width: 70rpx;
+    height: 70rpx;
+    
+    .iconfont {
+      font-size: 32rpx;
+    }
+  }
+}
+
+/* 微信小程序适配 */
+/* #ifdef MP-WEIXIN */
+.video-container {
+  .video-player {
+    /* 微信小程序视频组件特殊样式 */
+  }
+}
+/* #endif */
+
+/* H5适配 */
+/* #ifdef H5 */
+.video-container {
+  .video-player {
+    /* H5视频特殊样式 */
+  }
+}
+
+/* H5环境下的触摸优化 */
+@media (hover: hover) {
+  .control-item:hover .control-icon {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.05);
+  }
+  
+  .music-info:hover .music-name.marquee {
+    animation: marquee 8s linear infinite;
+  }
+}
+/* #endif */
+
+/* APP适配 */
+/* #ifdef APP-PLUS */
+.video-item {
+  /* APP环境下的特殊处理 */
+}
+/* #endif */
+
+/* 新增的进入动画 */
+@keyframes slideInFromRight {
+  0% {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideInFromBottom {
+  0% {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* 组件加载动画 */
+.right-controls {
+  animation: slideInFromRight 0.8s ease-out 0.3s both;
+}
+
+.bottom-info {
+  animation: slideInFromBottom 0.8s ease-out 0.5s both;
+}
+
+/* 性能优化 */
+.video-item {
+  contain: layout style paint;
+  
+  * {
+    box-sizing: border-box;
+  }
+}
+
+.control-icon,
+.avatar,
+.disc-image {
+  will-change: transform;
+  transform: translateZ(0);
+}
+
+/* 焦点状态 */
+.control-item:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.8);
+  outline-offset: 4rpx;
+  border-radius: 50%;
+}
+
+/* 辅助功能 */
+.video-item[aria-hidden="true"] {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* 减少动画适配 */
+@media (prefers-reduced-motion: reduce) {
+  .spinning,
+  .control-icon,
+  .avatar {
+    animation: none !important;
+    transition: none !important;
+  }
+}

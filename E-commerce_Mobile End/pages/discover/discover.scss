@@ -1,124 +1,724 @@
-.page{
-	//position: absolute;
-	//width: 100%;
-	//height: 100%;
-	//overflow-x: hidden;
-	//overflow-y: auto;
-	padding-bottom: 100rpx;
-	background-color: #f6f6f6;
+/* 短视频页面基础样式 */
+.short-video-page {
+  width: 100vw;
+  height: 100vh;
+  background: #000;
+	position: relative;
+	overflow: hidden;
 }
-/* 文章搜索 */
-.article-search{
-	position: fixed;
-	left: 0;
+
+/* 状态栏占位 */
+.status-bar {
+  /* #ifdef MP-WEIXIN */
+  height: var(--status-bar-height);
+  /* #endif */
+  background: transparent;
+}
+
+/* 顶部工具栏 */
+.top-toolbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  /* #ifdef MP-WEIXIN */
+  padding-top: var(--status-bar-height);
+  /* #endif */
+  height: calc(88rpx + var(--status-bar-height, 0));
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.3) 0%, transparent 100%);
+  backdrop-filter: blur(10rpx);
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 0 24rpx 20rpx;
+  z-index: 1000;
+  
+  .toolbar-left {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    
+    .live-badge {
+      display: flex;
+      align-items: center;
+      gap: 8rpx;
+      padding: 8rpx 16rpx;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 20rpx;
+      backdrop-filter: blur(10rpx);
+      
+      .live-dot {
+        width: 12rpx;
+        height: 12rpx;
+        border-radius: 50%;
+        background: #ff4757;
+        animation: pulse 2s infinite;
+      }
+      
+      .live-text {
+        font-size: 28rpx;
+        color: #fff;
+        font-weight: 500;
+      }
+    }
+  }
+  
+  .toolbar-center {
+    flex: 2;
+    display: flex;
+    justify-content: center;
+    
+    .nav-tabs {
+      display: flex;
+      align-items: center;
+      gap: 32rpx;
+      
+      .nav-tab {
+        font-size: 38rpx;
+        color: rgba(255, 255, 255, 0.7);
+        font-weight: 400;
+        transition: all 0.3s ease;
+        position: relative;
+        
+        &.active {
+          color: #fff;
+          font-weight: 600;
+          font-size: 42rpx;
+          
+          &::after {
+            content: '';
+            position: absolute;
+            bottom: -8rpx;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 24rpx;
+            height: 4rpx;
+            border-radius: 2rpx;
+            background: #fff;
+          }
+        }
+      }
+    }
+  }
+  
+  .toolbar-right {
+    flex: 1;
+    display: flex;
+    justify-content: flex-end;
+    
+    .search-btn {
+      width: 60rpx;
+      height: 60rpx;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(10rpx);
+      
+      text {
+        font-size: 28rpx;
+      }
+    }
+  }
+}
+
+/* 视频容器 */
+.video-container {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  background: #000;
+	overflow: hidden;
+}
+
+/* 视频播放器 */
+.video-player {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: #000;
+	position: absolute;
 	top: 0;
-	z-index: 10;
-	display: flex;
-	justify-content: center;
-	align-items: center;
+	left: 0;
+	right: 0;
+	bottom: 0;
+}
+
+/* 视频覆盖层 */
+.video-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.3);
+  
+  .play-btn-large {
+    width: 120rpx;
+    height: 120rpx;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(10rpx);
+    transition: all 0.3s ease;
+    
+    text {
+      font-size: 48rpx;
+      color: #fff;
+    }
+    
+    &:active {
+      transform: scale(0.9);
+      background: rgba(255, 255, 255, 0.3);
+    }
+  }
+}
+
+.video-swiper {
 	width: 100%;
-	height: 100rpx;
-	/* #ifdef APP-PLUS */
-	height: calc(120rpx + var(--status-bar-height));
-	/* #endif */
-	padding: 0 4%;
-	background-color: #FFFFFF;
-	border-radius: 0 0 20rpx 20rpx;
-	.icon{
-		display: flex;
-		align-items: center;
-		justify-content: space-around;
-		width: 10%;
+	height: 100%;
+	overflow: hidden;
+	
+  .swiper-item {
+		width: 100%;
 		height: 100%;
-		text{
-			color: #333333;
-			font-size: 52rpx;
-		}
-	}
-	.search{
+    position: relative;
+    overflow: hidden;
 		display: flex;
 		align-items: center;
-		padding: 0 3%;
-		width: 90%;
-		height: 60rpx;
-		background-color: #f6f6f6;
-		border-radius: 60rpx;
-		/* #ifdef APP-PLUS */
-		margin-top: var(--status-bar-height);
-		/* #endif */
-		.iconfont{
-			font-size: 28rpx;
-			color: #C0C0C0;
-		}
-		input{
-			width: 90%;
-			height: 100%;
-			color: #212121;
-			font-size: 24rpx;
-			margin-left: 10rpx;
-		}
+		justify-content: center;
 	}
 }
-/* 文章数据  */
-.article-data{
+
+.video-item {
+  width: 100%;
+  height: 100%;
+	position: relative;
+  display: flex;
+  flex-direction: column;
+  background: #000;
+	overflow: hidden;
+}
+
+/* 视频占位区域 */
+.video-placeholder {
 	width: 100%;
-	margin-top: 120rpx;
-	/* #ifdef APP-PLUS */
-	margin-top: calc(150rpx + var(--status-bar-height));
-	/* #endif */
-	.article-list{
-		padding: 0 4%;
-		margin: 20rpx auto;
-		.list{
-			display: flex;
-			align-items: center;
-			width: 100%;
-			height: 300rpx;
-			background-color: #FFFFFF;
-			border-radius: 20rpx;
-			margin-bottom: 20rpx;
-			.item{
-				display: flex;
-				flex-direction: column;
-				justify-content: space-between;
-				width: 70%;
-				height: 100%;
-				padding: 0 4%;
-				.title{
-					display: flex;
-					padding:20rpx;
-					text{
-						color: #212121;
-						font-size: 28rpx;
-					}
-				}
-				.find-collect{
-					display: flex;
-					align-items: center;
-					padding: 0 20rpx;
-					height: 80rpx;
-					.find{
-						display: flex;
-						align-items: center;
-						margin-right: 20rpx;
-						.iconfont{
-							font-size: 34rpx;
-							margin-right: 10rpx;
-						}
-						text{
-							color: #C0C0C0;
-							font-size: 28rpx;
-						}
-					}
-				}
-			}
-			.thumb{
-				padding: 20rpx;
-				image{
-					width: 200rpx;
-					height: 200rpx;
-				}
-			}
+	height: 100%;
+  position: relative;
+	display: flex;
+  flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	
+  .video-title {
+    font-size: 48rpx;
+    color: #fff;
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: 40rpx;
+    text-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.5);
+  }
+  
+	.play-btn {
+		width: 120rpx;
+		height: 120rpx;
+		border-radius: 50%;
+    background: rgba(255, 255, 255, 0.9);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+    backdrop-filter: blur(10rpx);
+    transition: all 0.3s ease;
+    
+    text {
+      font-size: 48rpx;
+    }
+    
+    &:active {
+      transform: scale(0.9);
+    }
+  }
+}
+
+/* 右侧控制栏 */
+.right-controls {
+	position: absolute;
+  right: 24rpx;
+  bottom: 140rpx; /* 调整到合适位置，避免被导航栏遮挡 */
+  z-index: 200;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+  gap: 40rpx; /* 按钮变大后增加间距 */
+  
+  /* #ifdef MP-WEIXIN */
+  bottom: 150rpx; /* 微信小程序适配 */
+  /* #endif */
+  
+  /* #ifdef H5 */
+  bottom: 130rpx; /* H5适配 */
+  /* #endif */
+  
+  /* #ifdef APP-PLUS */
+  bottom: 130rpx; /* APP适配 */
+  /* #endif */
+}
+
+/* 作者信息 */
+.author-info {
+  position: relative;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+  
+  .avatar {
+    width: 120rpx;
+    height: 120rpx;
+    border-radius: 50%;
+    border: 4rpx solid #fff;
+    box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.3);
+    transition: transform 0.3s ease;
+    overflow: hidden;
+    
+    &:active {
+      transform: scale(0.95);
+    }
+  }
+  
+  .follow-btn {
+    position: absolute;
+    bottom: -8rpx;
+    right: -8rpx;
+    width: 40rpx;
+    height: 40rpx;
+    border-radius: 50%;
+    background: #ff4757;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2rpx solid #fff;
+    transition: all 0.3s ease;
+    
+    text {
+      font-size: 24rpx;
+      color: #fff;
+      font-weight: bold;
+    }
+    
+    &:active {
+      transform: scale(0.9);
+    }
+  }
+}
+
+/* 控制项 */
+.control-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8rpx;
+  cursor: pointer;
+  
+  .control-icon {
+    width: 100rpx;
+    height: 100rpx;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(10rpx);
+    transition: all 0.3s ease;
+    position: relative;
+    
+    text {
+      font-size: 44rpx;
+    }
+    
+    &.active {
+      background: rgba(255, 71, 87, 0.8);
+      
+      text {
+        color: #fff;
+      }
+    }
+    
+    &:active {
+      transform: scale(0.9);
+      background: rgba(255, 255, 255, 0.4);
+    }
+  }
+  
+  .control-text {
+    font-size: 28rpx;
+    color: #fff;
+    text-align: center;
+    text-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.5);
+    min-width: 60rpx;
+	}
+}
+
+/* 底部信息区域 */
+.bottom-info {
+	position: absolute;
+  left: 24rpx;
+  right: 160rpx;
+  bottom: 100rpx; /* 调整到合适位置，避免被导航栏遮挡 */
+  z-index: 200;
+  color: #fff;
+  
+  /* #ifdef MP-WEIXIN */
+  bottom: 110rpx; /* 微信小程序适配 */
+  /* #endif */
+  
+  /* #ifdef H5 */
+  bottom: 90rpx; /* H5适配 */
+  /* #endif */
+  
+  /* #ifdef APP-PLUS */
+  bottom: 90rpx; /* APP适配 */
+  /* #endif */
+}
+
+/* 作者昵称 */
+.author-name {
+  margin-bottom: 16rpx;
+  
+  text {
+    font-size: 34rpx;
+    font-weight: 600;
+    text-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.5);
 		}
+	}
+	
+	/* 视频描述 */
+.video-description {
+		margin-bottom: 16rpx;
+		
+  text {
+    font-size: 30rpx;
+			line-height: 1.5;
+    text-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.5);
+  }
+}
+
+/* 标签 */
+.video-tags {
+  margin-bottom: 16rpx;
+		display: flex;
+		flex-wrap: wrap;
+		gap: 12rpx;
+		
+		.tag {
+    font-size: 28rpx;
+    color: #fff;
+    background: rgba(255, 255, 255, 0.2);
+			padding: 8rpx 16rpx;
+    border-radius: 16rpx;
+			backdrop-filter: blur(10rpx);
+  }
+}
+
+/* 动画效果 */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.1);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+/* 页面进入动画 */
+.short-video-page {
+  animation: fadeIn 0.5s ease-out;
+}
+
+/* 工具栏动画 */
+.top-toolbar {
+  animation: slideUp 0.4s ease-out;
+}
+
+/* 过渡动画 */
+.toolbar-left .live-badge,
+.toolbar-right .search-btn,
+.nav-tabs .nav-tab {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+			
+			&:active {
+				transform: scale(0.95);
+    opacity: 0.8;
+  }
+}
+
+/* 标签切换动画 */
+.nav-tabs .nav-tab {
+  &::after {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+}
+
+/* 视频容器动画 */
+.video-container {
+  opacity: 0;
+  animation: fadeIn 0.6s ease-out 0.2s forwards;
+}
+
+/* 点击波纹效果 */
+@keyframes ripple {
+  0% {
+    transform: scale(0);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+.control-icon::after {
+  content: '';
+	position: absolute;
+  top: 50%;
+	left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.6);
+  transform: translate(-50%, -50%);
+	transition: all 0.3s ease;
+  pointer-events: none;
+}
+
+.control-icon:active::after {
+  width: 100%;
+  height: 100%;
+  animation: ripple 0.6s ease-out;
+}
+
+/* 响应式适配 */
+@media screen and (max-width: 375px) {
+  .top-toolbar {
+    height: calc(80rpx + var(--status-bar-height, 0));
+    padding: 0 20rpx 16rpx;
+    
+    .toolbar-center .nav-tabs .nav-tab {
+      font-size: 28rpx;
+      
+      &.active {
+        font-size: 32rpx;
+      }
+    }
+    
+    .toolbar-right .search-btn {
+      width: 56rpx;
+      height: 56rpx;
+      
+      text {
+        font-size: 20rpx;
+      }
+    }
+  }
+  
+  .right-controls {
+    right: 20rpx;
+    bottom: 120rpx; /* 小屏幕时调整位置 */
+    gap: 36rpx; /* 小屏幕适配间距 */
+  }
+  
+  .author-info .avatar {
+    width: 100rpx;
+    height: 100rpx;
+  }
+  
+  .control-item .control-icon {
+    width: 88rpx;
+    height: 88rpx;
+    
+    text {
+      font-size: 38rpx;
+    }
+  }
+  
+  .bottom-info {
+    left: 20rpx;
+    right: 140rpx;
+    bottom: 80rpx; /* 小屏幕适配 */
+  }
+}
+
+/* 横屏适配 */
+@media screen and (orientation: landscape) {
+  .right-controls {
+    right: 40rpx;
+    bottom: 120rpx; /* 横屏时调整位置 */
+    gap: 32rpx; /* 横屏模式间距 */
+  }
+  
+  .bottom-info {
+    left: 40rpx;
+    right: 200rpx;
+    bottom: 80rpx; /* 横屏时调整位置 */
+  }
+  
+  .author-info .avatar {
+    width: 90rpx;
+    height: 90rpx;
+  }
+  
+  .control-item .control-icon {
+    width: 80rpx;
+    height: 80rpx;
+    
+    text {
+      font-size: 36rpx;
+    }
+  }
+}
+
+/* 微信小程序适配 */
+/* #ifdef MP-WEIXIN */
+.short-video-page {
+  /* 微信小程序全屏适配 */
+  height: 100vh;
+  width: 100vw;
+}
+
+/* 小程序环境下的性能优化 */
+.control-item,
+.author-info,
+.bottom-info {
+  transform: translateZ(0);
+  will-change: transform;
+}
+/* #endif */
+
+/* H5适配 */
+/* #ifdef H5 */
+.short-video-page {
+  /* H5浏览器适配 */
+  height: 100vh;
+  width: 100vw;
+}
+
+/* H5环境下的触摸优化 */
+@media (hover: hover) {
+  .control-item:hover .control-icon {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.05);
+  }
+}
+/* #endif */
+
+/* APP适配 */
+	/* #ifdef APP-PLUS */
+.top-toolbar {
+  /* APP状态栏适配 */
+  padding-top: var(--status-bar-height);
+}
+	/* #endif */
+	
+/* 性能优化 */
+.short-video-page,
+.top-toolbar,
+.video-container {
+  will-change: transform;
+  transform: translateZ(0);
+}
+
+/* 防止滑动穿透 */
+.short-video-page {
+  touch-action: pan-y;
+  overscroll-behavior: contain;
+}
+
+/* 确保视频完全独立显示 */
+.video-swiper {
+	/* 隐藏滚动条 */
+	::-webkit-scrollbar {
+		display: none;
+	}
+	-ms-overflow-style: none;
+	scrollbar-width: none;
+}
+
+/* 视频项之间无间隙 */
+.swiper-item {
+	margin: 0;
+	padding: 0;
+	border: none;
+	box-sizing: border-box;
+}
+
+/* 视频切换遮罩 */
+.video-transition-mask {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background: #000;
+	z-index: 50;
+	transition: opacity 0.2s ease;
+	pointer-events: none;
+}
+
+/* 安全区域适配 */
+@supports (padding: max(0px)) {
+  .top-toolbar {
+    padding-left: max(24rpx, env(safe-area-inset-left));
+    padding-right: max(24rpx, env(safe-area-inset-right));
+  }
+}
+
+/* 暗黑模式适配 */
+@media (prefers-color-scheme: dark) {
+  .short-video-page {
+    background: #000;
+  }
+  
+  .control-icon {
+    background: rgba(255, 255, 255, 0.15);
+  }
+}
+
+/* 减少动画适配 */
+@media (prefers-reduced-motion: reduce) {
+  .pulse,
+  .fadeIn,
+  .slideUp,
+  .control-icon,
+  .avatar {
+    animation: none !important;
+    transition: none !important;
 	}
 }

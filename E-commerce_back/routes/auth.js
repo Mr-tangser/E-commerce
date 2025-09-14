@@ -1129,4 +1129,41 @@ router.post('/univerify-login', loginLimiter, [
     });
   }
 });
+// 获取当前用户信息接口
+router.get('/me', protect, async (req, res) => {
+  try {
+    console.log('📋 获取用户信息请求，用户ID:', req.user._id);
+    
+    // 返回用户信息（已经在protect中间件中获取）
+    const userInfo = {
+      id: req.user._id,
+      username: req.user.username,
+      email: req.user.email,
+      phone: req.user.phone,
+      avatar: req.user.avatar,
+      isActive: req.user.isActive,
+      role: req.user.role,
+      userType: req.user.userType || 'user'
+    };
+    
+    console.log('✅ 用户信息获取成功:', userInfo.username || userInfo.email);
+    
+    res.json({
+      success: true,
+      message: '获取用户信息成功',
+      data: userInfo
+    });
+    
+  } catch (error) {
+    console.error('❌ 获取用户信息失败:', error);
+    res.status(500).json({
+      success: false,
+      error: {
+        message: '获取用户信息失败',
+        statusCode: 500
+      }
+    });
+  }
+});
+
 module.exports = router;

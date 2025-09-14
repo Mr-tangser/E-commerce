@@ -10,15 +10,20 @@
 					<text v-show="scrollTop>20">我的</text>
 				</view>
 				<view class="setting-mess">
+					<!-- 设置按钮 -->
 					<view class="setting" @click="onSetting">
 						<text class="iconfont icon-setting" :style="scrollTop>20?'color:#333333':''"></text>
 					</view>
+					<!-- 消息按钮 -->
 					<view class="mess" @click="onMessage">
 						<text class="iconfont icon-xiaoxi" :style="scrollTop>20?'color:#333333':''"></text>
 					</view>
-					<!-- 快速退出登录按钮（仅已登录时显示） -->
-					<view v-if="isLoggedIn" class="logout-quick" @click="onLogout">
+					<!-- 第三个按钮位置：登录时显示退出，未登录时显示占位 -->
+					<view class="extra-button" v-if="isLoggedIn" @click="onLogout">
 						<text class="iconfont icon-tuichu" :style="scrollTop>20?'color:#333333':'color:white'"></text>
+					</view>
+					<view class="extra-button placeholder" v-else>
+						<!-- 未登录时的占位按钮，保持布局一致但不可见 -->
 					</view>
 				</view>
 			</view>
@@ -233,8 +238,8 @@
 				</view>
 				<!-- 新增：账号关联入口 -->
 				<view class="list" @click="onServer('account')" v-if="isLoggedIn">
-					<view class="thumb">
-						<text class="iconfont icon-guanlian" style="font-size: 32rpx; color: #667eea;"></text>
+					<view class="thumb account-icon">
+						<text>🔗</text>
 					</view>
 					<view class="name">
 						<text>账号关联</text>
@@ -858,25 +863,5 @@
 		}
 	}
 	
-	/* 快速退出登录按钮样式 */
-	.logout-quick {
-		margin-left: 20rpx;
-		width: 60rpx;
-		height: 60rpx;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		border-radius: 50%;
-		background: rgba(255, 255, 255, 0.1);
-		transition: all 0.3s ease;
-		
-		&:active {
-			background: rgba(255, 255, 255, 0.2);
-			transform: scale(0.95);
-		}
-		
-		.iconfont {
-			font-size: 36rpx;
-		}
-	}
+	/* 删除旧的退出登录按钮样式，已整合到 .extra-button 中 */
 </style>

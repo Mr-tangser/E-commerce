@@ -130,25 +130,320 @@ page{
 				.list{
 					display: flex;
 					flex-direction: column;
-					justify-content: center;
+					justify-content: flex-start;
 					align-items: center;
-					width: 32%;
-					height: 140rpx;
-					margin-right: 2%;
+					width: 48%;
+					height: 320rpx;
+					margin-right: 4%;
+					padding: 20rpx 15rpx;
+					box-sizing: border-box;
 					image{
-						width: 80rpx;
-						height: 80rpx;
+						width: 160rpx !important;
+						height: 160rpx !important;
+						min-height: 160rpx !important;
+						display: block !important;
+						box-sizing: border-box;
+						flex-shrink: 0;
 					}
 					text{
 						color: #212121;
-						font-size: 24rpx;
-						margin-top: 10rpx;
+						font-size: 28rpx;
+						margin-top: 15rpx;
+						text-align: center;
+						line-height: 1.4;
+						flex-shrink: 0;
+						max-width: 100%;
+						overflow: hidden;
+						display: -webkit-box;
+						-webkit-line-clamp: 2;
+						-webkit-box-orient: vertical;
 					}
 				}
-				.list:nth-child(3n){
+				.list:nth-child(2n){
 					margin-right: 0;
 				}
 			}
 		}
 	}
 }
+
+/* 新增样式补充 */
+
+/* 二级分类标题增强 */
+.classify-data .classify-two-three .scroll .classify-two .two-name {
+	border-bottom: 1rpx solid #f5f5f5;
+	margin-bottom: 20rpx;
+	
+	.name {
+		font-weight: bold;
+		position: relative;
+		
+		&::before {
+			content: '';
+			position: absolute;
+			left: -10rpx;
+			top: 50%;
+			transform: translateY(-50%);
+			width: 4rpx;
+			height: 20rpx;
+			background: $base;
+			border-radius: 2rpx;
+		}
+	}
+	
+	.more {
+		display: flex;
+		align-items: center;
+		font-size: 24rpx;
+		color: #999;
+		transition: all 0.3s ease;
+		
+		&:active {
+			color: $base;
+		}
+		
+		text {
+			margin-right: 4rpx;
+		}
+		
+		.iconfont {
+			font-size: 20rpx;
+		}
+	}
+}
+
+/* 商品列表增强 */
+.classify-data .classify-two-three .scroll .classify-three .list {
+	width: 48%;
+	height: 320rpx;
+	margin-right: 4%;
+	margin-bottom: 30rpx;
+	background: rgba(248, 248, 248, 0.5);
+	border-radius: 15rpx;
+	transition: all 0.3s ease;
+	padding: 20rpx 15rpx;
+	box-sizing: border-box;
+	
+	&:nth-child(2n) {
+		margin-right: 0;
+	}
+	
+	&:active {
+		transform: scale(0.95);
+		background: rgba(240, 240, 240, 0.8);
+	}
+	
+	image {
+		width: 160rpx !important;
+		height: 160rpx !important;
+		min-height: 160rpx !important;
+		display: block !important;
+		border-radius: 12rpx;
+		margin-bottom: 0;
+		box-sizing: border-box;
+		flex-shrink: 0;
+	}
+	
+	text {
+		margin-top: 15rpx;
+		text-align: center;
+		line-height: 1.4;
+		max-width: 100%;
+		overflow: hidden;
+		display: -webkit-box;
+		-webkit-line-clamp: 2;
+		-webkit-box-orient: vertical;
+		flex-shrink: 0;
+		font-size: 28rpx;
+		
+		&.price {
+			color: #ff6b6b;
+			font-weight: bold;
+			font-size: 26rpx;
+			margin-top: 8rpx;
+			-webkit-line-clamp: 1;
+		}
+	}
+}
+
+/* 左侧分类增强 */
+.classify-data .classify-one .classify-list .list {
+	transition: all 0.3s ease;
+	position: relative;
+	
+	&:active {
+		background-color: rgba(255, 255, 255, 0.5);
+	}
+	
+	text {
+		padding: 0 20rpx;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		transition: all 0.3s ease;
+	}
+}
+
+.classify-data .classify-one .classify-list .action {
+	box-shadow: 2rpx 0 8rpx rgba(0, 0, 0, 0.1);
+	z-index: 2;
+	
+	text {
+		font-weight: bold;
+	}
+}
+
+/* 搜索结果样式 */
+.search-results {
+	.search-title {
+		display: flex;
+		align-items: center;
+		height: 80rpx;
+		border-bottom: 1rpx solid #f5f5f5;
+		margin-bottom: 20rpx;
+		
+		text {
+			font-size: 28rpx;
+			color: #212121;
+			font-weight: bold;
+		}
+	}
+}
+
+/* 加载状态 */
+.loading-state {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	height: 400rpx;
+	color: #999;
+	
+	.loading-spinner {
+		width: 60rpx;
+		height: 60rpx;
+		border: 4rpx solid #f3f3f3;
+		border-top: 4rpx solid $base;
+		border-radius: 50%;
+		animation: spin 1s linear infinite;
+		margin-bottom: 20rpx;
+	}
+	
+	text {
+		font-size: 26rpx;
+		color: #666;
+	}
+}
+
+/* 空状态 */
+.empty-state, .no-result {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	height: 400rpx;
+	color: #999;
+	
+	image {
+		width: 200rpx;
+		height: 200rpx;
+		margin-bottom: 30rpx;
+		opacity: 0.5;
+	}
+	
+	text {
+		font-size: 28rpx;
+		color: #999;
+	}
+}
+
+/* 动画定义 */
+@keyframes spin {
+	0% { transform: rotate(0deg); }
+	100% { transform: rotate(360deg); }
+}
+
+/* 真机设备优化 - APP环境下使用更大尺寸 */
+/* #ifdef APP-PLUS */
+.classify-data .classify-two-three .scroll .classify-three .list {
+	height: 380rpx !important;
+	padding: 25rpx 20rpx !important;
+	
+	image {
+		width: 180rpx !important;
+		height: 180rpx !important;
+		min-height: 180rpx !important;
+	}
+	
+	text {
+		font-size: 30rpx !important;
+		margin-top: 18rpx !important;
+		
+		&.price {
+			font-size: 28rpx !important;
+		}
+	}
+}
+/* #endif */
+
+/* 小屏幕设备适配 */
+@media screen and (max-width: 750rpx) {
+	.classify-three .list {
+		width: 48% !important;
+		margin-right: 4% !important;
+		height: 280rpx !important;
+		padding: 15rpx 10rpx !important;
+		
+		&:nth-child(2n) {
+			margin-right: 0 !important;
+		}
+		
+		image {
+			width: 140rpx !important;
+			height: 140rpx !important;
+			min-height: 140rpx !important;
+		}
+		
+		text {
+			font-size: 26rpx !important;
+			margin-top: 12rpx !important;
+			
+			&.price {
+				font-size: 24rpx !important;
+			}
+		}
+	}
+}
+
+/* 确保商品列表间距合理 */
+.classify-data .classify-two-three .scroll .classify-three {
+	margin-bottom: 30rpx;
+}
+
+/* 修复flex布局确保不重叠 */
+.classify-data .classify-two-three .scroll .classify-three .list {
+	display: flex !important;
+	flex-direction: column !important;
+	justify-content: flex-start !important;
+	align-items: center !important;
+}
+
+/* 商品图片统一样式 - 两列布局优化 */
+.product-image {
+	width: 160rpx !important;
+	height: 160rpx !important;
+	min-height: 160rpx !important;
+	display: block !important;
+	box-sizing: border-box;
+	flex-shrink: 0;
+	border-radius: 12rpx;
+}
+
+/* 真机环境下图片更大 */
+/* #ifdef APP-PLUS */
+.product-image {
+	width: 180rpx !important;
+	height: 180rpx !important;
+	min-height: 180rpx !important;
+}
+/* #endif */
