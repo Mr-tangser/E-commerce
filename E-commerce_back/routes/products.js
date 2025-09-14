@@ -16,7 +16,44 @@ router.get('/', optionalAuth, async (req, res) => {
     // 构建筛选条件
     const filter = { isActive: true };
     
-    if (req.query.category) filter.category = req.query.category;
+    // 处理分类查询 - 支持分类名称和ObjectId
+    if (req.query.category) {
+      const Category = require('../models/Category');
+      try {
+        // 首先尝试作为ObjectId查询
+        if (req.query.category.match(/^[0-9a-fA-F]{24}$/)) {
+          filter.category = req.query.category;
+        } else {
+          // 如果不是ObjectId格式，则通过分类名称查找
+          const category = await Category.findOne({ 
+            $or: [
+              { name: req.query.category },
+              { slug: req.query.category }
+            ]
+          });
+          if (category) {
+            filter.category = category._id;
+          } else {
+            // 如果找不到分类，返回空结果
+            return res.json({
+              success: true,
+              data: {
+                products: [],
+                pagination: {
+                  page: parseInt(req.query.page) || 1,
+                  limit: parseInt(req.query.limit) || 12,
+                  total: 0,
+                  pages: 0
+                }
+              }
+            });
+          }
+        }
+      } catch (error) {
+        console.error('分类查询错误:', error);
+        // 如果分类查询出错，继续执行但不过滤分类
+      }
+    }
     if (req.query.brand) filter.brand = req.query.brand;
     if (req.query.minPrice || req.query.maxPrice) {
       filter.price = {};
@@ -29,6 +66,25 @@ router.get('/', optionalAuth, async (req, res) => {
     // 搜索功能
     if (req.query.search) {
       filter.$text = { $search: req.query.search };
+    }
+    
+    // 关键词搜索（用于推荐系统）
+    if (req.query.keywords) {
+      const keywords = req.query.keywords.split(',').map(k => k.trim()).filter(k => k);
+      if (keywords.length > 0) {
+        // 使用正则表达式在商品名称、描述、标签中搜索关键词
+        const keywordRegex = keywords.map(keyword => new RegExp(keyword, 'i'));
+        filter.$or = [
+          { name: { $in: keywordRegex } },
+          { description: { $in: keywordRegex } },
+          { tags: { $in: keywords } }
+        ];
+      }
+    }
+    
+    // 排除特定商品（用于推荐时排除当前商品）
+    if (req.query.excludeId) {
+      filter._id = { $ne: req.query.excludeId };
     }
 
     // 排序

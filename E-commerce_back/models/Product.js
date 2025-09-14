@@ -339,6 +339,115 @@ productSchema.virtual('defaultVariants').get(function() {
   return defaults;
 });
 
+// 确保图片和内容一致性的方法
+productSchema.methods.ensureImageContentConsistency = function() {
+  // 确保至少有一张图片
+  if (!this.images || this.images.length === 0) {
+    this.images = ['/static/img/goods_thumb_01.png'];
+  }
+
+  // 如果没有详情图片，使用主图片
+  if (!this.detailImages || this.detailImages.length === 0) {
+    this.detailImages = [...this.images];
+  }
+
+  // 根据品牌和分类设置合适的图片
+  const brand = this.brand || '';
+  let shouldUpdateImages = false;
+
+  // 检查当前图片是否与品牌/分类匹配
+  if (brand.includes('iPhone') || brand.includes('Apple')) {
+    if (!this.images.includes('/static/img/goods_thumb_01.png')) {
+      this.images = ['/static/img/goods_thumb_01.png', '/static/img/goods_thumb_02.png'];
+      shouldUpdateImages = true;
+    }
+  } else if (brand.includes('华为')) {
+    if (!this.images.includes('/static/img/goods_thumb_04.png')) {
+      this.images = ['/static/img/goods_thumb_04.png', '/static/img/goods_thumb_05.png'];
+      shouldUpdateImages = true;
+    }
+  } else if (brand.includes('小米')) {
+    if (!this.images.includes('/static/img/goods_thumb_06.png')) {
+      this.images = ['/static/img/goods_thumb_06.png', '/static/img/goods_thumb_07.png'];
+      shouldUpdateImages = true;
+    }
+  } else if (brand.includes('Nike')) {
+    if (!this.images.includes('/static/img/goods_thumb_08.png')) {
+      this.images = ['/static/img/goods_thumb_08.png', '/static/img/goods_thumb_09.png'];
+      shouldUpdateImages = true;
+    }
+  } else if (brand.includes('Adidas')) {
+    if (!this.images.includes('/static/img/goods_thumb_10.png')) {
+      this.images = ['/static/img/goods_thumb_10.png', '/static/img/goods_thumb_11.png'];
+      shouldUpdateImages = true;
+    }
+  }
+
+  // 如果更新了图片，同步更新详情图片
+  if (shouldUpdateImages) {
+    this.detailImages = [...this.images, '/static/img/goods_thumb_01.png', '/static/img/goods_thumb_02.png'];
+  }
+
+  return shouldUpdateImages;
+};
+
+// 验证图片内容一致性
+productSchema.methods.validateImageContentConsistency = function() {
+  const issues = [];
+  const brand = this.brand || '';
+  
+  // 检查图片是否与品牌匹配
+  if (brand && this.images.length > 0) {
+    let isConsistent = false;
+    
+    if ((brand.includes('iPhone') || brand.includes('Apple')) && 
+        this.images.some(img => img.includes('goods_thumb_01') || img.includes('goods_thumb_02'))) {
+      isConsistent = true;
+    } else if (brand.includes('华为') && 
+               this.images.some(img => img.includes('goods_thumb_04') || img.includes('goods_thumb_05'))) {
+      isConsistent = true;
+    } else if (brand.includes('小米') && 
+               this.images.some(img => img.includes('goods_thumb_06') || img.includes('goods_thumb_07'))) {
+      isConsistent = true;
+    } else if (brand.includes('Nike') && 
+               this.images.some(img => img.includes('goods_thumb_08') || img.includes('goods_thumb_09'))) {
+      isConsistent = true;
+    } else if (brand.includes('Adidas') && 
+               this.images.some(img => img.includes('goods_thumb_10') || img.includes('goods_thumb_11'))) {
+      isConsistent = true;
+    }
+    
+    if (!isConsistent) {
+      issues.push('商品图片与品牌不匹配');
+    }
+  }
+  
+  // 检查描述是否包含品牌信息
+  if (brand && this.description && !this.description.includes(brand)) {
+    issues.push('商品描述缺少品牌信息');
+  }
+  
+  return {
+    isValid: issues.length === 0,
+    issues: issues
+  };
+};
+
+// 虚拟字段 - 图片内容一致性状态
+productSchema.virtual('imageConsistency').get(function() {
+  return this.validateImageContentConsistency();
+});
+
+// 中间件 - 保存前确保一致性
+productSchema.pre('save', function(next) {
+  this.ensureImageContentConsistency();
+  next();
+});
+
+// 确保虚拟字段在JSON序列化时包含
+productSchema.set('toJSON', { virtuals: true });
+productSchema.set('toObject', { virtuals: true });
+
 // 索引
 productSchema.index({ name: 'text', description: 'text', tags: 'text' });
 productSchema.index({ category: 1 });
