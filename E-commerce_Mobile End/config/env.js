@@ -51,6 +51,9 @@ const ENV_CONFIG = {
   SERVER_URL: `http://${API_Global}`,
   HEALTH_URL: `http://${API_Global}/health`,
   
+  // AI客服服务配置（真机调试）
+  AI_SERVICE_URL: `http://${SERVER_IP}:3001`, // AI客服独立服务
+  
   // 配置验证
   isValid() {
     return API_Global && API_Global !== 'your_server_ip:port' && SERVER_IP && SERVER_PORT;

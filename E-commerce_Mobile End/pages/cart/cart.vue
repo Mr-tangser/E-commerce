@@ -22,8 +22,13 @@
 				<image src="/static/img/goods_01.png" mode="aspectFit"></image>
 				<text class="empty-text">购物车还是空的</text>
 				<text class="empty-desc">快去选购您喜欢的商品吧~</text>
-				<view class="go-shopping" @click="goShopping">
-					<text>去购物</text>
+				<view class="empty-actions">
+					<view class="go-shopping" @click="goShopping">
+						<text>去购物</text>
+					</view>
+					<view class="ask-ai" @click="askAIForShopping">
+						<text>🤖 咨询AI</text>
+					</view>
 				</view>
 			</view>
 			
@@ -129,18 +134,28 @@
 		
 		<!-- tabbar -->
 		<TabBar :tabBarShow="3"></TabBar>
+		
+		<!-- AI客服浮动按钮 -->
+		<ai-float-button 
+			:visible="true"
+			position="bottom-right"
+			page-id="cart"
+			@click="onAIServiceClick"
+		></ai-float-button>
 	</view>
 </template>
 
 <script>
-	import TabBar from '../../components/TabBar/TabBar.vue';
-	import MescrollMixin from "@/components/mescroll-uni/mescroll-mixins.js";
-	import CartManager from '@/utils/cart.js';
+import TabBar from '../../components/TabBar/TabBar.vue';
+import MescrollMixin from "@/components/mescroll-uni/mescroll-mixins.js";
+import CartManager from '@/utils/cart.js';
+import AIFloatButton from '../../components/AIFloatButton/AIFloatButton.vue';
 
 	export default {
 		mixins: [MescrollMixin],
 		components: {
 			TabBar,
+			AIFloatButton,
 		},
 		data() {
 			return {
@@ -439,6 +454,78 @@
 			upCallback(page) {
 				// 购物车页面不需要分页加载
 				this.mescroll.endByPage(10, 20);
+			},
+
+			/**
+			 * 购物车为空时咨询AI
+			 */
+			askAIForShopping() {
+				console.log('🤖 用户在空购物车时咨询AI');
+				
+				uni.navigateTo({
+					url: '/pages/AICustomerService/AICustomerService?from=empty-cart&context=shopping-advice',
+					success: () => {
+						console.log('✅ 成功跳转到AI客服页面');
+						
+						// 可以预设一些购物咨询的快捷问题
+						// 这里可以通过URL参数传递上下文
+					},
+					fail: (error) => {
+						console.error('❌ 跳转AI客服页面失败:', error);
+						
+						// 降级处理：显示购物建议
+						uni.showModal({
+							title: '购物建议',
+							content: '需要购物建议吗？\n\n• 查看热门商品推荐\n• 咨询客服获取个性化建议\n• 浏览分类找到心仪商品',
+							confirmText: '联系客服',
+							cancelText: '去购物',
+							success: (res) => {
+								if (res.confirm) {
+									uni.makePhoneCall({
+										phoneNumber: '400-123-4567'
+									});
+								} else {
+									this.goShopping();
+								}
+							}
+						});
+					}
+				});
+			},
+
+			/**
+			 * AI客服按钮点击事件
+			 */
+			onAIServiceClick(data) {
+				console.log('🤖 购物车AI客服按钮被点击:', data);
+				
+				// 可以在这里添加购物车特有的逻辑
+				try {
+					// 记录用户在购物车使用AI客服的行为
+					const clickInfo = {
+						page: 'cart',
+						timestamp: new Date().toISOString(),
+						cartItemsCount: this.cartItems.length,
+						selectedItemsCount: this.statistics.selectedItemsCount,
+						totalPrice: this.statistics.totalPrice,
+						userAgent: navigator.userAgent || 'unknown'
+					};
+					
+					// 保存到本地存储用于分析
+					const existingClicks = uni.getStorageSync('ai_service_analytics') || [];
+					existingClicks.push(clickInfo);
+					
+					// 只保留最近50条记录
+					if (existingClicks.length > 50) {
+						existingClicks.splice(0, existingClicks.length - 50);
+					}
+					
+					uni.setStorageSync('ai_service_analytics', existingClicks);
+					
+					console.log('📊 购物车AI客服使用统计已记录');
+				} catch (error) {
+					console.warn('⚠️ 统计记录失败:', error);
+				}
 			}
 		}
 	}
@@ -474,12 +561,42 @@
 			margin-bottom: 40rpx;
 		}
 
+		/* 空购物车按钮容器 */
+		.empty-actions {
+			display: flex;
+			gap: 30rpx;
+			width: 100%;
+			justify-content: center;
+			max-width: 500rpx;
+		}
+
 		.go-shopping {
 			background: #ff6b35;
 			color: white;
-			padding: 18rpx 50rpx;
+			padding: 18rpx 40rpx;
 			border-radius: 50rpx;
 			font-size: 26rpx;
+			flex: 1;
+			text-align: center;
+			
+			&:active {
+				background: #e85a2f;
+			}
+		}
+		
+		.ask-ai {
+			background: linear-gradient(45deg, #ff4757, #ff3742);
+			color: white;
+			padding: 18rpx 40rpx;
+			border-radius: 50rpx;
+			font-size: 24rpx;
+			flex: 1;
+			text-align: center;
+			border: 2rpx solid rgba(255, 255, 255, 0.3);
+			
+			&:active {
+				background: linear-gradient(45deg, #e84058, #e8303e);
+			}
 		}
 	}
 

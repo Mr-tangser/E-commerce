@@ -1,0 +1,36 @@
+version: "3.1"
+
+rules:
+
+- rule: 问候用户
+  steps:
+  - intent: greet
+  - action: utter_greet
+
+- rule: 告别用户
+  steps:
+  - intent: goodbye
+  - action: utter_goodbye
+
+- rule: 处理不理解的消息
+  steps:
+  - intent: nlu_fallback
+  - action: action_fallback_with_gemini
+
+- rule: 订单状态查询
+  condition:
+  - slot_was_set:
+    - order_id: null
+  steps:
+  - intent: ask_order_status
+  - action: utter_ask_order_id
+
+- rule: 投诉处理
+  steps:
+  - intent: complaint
+  - action: action_handle_complaint
+
+- rule: 转人工客服
+  steps:
+  - intent: ask_contact
+  - action: utter_contact_human

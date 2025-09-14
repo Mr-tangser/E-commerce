@@ -1,0 +1,52 @@
+version: "3.1"
+
+stories:
+
+- story: 问候流程
+  steps:
+  - intent: greet
+  - action: utter_greet
+  - intent: ask_order_status
+  - action: action_check_order_status
+
+- story: 订单查询流程
+  steps:
+  - intent: ask_order_status
+  - action: action_check_order_status
+  - intent: ask_shipping
+  - action: utter_shipping_info
+
+- story: 商品咨询流程
+  steps:
+  - intent: ask_product_info
+  - action: utter_ask_product_details
+  - intent: ask_stock
+  - action: action_check_stock
+  - intent: ask_price
+  - action: utter_price_info
+
+- story: 退货申请流程
+  steps:
+  - intent: ask_return_policy
+  - action: utter_return_policy
+  - intent: request_return
+  - action: action_handle_return_request
+
+- story: 支付问题流程
+  steps:
+  - intent: ask_payment
+  - action: utter_payment_methods
+  - intent: complaint
+  - action: action_handle_complaint
+
+- story: 结束对话
+  steps:
+  - intent: goodbye
+  - action: utter_goodbye
+
+- story: 复杂问题转人工
+  steps:
+  - intent: ask_contact
+  - action: utter_contact_human
+  - intent: complaint
+  - action: action_transfer_to_human

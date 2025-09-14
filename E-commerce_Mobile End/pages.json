@@ -447,6 +447,23 @@
 				"navigationStyle": "custom",
 				"navigationBarTitleText": "识别历史"
 			}
+		},
+		{
+			"path": "pages/AICustomerService/AICustomerService",
+			"style": {
+				"navigationStyle": "custom",
+				"navigationBarTitleText": "AI智能客服",
+				"enablePullDownRefresh": false,
+				"backgroundColorTop": "#ff6b35",
+				"backgroundColorBottom": "#f8f9fa"
+			}
+		},
+		{
+			"path": "pages/test-ai-button",
+			"style": {
+				"navigationBarTitleText": "AI按钮测试",
+				"navigationBarBackgroundColor": "#FFFFFF"
+			}
 		}
     ],
     "globalStyle": {

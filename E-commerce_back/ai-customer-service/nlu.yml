@@ -1,0 +1,190 @@
+version: "3.1"
+
+nlu:
+# 问候和结束对话
+- intent: greet
+  examples: |
+    - 你好
+    - 您好
+    - hi
+    - hello
+    - 在吗
+    - 客服
+    - 人工客服
+
+- intent: goodbye
+  examples: |
+    - 再见
+    - 拜拜
+    - 谢谢
+    - 没事了
+    - 解决了
+
+# 订单相关查询
+- intent: ask_order_status
+  examples: |
+    - 我的订单怎么样了
+    - 订单状态查询
+    - 订单[12345678](order_id)什么时候发货
+    - 查询订单[87654321](order_id)
+    - 我的包裹到哪了
+    - 什么时候能收到货
+    - 订单进度
+    - 物流信息
+
+- intent: cancel_order
+  examples: |
+    - 我想取消订单
+    - 取消订单[12345678](order_id)
+    - 不要这个订单了
+    - 能取消吗
+    - 订单取消
+
+- intent: modify_order
+  examples: |
+    - 修改订单
+    - 改收货地址
+    - 换个商品
+    - 订单能改吗
+    - 修改订单[12345678](order_id)
+
+# 商品相关查询
+- intent: ask_product_info
+  examples: |
+    - 这个商品怎么样
+    - 商品参数
+    - 有什么颜色
+    - 尺码表
+    - 商品详情
+    - 材质是什么
+    - 产地在哪
+    - 保质期多久
+
+- intent: ask_stock
+  examples: |
+    - 有库存吗
+    - 还有货吗
+    - 什么时候补货
+    - 缺货了吗
+    - [红色](product_color)的还有吗
+    - [大号](product_size)有现货吗
+
+- intent: ask_price
+  examples: |
+    - 多少钱
+    - 价格是多少
+    - 能便宜点吗
+    - 有优惠吗
+    - 最低价
+    - 活动价格
+
+# 支付相关
+- intent: ask_payment
+  examples: |
+    - 支付方式
+    - 能用微信支付吗
+    - 支持花呗吗
+    - 可以货到付款吗
+    - 支付失败了
+    - 付款问题
+
+# 退换货相关
+- intent: ask_return_policy
+  examples: |
+    - 可以退货吗
+    - 退换货政策
+    - 不满意能退吗
+    - 怎么申请退货
+    - 退货流程
+    - 换货规则
+
+- intent: request_return
+  examples: |
+    - 我要退货
+    - 申请退货
+    - 这个商品要退
+    - 退货申请
+    - 不想要了
+
+- intent: request_exchange
+  examples: |
+    - 我要换货
+    - 申请换货
+    - 换个尺码
+    - 换个颜色
+    - 商品有问题要换
+
+# 物流配送
+- intent: ask_shipping
+  examples: |
+    - 什么时候发货
+    - 运费多少
+    - 配送范围
+    - 能送到[北京](city)吗
+    - 快递公司
+    - 多久能到
+
+# 会员服务
+- intent: ask_membership
+  examples: |
+    - 会员有什么优惠
+    - 怎么成为会员
+    - 积分怎么用
+    - 会员等级
+    - 会员政策
+
+# 投诉建议
+- intent: complaint
+  examples: |
+    - 我要投诉
+    - 服务态度不好
+    - 商品有问题
+    - 质量不行
+    - 要求赔偿
+
+# 其他咨询
+- intent: ask_contact
+  examples: |
+    - 客服电话
+    - 联系方式
+    - 人工客服
+    - 营业时间
+    - 公司地址
+
+# 实体定义
+- regex: order_id
+  examples: |
+    - \d{8,20}
+
+- lookup: product_color
+  examples: |
+    - 红色
+    - 蓝色
+    - 黑色
+    - 白色
+    - 绿色
+    - 黄色
+    - 粉色
+    - 紫色
+
+- lookup: product_size
+  examples: |
+    - S
+    - M  
+    - L
+    - XL
+    - XXL
+    - 大号
+    - 中号
+    - 小号
+
+- lookup: city
+  examples: |
+    - 北京
+    - 上海
+    - 广州
+    - 深圳
+    - 杭州
+    - 南京
+    - 武汉
+    - 成都

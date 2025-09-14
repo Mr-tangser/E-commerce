@@ -317,6 +317,12 @@
       @confirm="onAttrConfirm"
       @selection-update="onSelectionUpdate"
     ></goods-attr>
+    
+    <!-- AI智能客服 -->
+    <ai-chat 
+      :user-info="currentUserInfo"
+      :auto-open="false"
+    ></ai-chat>
     </view>
   </view>
 </template>
@@ -326,6 +332,7 @@ import GoodsServe from '../../components/GoodsServe/GoodsServe.vue';
 import GoodsCoupon from '../../components/GoodsCoupon/GoodsCoupon.vue';
 import GoodsAttr from '../../components/GoodsAttr/GoodsAttr.vue';
 import GoodsComment from '../../components/GoodsComment/GoodsComment.vue';
+import AIChat from '../../components/AIChat/AIChat.vue';
 import api from '@/utils/api.js';
 import BrowsingHistory from '@/utils/browsing-history.js';
 // 导入环境配置
@@ -337,6 +344,7 @@ export default {
     GoodsCoupon,
     GoodsAttr,
     GoodsComment,
+    AIChat,
   },
   data() {
     return {
@@ -417,6 +425,31 @@ export default {
       return variantTexts.length > 0 ? 
         `${variantTexts.join('，')}，${this.selectedQuantity}件` : 
         '请选择规格';
+    },
+    
+    // 当前用户信息（用于AI客服）
+    currentUserInfo() {
+      try {
+        const user = uni.getStorageSync('user');
+        return {
+          id: user?.id || user?._id || 'guest',
+          nickname: user?.username || user?.nickname || '游客',
+          avatar: user?.avatar || '/static/img/default_avatar.png',
+          // AI客服可能需要的额外信息
+          currentProduct: {
+            id: this.productId,
+            name: this.goodsDetail?.name || '',
+            price: this.goodsDetail?.price || 0
+          }
+        };
+      } catch (error) {
+        console.error('获取用户信息失败:', error);
+        return {
+          id: 'guest',
+          nickname: '游客',
+          avatar: '/static/img/default_avatar.png'
+        };
+      }
     }
   },
 	onLoad(params) {

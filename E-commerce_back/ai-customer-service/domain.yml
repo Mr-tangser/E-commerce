@@ -1,0 +1,97 @@
+version: "3.1"
+
+intents:
+  - greet
+  - goodbye
+  - ask_order_status
+  - cancel_order
+  - modify_order
+  - ask_product_info
+  - ask_stock
+  - ask_price
+  - ask_payment
+  - ask_return_policy
+  - request_return
+  - request_exchange
+  - ask_shipping
+  - ask_membership
+  - complaint
+  - ask_contact
+  - nlu_fallback
+
+entities:
+  - order_id
+  - product_color
+  - product_size
+  - city
+
+slots:
+  order_id:
+    type: text
+    mappings:
+    - type: from_entity
+      entity: order_id
+  
+  product_color:
+    type: text
+    mappings:
+    - type: from_entity
+      entity: product_color
+      
+  product_size:
+    type: text
+    mappings:
+    - type: from_entity
+      entity: product_size
+      
+  city:
+    type: text
+    mappings:
+    - type: from_entity
+      entity: city
+
+responses:
+  utter_greet:
+  - text: "您好！欢迎来到我们的在线商城！我是AI客服助手，有什么可以帮您的吗？"
+  - text: "Hi！很高兴为您服务！您可以咨询商品信息、订单状态、退换货等问题哦～"
+
+  utter_goodbye:
+  - text: "感谢您的咨询！祝您购物愉快！如有其他问题随时联系我们～"
+  - text: "再见！期待为您提供更好的服务！"
+
+  utter_ask_order_id:
+  - text: "请提供您的订单号，我来帮您查询订单状态～"
+  - text: "您可以在订单详情页面找到订单号，通常是8-20位数字"
+
+  utter_shipping_info:
+  - text: "我们默认使用顺丰快递，工作日24小时内发货，一般3-5个工作日送达。偏远地区可能需要7-10天。"
+
+  utter_ask_product_details:
+  - text: "请告诉我您想了解哪个商品的详细信息，我可以为您介绍参数、材质、尺码等～"
+
+  utter_price_info:
+  - text: "商品价格以页面显示为准，我们经常有优惠活动，建议关注商品页面的促销信息哦！"
+
+  utter_return_policy:
+  - text: "我们支持7天无理由退货，商品需保持完好包装。贵重商品请保留完整包装和配件。退货运费买家承担。"
+
+  utter_payment_methods:
+  - text: "我们支持微信支付、支付宝、银行卡支付、花呗分期。部分地区支持货到付款。"
+
+  utter_contact_human:
+  - text: "如需人工客服，请拨打400-123-4567，服务时间：9:00-21:00。或在商品页面点击客服按钮直接咨询。"
+
+  utter_default:
+  - text: "抱歉我没有理解您的问题，正在为您转接更智能的服务..."
+
+actions:
+  - action_check_order_status
+  - action_check_stock
+  - action_handle_return_request
+  - action_handle_complaint
+  - action_transfer_to_human
+  - action_fallback_with_gemini
+
+session_config:
+  session_expiration_time: 60
+  carry_over_slots_to_new_session: true

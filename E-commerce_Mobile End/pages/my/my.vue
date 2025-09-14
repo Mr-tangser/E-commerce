@@ -236,6 +236,15 @@
 						<text>客服热线</text>
 					</view>
 				</view>
+				<!-- 新增：AI智能客服 -->
+				<view class="list" @click="onServer('ai-service')">
+					<view class="thumb ai-service-icon">
+						<text>🤖</text>
+					</view>
+					<view class="name">
+						<text>AI客服</text>
+					</view>
+				</view>
 				<!-- 新增：账号关联入口 -->
 				<view class="list" @click="onServer('account')" v-if="isLoggedIn">
 					<view class="thumb account-icon">
@@ -301,15 +310,25 @@
 		
 		<!-- tabbar -->
 		<TabBar :tabBarShow="4"></TabBar>
+		
+		<!-- AI客服浮动按钮 -->
+		<ai-float-button 
+			:visible="true"
+			position="bottom-right"
+			page-id="my"
+			@click="onAIServiceClick"
+		></ai-float-button>
 	</view>
 </template>
 
 <script>
 	import TabBar from '../../components/TabBar/TabBar.vue';
+import AIFloatButton from '../../components/AIFloatButton/AIFloatButton.vue';
 	
 	export default {
 		components:{
 			TabBar,
+			AIFloatButton,
 		},
 		data() {
 			return {
@@ -750,6 +769,32 @@
 							url: '/pages/AccountAssociated/AccountAssociated'
 						})
 						break;
+					case 'ai-service':
+						console.log('🤖 用户点击AI客服按钮');
+						uni.navigateTo({
+							url: '/pages/AICustomerService/AICustomerService?from=my-service',
+							success: () => {
+								console.log('✅ 成功跳转到AI客服页面');
+							},
+							fail: (error) => {
+								console.error('❌ 跳转AI客服页面失败:', error);
+								// 降级处理：显示联系方式
+								uni.showModal({
+									title: '联系客服',
+									content: '客服热线：400-123-4567\n服务时间：9:00-21:00\n\n或者您可以点击客服热线进行咨询',
+									confirmText: '拨打电话',
+									cancelText: '取消',
+									success: (res) => {
+										if (res.confirm) {
+											uni.makePhoneCall({
+												phoneNumber: '400-123-4567'
+											});
+										}
+									}
+								});
+							}
+						})
+						break;
 				}
 			},
 			
@@ -834,6 +879,39 @@
             }
           }
         });
+      },
+
+      /**
+       * AI客服按钮点击事件
+       */
+      onAIServiceClick(data) {
+        console.log('🤖 个人中心AI客服按钮被点击:', data);
+        
+        // 可以在这里添加个人中心特有的逻辑
+        try {
+          // 记录用户在个人中心使用AI客服的行为
+          const clickInfo = {
+            page: 'my',
+            timestamp: new Date().toISOString(),
+            userType: this.isLoggedIn ? 'logged' : 'guest',
+            userAgent: navigator.userAgent || 'unknown'
+          };
+          
+          // 保存到本地存储用于分析
+          const existingClicks = uni.getStorageSync('ai_service_analytics') || [];
+          existingClicks.push(clickInfo);
+          
+          // 只保留最近50条记录
+          if (existingClicks.length > 50) {
+            existingClicks.splice(0, existingClicks.length - 50);
+          }
+          
+          uni.setStorageSync('ai_service_analytics', existingClicks);
+          
+          console.log('📊 个人中心AI客服使用统计已记录');
+        } catch (error) {
+          console.warn('⚠️ 统计记录失败:', error);
+        }
       }
 		}
 	}
@@ -885,6 +963,21 @@
 			height: 64rpx;
 			background: rgba(102, 126, 234, 0.1);
 			border-radius: 12rpx;
+		}
+	}
+	
+	/* AI智能客服图标样式 */
+	.ai-service-icon {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 64rpx;
+		height: 64rpx;
+		background: linear-gradient(135deg, #ff4757 0%, #ff3742 100%);
+		border-radius: 12rpx;
+		text {
+			font-size: 32rpx;
+			line-height: 1;
 		}
 	}
 	

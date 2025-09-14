@@ -1,0 +1,56 @@
+{
+  "name": "ecommerce-ai-customer-service",
+  "version": "1.0.0",
+  "description": "电商AI客服系统 - Rasa + Gemini 集成方案",
+  "main": "chatService.js",
+  "scripts": {
+    "install-system": "chmod +x install.sh && ./install.sh",
+    "start": "chmod +x start.sh && ./start.sh",
+    "stop": "chmod +x stop.sh && ./stop.sh",
+    "dev": "node chatService.js",
+    "simple": "node simple-ai-service.js",
+    "simple-start": "node simple-ai-service.js",
+    "train": "cd ai-customer-service && rasa train",
+    "shell": "cd ai-customer-service && rasa shell",
+    "test": "cd ai-customer-service && rasa test",
+    "validate": "cd ai-customer-service && rasa data validate",
+    "logs:rasa": "tail -f ai-customer-service/rasa.log",
+    "logs:actions": "tail -f ai-customer-service/actions.log", 
+    "logs:chat": "tail -f chat.log",
+    "health": "curl http://localhost:3001/api/chat/health"
+  },
+  "keywords": [
+    "ai",
+    "chatbot",
+    "rasa",
+    "gemini",
+    "ecommerce",
+    "customer-service"
+  ],
+  "author": "E-commerce Team",
+  "license": "MIT",
+  "dependencies": {
+    "@google/generative-ai": "^0.2.1",
+    "axios": "^1.6.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "rasa": "^0.2.0",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/ecommerce-ai-service.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-org/ecommerce-ai-service/issues"
+  },
+  "homepage": "https://github.com/your-org/ecommerce-ai-service#readme"
+}

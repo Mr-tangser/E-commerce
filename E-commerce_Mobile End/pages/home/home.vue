@@ -53,7 +53,7 @@
 				<scroll-view scroll-x @scroll="ScrollMenu" class="nav-list">
 					<view class="nav" ref="nav">
 						<view class="list" v-for="(item,index) in navList"
-						@click="onSkip('menu')"
+						@click="onNavClick(item)"
 						:key="item.id">
 							<image :src="item.icon || '/static/nav/nav_ico'+(index+1)+'.png'" mode="aspectFill"></image>
 							<text>{{item.name}}</text>
@@ -253,6 +253,17 @@
 		></ClassifyData>
 		<!-- tabbar -->
 		<TabBar :tabBarShow="0"></TabBar>
+		
+		<!-- AI客服浮动按钮 -->
+		<ai-float-button 
+			:visible="true"
+			position="bottom-right"
+			page-id="home"
+			@click="onAIServiceClick"
+		></ai-float-button>
+		
+		<!-- 简化版AI客服按钮（备用方案） -->
+		<!-- <simple-ai-button page-id="home"></simple-ai-button> -->
 	</view>
 </template>
 
@@ -260,6 +271,7 @@
 import TabBar from '../../components/TabBar/TabBar.vue';
 import ClassifyData from '../../components/ClassifyData/ClassifyData.vue';
 import WaterfallFlow from '../../components/WaterfallFlow/WaterfallFlow.vue';
+import AIFloatButton from '../../components/AIFloatButton/AIFloatButton.vue';
 // 引入mescroll-mixins.js
 import MescrollMixin from "@/components/mescroll-uni/mescroll-mixins.js";
 import api from '@/utils/api.js';
@@ -271,6 +283,7 @@ export default {
 		TabBar,
 		ClassifyData,
 		WaterfallFlow,
+		AIFloatButton,
 		},
 	data(){
 		return{
@@ -1258,6 +1271,7 @@ export default {
 			
 			// 使用真实的分类ID作为默认数据
 			const defaultNavList = [
+				{ id: 'ai-service', name: 'AI客服', icon: '/static/nav/nav_ico10.png', isService: true },
 				{ id: '68b039423b0bc493f4cc4aa3', name: '手机专区' },
 				{ id: '68b039423b0bc493f4cc4aac', name: '潮牌男装' },
 				{ id: '68b039423b0bc493f4cc4aab', name: '运动男装' },
@@ -2074,6 +2088,76 @@ export default {
 			}
 			
 			console.log('✅ 资源清理完成');
+		},
+
+		/**
+		 * 导航点击事件
+		 */
+		onNavClick(item) {
+			console.log('🔘 导航点击:', item);
+			
+			if (item.id === 'ai-service') {
+				// AI客服特殊处理
+				console.log('🤖 用户点击首页AI客服导航');
+				uni.navigateTo({
+					url: '/pages/AICustomerService/AICustomerService?from=home-nav',
+					success: () => {
+						console.log('✅ 成功跳转到AI客服页面');
+					},
+					fail: (error) => {
+						console.error('❌ 跳转AI客服页面失败:', error);
+						// 降级处理
+						uni.showModal({
+							title: '联系客服',
+							content: '客服热线：400-123-4567\n服务时间：9:00-21:00',
+							confirmText: '拨打电话',
+							cancelText: '取消',
+							success: (res) => {
+								if (res.confirm) {
+									uni.makePhoneCall({
+										phoneNumber: '400-123-4567'
+									});
+								}
+							}
+						});
+					}
+				});
+			} else {
+				// 其他导航项跳转到商品搜索页面
+				this.onSkip('menu', item);
+			}
+		},
+
+		/**
+		 * AI客服按钮点击事件
+		 */
+		onAIServiceClick(data) {
+			console.log('🤖 AI客服按钮被点击:', data);
+			
+			// 可以在这里添加统计、埋点等逻辑
+			try {
+				// 记录用户使用AI客服的行为
+				const clickInfo = {
+					page: 'home',
+					timestamp: new Date().toISOString(),
+					userAgent: navigator.userAgent || 'unknown'
+				};
+				
+				// 保存到本地存储用于分析
+				const existingClicks = uni.getStorageSync('ai_service_analytics') || [];
+				existingClicks.push(clickInfo);
+				
+				// 只保留最近50条记录
+				if (existingClicks.length > 50) {
+					existingClicks.splice(0, existingClicks.length - 50);
+				}
+				
+				uni.setStorageSync('ai_service_analytics', existingClicks);
+				
+				console.log('📊 AI客服使用统计已记录');
+			} catch (error) {
+				console.warn('⚠️ 统计记录失败:', error);
+			}
 		}
 		
 	}
