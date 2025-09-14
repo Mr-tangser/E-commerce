@@ -60,15 +60,6 @@
 								<text class="iconfont" :class="PayWay===0?'icon-checked action':'icon-check'"></text>
 							</view>
 						</view>
-						<view class="list" @click.stop="onPayWay(1)">
-							<view class="pay">
-								<image src="/static/wx_pay.png" mode=""></image>
-								<text>微信支付</text>
-							</view>
-							<view class="check">
-								<text class="iconfont" :class="PayWay===1?'icon-checked action':'icon-check'"></text>
-							</view>
-						</view>
 						<view class="list" @click.stop="onPayWay(2)">
 							<view class="pay">
 								<image src="/static/zfb_pay.png" mode=""></image>
@@ -101,16 +92,13 @@
 		methods:{
 			/**
 			 * 支付方式选择点击
-			 * @param {Number} type 0 余额 1 微信 2 支付宝
+			 * @param {Number} type 0 余额 2 支付宝
 			 */
 			onPayWay(type){
 				this.PayWay = type;
 				switch (type) {
 					case 0:
 						this.PayWayText = '余额支付';
-						break;
-					case 1:
-						this.PayWayText = '微信支付';
 						break;
 					case 2:
 						this.PayWayText = '支付宝支付';
