@@ -178,31 +178,46 @@
 	.focus-area{
 		display: flex;
 		align-items: center;
+		justify-content: space-around;
 		width: 100%;
 		height: 120rpx;
+		padding: 0 8%;
 		.list{
 			display: flex;
 			flex-direction: column;
 			justify-content: center;
 			align-items: center;
-			width: 33%;
+			width: 40%;
 			height: 100%;
+			position: relative;
+			
+			&:not(:last-child):after {
+				content: '';
+				position: absolute;
+				right: -20%;
+				top: 25%;
+				width: 2rpx;
+				height: 50%;
+				background: rgba(255, 255, 255, 0.3);
+			}
+			
 			.num{
 				display: flex;
 				align-items: center;
 				text{
 					color: #FFFFFF;
-					font-size: 32rpx;
+					font-size: 36rpx;
 					font-weight: bold;
 				}
 			}
 			.title{
 				display: flex;
 				align-items: center;
-				margin-top: 5rpx;
+				margin-top: 8rpx;
 				text{
 					color: #FFFFFF;
-					font-size: 24rpx;
+					font-size: 26rpx;
+					opacity: 0.9;
 				}
 			}
 		}

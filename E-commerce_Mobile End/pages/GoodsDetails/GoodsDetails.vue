@@ -108,9 +108,9 @@
             <text class="iconfont icon-jiangjia"></text>
             <text>降价通知</text>
           </view>
-          <view class="list" @click="onAttention">
-            <text class="iconfont" :class="AttentionShow===0?'icon-guanzhu-off':'icon-guanzhu-on action'"></text>
-            <text>{{ AttentionShow === 0 ? '关注' : '已关注' }}</text>
+          <view class="list" @click="onAttention" :class="{ 'disabled': favoriteLoading }">
+            <text class="iconfont" :class="favoriteLoading ? 'icon-loading' : (AttentionShow===0?'icon-guanzhu-off':'icon-guanzhu-on action')"></text>
+            <text>{{ favoriteLoading ? '处理中...' : (AttentionShow === 0 ? '关注' : '已关注') }}</text>
           </view>
         </view>
       </view>
@@ -335,6 +335,7 @@ import GoodsComment from '../../components/GoodsComment/GoodsComment.vue';
 import AIChat from '../../components/AIChat/AIChat.vue';
 import api from '@/utils/api.js';
 import BrowsingHistory from '@/utils/browsing-history.js';
+import FavoriteManager from '@/utils/favorites.js';
 // 导入环境配置
 import ENV_CONFIG from '../../config/env.js';
 
@@ -351,6 +352,8 @@ export default {
       TabShow: 0,
       isMore: false,
       AttentionShow: 0,
+      // 关注状态：0-未关注，1-已关注，2-加载中
+      favoriteLoading: false,
       // 商品详情数据
       goodsDetail: null,
       productId: null,
@@ -462,6 +465,9 @@ export default {
 			
 			// 加载商品详情数据
 			this.loadProductDetail();
+			
+			// 加载收藏状态
+			this.loadFavoriteStatus();
 		} else {
 			console.warn('⚠️ 未接收到商品ID参数');
 			uni.showToast({
@@ -528,23 +534,101 @@ export default {
       })
     },
     /**
-     * 关注点击
+     * 关注点击 - 真实的收藏功能
      */
-    onAttention() {
-      if (this.AttentionShow === 0) {
-        this.AttentionShow = 1;
-        uni.showToast({
-          title: '关注成功',
-          icon: 'none'
-        })
-      } else {
-        this.AttentionShow = 0;
-        uni.showToast({
-          title: '取消成功',
-          icon: 'none'
-        })
+    async onAttention() {
+      // 检查登录状态
+      if (!FavoriteManager.isLoggedIn()) {
+        this.showLoginRequired();
+        return;
       }
-
+      
+      // 防止重复点击
+      if (this.favoriteLoading) {
+        return;
+      }
+      
+      this.favoriteLoading = true;
+      
+      try {
+        console.log('💖 切换收藏状态，当前状态:', this.AttentionShow);
+        
+        const result = await FavoriteManager.toggleFavorite(this.productId, {
+          type: 'product',
+          priceNotification: true
+        });
+        
+        if (result.success) {
+          // 切换状态
+          this.AttentionShow = this.AttentionShow === 0 ? 1 : 0;
+          
+          // 显示提示
+          uni.showToast({
+            title: result.message,
+            icon: 'success',
+            duration: 2000
+          });
+          
+          // 触发全局收藏状态更新事件
+          uni.$emit('favoriteStatusChanged', {
+            productId: this.productId,
+            isFavorited: this.AttentionShow === 1
+          });
+          
+          console.log('✅ 收藏操作成功:', result.message);
+        } else {
+          throw new Error(result.message || '操作失败');
+        }
+      } catch (error) {
+        console.error('❌ 收藏操作失败:', error);
+        uni.showToast({
+          title: error.message || '操作失败，请重试',
+          icon: 'none',
+          duration: 2000
+        });
+      } finally {
+        this.favoriteLoading = false;
+      }
+    },
+    
+    /**
+     * 加载商品收藏状态
+     */
+    async loadFavoriteStatus() {
+      try {
+        if (!FavoriteManager.isLoggedIn()) {
+          this.AttentionShow = 0;
+          return;
+        }
+        
+        console.log('🔍 加载收藏状态:', this.productId);
+        
+        const isFavorited = await FavoriteManager.checkFavoriteStatus(this.productId);
+        this.AttentionShow = isFavorited ? 1 : 0;
+        
+        console.log('✅ 收藏状态加载完成:', isFavorited);
+      } catch (error) {
+        console.error('❌ 加载收藏状态失败:', error);
+        this.AttentionShow = 0;
+      }
+    },
+    
+    /**
+     * 显示登录提示
+     */
+    showLoginRequired() {
+      uni.showModal({
+        title: '需要登录',
+        content: '请先登录后再收藏商品',
+        success: (res) => {
+          if (res.confirm) {
+            console.log('🔗 跳转到登录页面');
+            uni.navigateTo({
+              url: '/pages/login/login'
+            });
+          }
+        }
+      });
     },
 		
 		/**
@@ -1060,6 +1144,16 @@ export default {
 /* 商品评论区域 */
 .goods-comments {
   margin-top: 20rpx;
+}
+/* 收藏按钮状态样式 */
+.price-info .info .list.disabled {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.price-info .info .list .iconfont.icon-loading {
+  animation: spin 1s linear infinite;
+  color: #999;
 }
 
 

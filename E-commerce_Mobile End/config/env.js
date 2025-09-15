@@ -18,7 +18,9 @@ if (!API_Global) {
 
 
 
+
   API_Global = '192.168.0.198:3000'; // 请根据实际情况修改
+
 
   
   console.log('📝 使用配置文件中的API地址:', API_Global);

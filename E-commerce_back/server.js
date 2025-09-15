@@ -22,6 +22,7 @@ const merchantAuditRoutes = require('./routes/merchantAudit');
 const paymentRoutes = require('./routes/payment');
 const captchaRoutes = require('./routes/captcha');
 const recognitionRoutes = require('./routes/recognition');
+const favoriteRoutes = require('./routes/favorites');
 
 // 导入中间件
 const errorHandler = require('./middleware/errorHandler');
@@ -29,6 +30,14 @@ const notFound = require('./middleware/notFound');
 
 // 导入Redis配置
 const { connectRedis } = require('./config/redis');
+
+// 导入模型（确保模型被注册到mongoose）
+require('./models/User');
+require('./models/Product');
+require('./models/Category');
+require('./models/Order');
+require('./models/Admin');
+require('./models/Favorite'); // 添加 Favorite 模型
 
 // 创建Express应用
 const app = express();
@@ -81,6 +90,7 @@ app.use('/api/admin/merchant-audit', merchantAuditRoutes);
 app.use('/api/payment', paymentRoutes);
 app.use('/api/captcha', captchaRoutes);
 app.use('/api/recognition', recognitionRoutes);
+app.use('/api/favorites', favoriteRoutes);
 
 // 健康检查端点
 app.get('/health', (req, res) => {
