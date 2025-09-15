@@ -1770,6 +1770,131 @@ export default {
 			console.log('✅ 默认分类商品数据设置完成:', categoryProducts.length, '个商品');
 		},
 		
+		/**
+		 * 显示识别结果
+		 */
+		showRecognitionResult(data, imagePath) {
+			console.log('📋 识别结果数据:', data);
+			console.log('📸 图片路径:', imagePath);
+			
+			if (!data || !data.topResult || !data.topResult.name) {
+				uni.showToast({
+					title: '未识别出物品',
+					icon: 'none',
+					duration: 2000
+				});
+				return;
+			}
+
+			const topResult = data.topResult;
+			const confidence = (topResult.score * 100).toFixed(1);
+			
+			// 跳转到识别结果详情页面
+			uni.navigateTo({
+				url: `/pages/recognition/result?data=${encodeURIComponent(JSON.stringify(data))}&image=${encodeURIComponent(imagePath)}`,
+				success: () => {
+					console.log('✅ 识别结果页面跳转成功');
+				},
+				fail: (error) => {
+					console.error('❌ 识别结果页面跳转失败:', error);
+					uni.showToast({
+						title: '页面跳转失败',
+						icon: 'error',
+						duration: 2000
+					});
+				}
+			});
+			
+			// 显示成功提示
+			uni.showToast({
+				title: '识别成功！',
+				icon: 'success',
+				duration: 1500
+			});
+		},
+
+		/**
+		 * 显示登录提示
+		 */
+		showLoginPrompt(message = '请先登录后再使用识别功能') {
+			uni.showModal({
+				title: '需要登录',
+				content: message,
+				confirmText: '去登录',
+				cancelText: '取消',
+				success: (res) => {
+					if (res.confirm) {
+						uni.navigateTo({
+							url: '/pages/Login'
+						});
+					}
+				}
+			});
+		},
+
+		/**
+		 * 验证token有效性
+		 */
+		async validateToken(token) {
+			try {
+				const result = await api.user.getUserInfo(token);
+				console.log('🔍 Token验证结果:', result);
+				
+				if (result.success && result.data) {
+					return true;
+				} else {
+					// token无效，清除本地存储
+					uni.removeStorageSync('token');
+					return false;
+				}
+			} catch (error) {
+				console.error('❌ Token验证失败:', error);
+				// 如果是401错误，说明token已过期
+				if (error.message && error.message.includes('401')) {
+					uni.removeStorageSync('token');
+				}
+				return false;
+			}
+		},
+
+		/**
+		 * 选择图片来源
+		 */
+		chooseImageSource() {
+			return new Promise((resolve) => {
+				uni.showActionSheet({
+					itemList: ['拍照识别', '从相册选择'],
+					success: (res) => {
+						resolve(res.tapIndex === 0 ? 'camera' : 'album');
+					},
+					fail: () => {
+						resolve('camera'); // 默认使用相机
+					}
+				});
+			});
+		},
+
+		/**
+		 * 获取图片
+		 */
+		getImage(sourceType) {
+			return new Promise((resolve, reject) => {
+				uni.chooseImage({
+					count: 1,
+					sourceType: [sourceType === 'camera' ? 'camera' : 'album'],
+					sizeType: ['compressed'], // 压缩图片
+					success: (res) => {
+						console.log('选择图片成功:', res.tempFilePaths[0]);
+						resolve(res.tempFilePaths[0]);
+					},
+					fail: (error) => {
+						console.error('选择图片失败:', error);
+						reject(new Error('获取图片失败'));
+					}
+				});
+			});
+		},
+
 		// 清理资源
 		cleanup() {
 			console.log('🧹 清理页面资源...');
