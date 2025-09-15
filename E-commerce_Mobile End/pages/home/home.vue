@@ -53,7 +53,7 @@
 				<scroll-view scroll-x @scroll="ScrollMenu" class="nav-list">
 					<view class="nav" ref="nav">
 						<view class="list" v-for="(item,index) in navList"
-						@click="onNavClick(item)"
+						@click="onSkip('menu')"
 						:key="item.id">
 							<image :src="item.icon || '/static/nav/nav_ico'+(index+1)+'.png'" mode="aspectFill"></image>
 							<text>{{item.name}}</text>
@@ -253,17 +253,6 @@
 		></ClassifyData>
 		<!-- tabbar -->
 		<TabBar :tabBarShow="0"></TabBar>
-		
-		<!-- AI客服浮动按钮 -->
-		<ai-float-button 
-			:visible="true"
-			position="bottom-right"
-			page-id="home"
-			@click="onAIServiceClick"
-		></ai-float-button>
-		
-		<!-- 简化版AI客服按钮（备用方案） -->
-		<!-- <simple-ai-button page-id="home"></simple-ai-button> -->
 	</view>
 </template>
 
@@ -271,7 +260,6 @@
 import TabBar from '../../components/TabBar/TabBar.vue';
 import ClassifyData from '../../components/ClassifyData/ClassifyData.vue';
 import WaterfallFlow from '../../components/WaterfallFlow/WaterfallFlow.vue';
-import AIFloatButton from '../../components/AIFloatButton/AIFloatButton.vue';
 // 引入mescroll-mixins.js
 import MescrollMixin from "@/components/mescroll-uni/mescroll-mixins.js";
 import api from '@/utils/api.js';
@@ -283,7 +271,6 @@ export default {
 		TabBar,
 		ClassifyData,
 		WaterfallFlow,
-		AIFloatButton,
 		},
 	data(){
 		return{
@@ -578,304 +565,18 @@ export default {
 			uni.navigateTo({url:'/pages/search/search'})
 		},
 		/**
-		 * 扫一扫点击 - 物品识别功能
+		 * 扫一扫点击
 		 */
 		onCode(){
-			const that = this;
-			uni.showActionSheet({
-				itemList: ['物品识别', '扫码', '从相册选择'],
-				success: function (res) {
-					switch(res.tapIndex) {
-						case 0: // 物品识别
-							that.handleImageRecognition();
-							break;
-						case 1: // 扫码
-							that.handleScanCode();
-							break;
-						case 2: // 从相册选择
-							that.handleChooseFromAlbum();
-							break;
-					}
-				}
-			});
-		},
-
-		/**
-		 * 处理图片识别
-		 */
-		async handleImageRecognition() {
-			try {
-				// 获取用户token
-				const token = uni.getStorageSync('token');
-				console.log('🔐 获取到的token:', token ? token.substring(0, 20) + '...' : '未获取');
-				
-				if (!token) {
-					this.showLoginPrompt();
-					return;
-				}
-
-				// 验证token有效性
-				if (!await this.validateToken(token)) {
-					this.showLoginPrompt('登录已过期，请重新登录');
-					return;
-				}
-
-				// 选择图片来源
-				const sourceType = await this.chooseImageSource();
-				
-				// 获取图片
-				const imagePath = await this.getImage(sourceType);
-				console.log('📁 选择的图片路径:', imagePath);
-				
-				// 检查图片文件是否存在
-				try {
-					const fileInfo = await new Promise((resolve, reject) => {
-						uni.getFileInfo({
-							filePath: imagePath,
-							success: resolve,
-							fail: reject
-						});
-					});
-					console.log('📊 图片文件信息:', fileInfo);
-				} catch (fileError) {
-					console.error('❌ 图片文件检查失败:', fileError);
-					throw new Error('图片文件异常，请重新选择');
-				}
-				
-				// 显示识别中提示
-				uni.showLoading({
-					title: '识别中...',
-					mask: true
-				});
-				
-				// 调用识别API
-				const result = await api.recognition.identifyImage(imagePath, token);
-				
-				uni.hideLoading();
-				
-				// 显示识别结果，并传递图片路径
-				this.showRecognitionResult(result.data, imagePath);
-				
-			} catch (error) {
-				uni.hideLoading();
-				console.error('物品识别失败:', error);
-				uni.showToast({
-					title: error.message || '识别失败，请重试',
-					icon: 'none',
-					duration: 2000
-				});
-			}
-		},
-
-		/**
-		 * 处理扫码
-		 */
-		handleScanCode() {
+			// 只允许通过相机扫码
 			uni.scanCode({
 				onlyFromCamera: true,
 				success: function (res) {
-					console.log('条码类型：' + res.scanType);
-					console.log('条码内容：' + res.result);
-					
-					// 可以根据扫码结果跳转到相应页面
-					uni.showToast({
-						title: '扫码成功',
-						icon: 'success'
-					});
-				},
-				fail: function (error) {
-					console.log('扫码失败:', error);
-					uni.showToast({
-						title: '扫码失败',
-						icon: 'none'
-					});
+						console.log('条码类型：' + res.scanType);
+						console.log('条码内容：' + res.result);
 				}
 			});
 		},
-
-		/**
-		 * 从相册选择图片识别
-		 */
-		async handleChooseFromAlbum() {
-			try {
-				// 获取用户token
-				const token = uni.getStorageSync('token');
-				console.log('🔐 获取到的token:', token ? token.substring(0, 20) + '...' : '未获取');
-				
-				if (!token) {
-					this.showLoginPrompt();
-					return;
-				}
-
-				// 验证token有效性
-				if (!await this.validateToken(token)) {
-					this.showLoginPrompt('登录已过期，请重新登录');
-					return;
-				}
-
-				// 从相册选择图片
-				const imagePath = await this.getImage('album');
-				console.log('📁 选择的图片路径:', imagePath);
-				
-				// 检查图片文件是否存在
-				try {
-					const fileInfo = await new Promise((resolve, reject) => {
-						uni.getFileInfo({
-							filePath: imagePath,
-							success: resolve,
-							fail: reject
-						});
-					});
-					console.log('📊 图片文件信息:', fileInfo);
-				} catch (fileError) {
-					console.error('❌ 图片文件检查失败:', fileError);
-					throw new Error('图片文件异常，请重新选择');
-				}
-				
-				// 显示识别中提示
-				uni.showLoading({
-					title: '识别中...',
-					mask: true
-				});
-				
-				// 调用识别API
-				const result = await api.recognition.identifyImage(imagePath, token);
-				
-				uni.hideLoading();
-				
-				// 显示识别结果，并传递图片路径
-				this.showRecognitionResult(result.data, imagePath);
-				
-			} catch (error) {
-				uni.hideLoading();
-				console.error('图片识别失败:', error);
-				uni.showToast({
-					title: error.message || '识别失败，请重试',
-					icon: 'none',
-					duration: 2000
-				});
-			}
-		},
-
-		/**
-		 * 选择图片来源
-		 */
-		chooseImageSource() {
-			return new Promise((resolve) => {
-				uni.showActionSheet({
-					itemList: ['拍照识别', '从相册选择'],
-					success: (res) => {
-						resolve(res.tapIndex === 0 ? 'camera' : 'album');
-					},
-					fail: () => {
-						resolve('camera'); // 默认使用相机
-					}
-				});
-			});
-		},
-
-		/**
-		 * 获取图片
-		 */
-		getImage(sourceType) {
-			return new Promise((resolve, reject) => {
-				uni.chooseImage({
-					count: 1,
-					sourceType: [sourceType === 'camera' ? 'camera' : 'album'],
-					sizeType: ['compressed'], // 压缩图片
-					success: (res) => {
-						console.log('选择图片成功:', res.tempFilePaths[0]);
-						resolve(res.tempFilePaths[0]);
-					},
-					fail: (error) => {
-						console.error('选择图片失败:', error);
-						reject(new Error('获取图片失败'));
-					}
-				});
-			});
-		},
-
-		/**
-		 * 显示识别结果
-		 */
-		showRecognitionResult(data, imagePath) {
-			console.log('📋 识别结果数据:', data);
-			console.log('📸 图片路径:', imagePath);
-			
-			if (!data || !data.topResult || !data.topResult.name) {
-				uni.showToast({
-					title: '未识别出物品',
-					icon: 'none',
-					duration: 2000
-				});
-				return;
-			}
-
-			const topResult = data.topResult;
-			const confidence = (topResult.score * 100).toFixed(1);
-			
-			// 跳转到识别结果详情页面
-			uni.navigateTo({
-				url: `/pages/recognition/result?data=${encodeURIComponent(JSON.stringify(data))}&image=${encodeURIComponent(imagePath)}`
-			});
-			
-			// 显示成功提示
-			uni.showToast({
-				title: '识别成功！',
-				icon: 'success',
-				duration: 1500
-			});
-		},
-
-			/**
-			 * 显示登录提示
-			 */
-			showLoginPrompt(message = '请先登录后再使用识别功能') {
-				uni.showModal({
-					title: '需要登录',
-					content: message,
-					confirmText: '去登录',
-					cancelText: '取消',
-					success: (res) => {
-						if (res.confirm) {
-							uni.navigateTo({
-								url: '/pages/Login'
-							});
-						}
-					}
-				});
-			},
-
-			/**
-			 * 验证token有效性
-			 */
-			async validateToken(token) {
-				try {
-					console.log('🔍 验证token有效性...');
-					const result = await api.user.getUserInfo(token);
-					
-					if (result.success && result.data) {
-						console.log('✅ Token有效，用户信息:', result.data.username || result.data.email);
-						return true;
-					} else {
-						console.log('❌ Token无效:', result.message);
-						return false;
-					}
-				} catch (error) {
-					console.log('❌ Token验证失败:', error.message);
-					
-					// 如果是401错误，说明token过期或无效
-					if (error.message.includes('401') || error.message.includes('认证')) {
-						// 清除过期的token
-						uni.removeStorageSync('token');
-						uni.removeStorageSync('userInfo');
-						return false;
-					}
-					
-					// 其他错误可能是网络问题，暂时认为token有效
-					return true;
-				}
-			},
 		/**
 		 * 分类点击
 		 * @param {Object} item
@@ -1271,7 +972,6 @@ export default {
 			
 			// 使用真实的分类ID作为默认数据
 			const defaultNavList = [
-				{ id: 'ai-service', name: 'AI客服', icon: '/static/nav/nav_ico10.png', isService: true },
 				{ id: '68b039423b0bc493f4cc4aa3', name: '手机专区' },
 				{ id: '68b039423b0bc493f4cc4aac', name: '潮牌男装' },
 				{ id: '68b039423b0bc493f4cc4aab', name: '运动男装' },
@@ -2088,80 +1788,8 @@ export default {
 			}
 			
 			console.log('✅ 资源清理完成');
-		},
-
-		/**
-		 * 导航点击事件
-		 */
-		onNavClick(item) {
-			console.log('🔘 导航点击:', item);
-			
-			if (item.id === 'ai-service') {
-				// AI客服特殊处理
-				console.log('🤖 用户点击首页AI客服导航');
-				uni.navigateTo({
-					url: '/pages/AICustomerService/AICustomerService?from=home-nav',
-					success: () => {
-						console.log('✅ 成功跳转到AI客服页面');
-					},
-					fail: (error) => {
-						console.error('❌ 跳转AI客服页面失败:', error);
-						// 降级处理
-						uni.showModal({
-							title: '联系客服',
-							content: '客服热线：400-123-4567\n服务时间：9:00-21:00',
-							confirmText: '拨打电话',
-							cancelText: '取消',
-							success: (res) => {
-								if (res.confirm) {
-									uni.makePhoneCall({
-										phoneNumber: '400-123-4567'
-									});
-								}
-							}
-						});
-					}
-				});
-			} else {
-				// 其他导航项跳转到商品搜索页面
-				this.onSkip('menu', item);
-			}
-		},
-
-		/**
-		 * AI客服按钮点击事件
-		 */
-		onAIServiceClick(data) {
-			console.log('🤖 AI客服按钮被点击:', data);
-			
-			// 可以在这里添加统计、埋点等逻辑
-			try {
-				// 记录用户使用AI客服的行为
-				const clickInfo = {
-					page: 'home',
-					timestamp: new Date().toISOString(),
-					userAgent: navigator.userAgent || 'unknown'
-				};
-				
-				// 保存到本地存储用于分析
-				const existingClicks = uni.getStorageSync('ai_service_analytics') || [];
-				existingClicks.push(clickInfo);
-				
-				// 只保留最近50条记录
-				if (existingClicks.length > 50) {
-					existingClicks.splice(0, existingClicks.length - 50);
-				}
-				
-				uni.setStorageSync('ai_service_analytics', existingClicks);
-				
-				console.log('📊 AI客服使用统计已记录');
-			} catch (error) {
-				console.warn('⚠️ 统计记录失败:', error);
-			}
 		}
-		
 	}
-	
 };
 </script>
 
