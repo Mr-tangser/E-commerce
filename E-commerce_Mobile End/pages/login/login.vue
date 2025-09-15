@@ -3,7 +3,7 @@
     <!-- Logo区域 -->
     <view class="logo">
       <image src="../../static/logo.png" mode="aspectFit"></image>
-      <text class="app-name">电商平台</text>
+      <text class="app-name">全品汇</text>
     </view>
     
     <!-- 登录方式切换 -->

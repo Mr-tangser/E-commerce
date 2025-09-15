@@ -13,9 +13,9 @@ class SmsService {
       // 互亿无线短信接口地址
       url: 'https://106.ihuyi.com/webservice/sms.php?method=Submit',
       // 账户ID - 请替换为您的实际账户ID
-      account: process.env.SMS_ACCOUNT || 'C83996639',
+      account: process.env.SMS_ACCOUNT || 'C34247721',
       // 密码 - 请替换为您的实际密码
-      password: process.env.SMS_PASSWORD || '99e02604374d5125fea6094e8a62e72b',
+      password: process.env.SMS_PASSWORD || '1206e319b430d51011aecfbe23ec7acd',
       // 短信签名 - 请替换为您的实际签名
       sign: process.env.SMS_SIGN || '【电商平台】',
              // 验证码模板（与互亿无线平台报备的模板完全一致）

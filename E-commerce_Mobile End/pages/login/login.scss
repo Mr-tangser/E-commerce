@@ -86,54 +86,62 @@
       .input-group {
     position: relative;
     margin-bottom: 30rpx;
-    background: rgba(255, 255, 255, 0.9);
+    background: transparent;
     border-radius: 50rpx;
     padding: 0 30rpx;
     display: flex;
     align-items: center;
     box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.15);
     backdrop-filter: blur(15rpx);
-    border: 1rpx solid rgba(255, 255, 255, 0.2);
+    border: 1rpx solid rgba(255, 255, 255, 0.3);
     
     .input-icon {
       font-size: 36rpx;
-      color: #667eea;
+      color: rgba(255, 255, 255, 0.9);
       margin-right: 20rpx;
       width: 36rpx;
       text-align: center;
+      text-shadow: 0 2rpx 6rpx rgba(0, 0, 0, 0.5);
     }
     
     .form-input {
       flex: 1;
       height: 88rpx;
       font-size: 28rpx;
-      color: #333;
+      color: #ffffff;
       border: none;
       background: transparent;
+      text-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.3);
       
       &::placeholder {
-        color: #999;
+        color: rgba(255, 255, 255, 0.6);
+        text-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.3);
       }
     }
     
     .password-toggle {
       font-size: 32rpx;
-      color: #999;
+      color: rgba(255, 255, 255, 0.7);
       padding: 10rpx;
       margin-right: -10rpx;
+      text-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.3);
     }
     
     .code-btn {
       font-size: 24rpx;
-      color: #667eea;
+      color: #ffffff;
       padding: 15rpx 25rpx;
       border-radius: 30rpx;
-      background: rgba(102, 126, 234, 0.1);
+      background: rgba(255, 255, 255, 0.2);
       white-space: nowrap;
+      backdrop-filter: blur(10rpx);
+      border: 1rpx solid rgba(255, 255, 255, 0.3);
+      text-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.3);
       
       &.disabled {
-        color: #999;
-        background: rgba(153, 153, 153, 0.1);
+        color: rgba(255, 255, 255, 0.5);
+        background: rgba(255, 255, 255, 0.1);
+        border: 1rpx solid rgba(255, 255, 255, 0.2);
       }
     }
   }
@@ -271,29 +279,13 @@
           filter: drop-shadow(0 0 8rpx rgba(255, 255, 255, 0.5));
         }
         
-        // 一键登录图标特殊效果
+        // 一键登录图标样式（与其他图标保持一致）
         &.univerify-icon {
-          color: #ffffff;
-          text-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.5);
-          filter: drop-shadow(0 0 6rpx rgba(0, 122, 255, 0.6));
+          // 使用统一的图标样式
+          filter: drop-shadow(0 0 8rpx rgba(255, 255, 255, 0.5));
         }
       }
       
-      // 一键登录按钮特殊样式
-      &.univerify-login-btn {
-        background: linear-gradient(135deg, rgba(0, 122, 255, 0.8), rgba(88, 86, 214, 0.8));
-        border: 1rpx solid rgba(0, 122, 255, 0.5);
-        
-        &:active {
-          background: linear-gradient(135deg, rgba(0, 122, 255, 0.9), rgba(88, 86, 214, 0.9));
-          transform: scale(0.95);
-        }
-        
-        .btn-text {
-          color: #ffffff;
-          text-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.5);
-        }
-      }
       
       .quick-login-icon {
         width: 50rpx;
@@ -400,25 +392,6 @@
         font-size: 45rpx !important;
       }
       
-      // 一键登录按钮特殊样式
-      &.univerify-login-btn {
-        background: linear-gradient(135deg, rgba(0, 122, 255, 0.9), rgba(88, 86, 214, 0.9)) !important;
-        border: 1rpx solid rgba(0, 122, 255, 0.7) !important;
-        
-        &:active {
-          background: linear-gradient(135deg, rgba(0, 122, 255, 1), rgba(88, 86, 214, 1)) !important;
-        }
-        
-        .univerify-icon {
-          color: #ffffff !important;
-          text-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.5) !important;
-        }
-        
-        .btn-text {
-          color: #ffffff !important;
-          text-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.5) !important;
-        }
-      }
       
       .login-icon {
         font-size: 45rpx !important;
